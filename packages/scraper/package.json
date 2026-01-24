@@ -1,0 +1,44 @@
+{
+  "name": "@supermarkt-deals/scraper",
+  "version": "1.0.0",
+  "description": "Web scraper for Dutch supermarket discount offers",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "start": "ts-node src/index.ts",
+    "scrape": "ts-node src/index.ts",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "test": "jest",
+    "clean": "rm -rf dist screenshots"
+  },
+  "bin": {
+    "scrape-deals": "./dist/index.js"
+  },
+  "keywords": [
+    "scraper",
+    "supermarket",
+    "netherlands",
+    "playwright"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.3",
+    "playwright": "^1.40.1",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "sharp": "^0.33.2",
+    "dotenv": "^16.3.1",
+    "@supermarkt-deals/shared": "^1.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "@types/jest": "^29.5.11",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.1"
+  }
+}

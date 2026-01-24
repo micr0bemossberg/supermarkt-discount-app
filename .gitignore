@@ -1,0 +1,58 @@
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+
+# Build outputs
+dist/
+build/
+*.tsbuildinfo
+
+# Expo
+.expo/
+.expo-shared/
+
+# React Native
+.vscode/
+.idea/
+
+# Android
+*.apk
+*.aab
+android/app/build/
+
+# iOS
+*.ipa
+ios/Pods/
+ios/build/
+
+# Testing
+coverage/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Screenshots (from scraper errors)
+packages/scraper/screenshots/
+
+# Supabase
+supabase/.branches
+supabase/.temp
+
+# Editor
+*.swp
+*.swo
+*~

@@ -1,0 +1,33 @@
+{
+  "name": "supermarkt-discount-app",
+  "version": "1.0.0",
+  "description": "Dutch Supermarket Discount Aggregator App",
+  "private": true,
+  "workspaces": [
+    "packages/scraper",
+    "packages/mobile-app",
+    "packages/shared"
+  ],
+  "scripts": {
+    "scraper": "npm run start --workspace=packages/scraper",
+    "mobile": "npm run start --workspace=packages/mobile-app",
+    "test": "npm run test --workspaces",
+    "lint": "npm run lint --workspaces"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/supermarkt-discount-app"
+  },
+  "keywords": [
+    "supermarket",
+    "discounts",
+    "netherlands",
+    "mobile-app",
+    "scraper"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "@supermarkt-deals/shared",
+  "version": "1.0.0",
+  "description": "Shared TypeScript types for SupermarktDeals app",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "typescript",
+    "types",
+    "shared"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.3.3"
+  }
+}
