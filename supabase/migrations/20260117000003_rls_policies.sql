@@ -6,7 +6,7 @@
 -- =====================================================
 -- Enable RLS on all tables
 -- =====================================================
-
+-- kjjhkhj
 ALTER TABLE supermarkets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE products ENABLE ROW LEVEL SECURITY;
