@@ -5,7 +5,7 @@
 
 import { BaseScraper } from '../base/BaseScraper';
 import { ahSelectors as selectors } from './selectors';
-import { parsePrice, calculateDiscountPercentage } from '../../utils/deduplication';
+import { parsePrice } from '../../utils/deduplication';
 import { CATEGORY_KEYWORDS } from '../../config/constants';
 import type { ScrapedProduct } from '@supermarkt-deals/shared';
 
@@ -55,6 +55,38 @@ export class AHScraper extends BaseScraper {
   }
 
   /**
+   * Parse discount label text to extract price if possible
+   * Examples: "2e gratis", "25%", "voor 0.99", "2 voor 2.89", "1+1"
+   */
+  private parseDiscountLabel(text: string | null): { price?: number; percentage?: number; label: string } {
+    if (!text) return { label: '' };
+
+    const label = text.replace(/\s+/g, ' ').trim();
+
+    // Try to extract price from "voor X.XX" or "X voor X.XX" patterns
+    const priceMatch = label.match(/voor\s*€?\s*(\d+)[,.](\d{2})/i);
+    if (priceMatch) {
+      const price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+      return { price, label };
+    }
+
+    // Try "X.XX" standalone price
+    const standalonePrice = label.match(/^€?\s*(\d+)[,.](\d{2})$/);
+    if (standalonePrice) {
+      const price = parseFloat(`${standalonePrice[1]}.${standalonePrice[2]}`);
+      return { price, label };
+    }
+
+    // Extract percentage
+    const percentMatch = label.match(/(\d+)\s*%/);
+    if (percentMatch) {
+      return { percentage: parseInt(percentMatch[1], 10), label };
+    }
+
+    return { label };
+  }
+
+  /**
    * Parse a single product element
    */
   private async parseProduct(element: any): Promise<ScrapedProduct | null> {
@@ -70,44 +102,25 @@ export class AHScraper extends BaseScraper {
         return null;
       }
 
-      // Extract discount price (required)
-      const discountPriceElement = await element.$(selectors.discountPrice);
-      const discountPriceText = discountPriceElement
-        ? (await discountPriceElement.textContent())?.trim()
+      // Extract discount label (AH uses labels like "2e gratis", "25%", "voor 0.99")
+      const discountLabelElement = await element.$(selectors.discountPrice);
+      const discountLabelText = discountLabelElement
+        ? (await discountLabelElement.textContent())?.trim()
         : null;
 
-      const discountPrice = parsePrice(discountPriceText);
-      if (!discountPrice) {
-        this.logger.debug(`Product missing price, skipping: ${title}`);
-        return null;
-      }
+      const { price: discountPrice, percentage: discountPercentage, label: discountLabel } =
+        this.parseDiscountLabel(discountLabelText);
 
-      // Extract original price (optional)
+      // AH bonus cards don't always show prices, so we use 0 as placeholder
+      // The discount label itself is the valuable info
+      const finalPrice = discountPrice || 0;
+
+      // Extract original price (optional, rarely shown on bonus cards)
       const originalPriceElement = await element.$(selectors.originalPrice);
       const originalPriceText = originalPriceElement
         ? (await originalPriceElement.textContent())?.trim()
         : null;
-
       const originalPrice = parsePrice(originalPriceText);
-
-      // Calculate or extract discount percentage
-      let discountPercentage: number | undefined;
-      const discountBadgeElement = await element.$(selectors.discountBadge);
-      if (discountBadgeElement) {
-        const badgeText = (await discountBadgeElement.textContent())?.trim();
-        const match = badgeText?.match(/(\d+)%/);
-        if (match) {
-          discountPercentage = parseInt(match[1], 10);
-        }
-      }
-
-      // If no badge, calculate from prices
-      if (!discountPercentage && originalPrice && discountPrice) {
-        discountPercentage = calculateDiscountPercentage(
-          originalPrice,
-          discountPrice
-        );
-      }
 
       // Extract image URL
       const imageElement = await element.$(selectors.image);
@@ -147,17 +160,16 @@ export class AHScraper extends BaseScraper {
         }
       }
 
-      // Extract description (optional)
+      // Extract description/unit info (optional)
       const descriptionElement = await element.$(selectors.description);
-      const description = descriptionElement
+      const descriptionText = descriptionElement
         ? (await descriptionElement.textContent())?.trim()
         : undefined;
 
-      // Extract unit info (optional)
-      const unitInfoElement = await element.$(selectors.unitInfo);
-      const unitInfo = unitInfoElement
-        ? (await unitInfoElement.textContent())?.trim()
-        : undefined;
+      // Combine discount label with description
+      const description = discountLabel
+        ? (descriptionText ? `${discountLabel} - ${descriptionText}` : discountLabel)
+        : descriptionText;
 
       // Detect category
       const categorySlug = this.detectCategory(title);
@@ -169,11 +181,11 @@ export class AHScraper extends BaseScraper {
         title,
         description,
         original_price: originalPrice ?? undefined,
-        discount_price: discountPrice,
+        discount_price: finalPrice,
         discount_percentage: discountPercentage,
         image_url: imageUrl,
         product_url: productUrl,
-        unit_info: unitInfo,
+        unit_info: discountLabel || descriptionText, // Store discount label as unit info
         valid_from: validFrom,
         valid_until: validUntil,
         category_slug: categorySlug,
@@ -200,7 +212,7 @@ export class AHScraper extends BaseScraper {
 
       // Navigate to bonus page
       await page.goto(this.baseUrl, {
-        waitUntil: 'domcontentloaded',
+        waitUntil: 'networkidle',
         timeout: 60000,
       });
 
@@ -208,6 +220,16 @@ export class AHScraper extends BaseScraper {
 
       // Handle cookie consent
       await this.handleCookieConsent(page);
+
+      // Wait extra time for dynamic content to load
+      await page.waitForTimeout(3000);
+
+      // Check if we hit the "aanbiedingen kunnen niet worden geladen" error
+      const errorText = await page.locator('text=aanbiedingen kunnen niet worden geladen').count();
+      if (errorText > 0) {
+        this.logger.warning('AH returned error page, trying category pages instead');
+        return await this.scrapeFromCategories(page);
+      }
 
       // Wait for product grid to load
       try {
@@ -308,5 +330,72 @@ export class AHScraper extends BaseScraper {
     } catch (error) {
       this.logger.warning('Error during scrolling', error);
     }
+  }
+
+  /**
+   * Fallback: Scrape from individual category pages
+   * Used when main bonus page is blocked by bot detection
+   */
+  private async scrapeFromCategories(page: any): Promise<ScrapedProduct[]> {
+    const products: ScrapedProduct[] = [];
+
+    // AH bonus category URLs
+    const categoryUrls = [
+      'https://www.ah.nl/bonus/groente-aardappelen',
+      'https://www.ah.nl/bonus/fruit-verse-sappen',
+      'https://www.ah.nl/bonus/vlees',
+      'https://www.ah.nl/bonus/vis',
+      'https://www.ah.nl/bonus/kaas',
+      'https://www.ah.nl/bonus/zuivel-eieren',
+      'https://www.ah.nl/bonus/bakkerij',
+      'https://www.ah.nl/bonus/borrel-chips-snacks',
+      'https://www.ah.nl/bonus/koffie-thee',
+      'https://www.ah.nl/bonus/frisdrank-sappen-water',
+      'https://www.ah.nl/bonus/bier-wijn',
+      'https://www.ah.nl/bonus/diepvries',
+    ];
+
+    for (const url of categoryUrls) {
+      try {
+        this.logger.info(`Scraping category: ${url}`);
+
+        await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+        await page.waitForTimeout(2000);
+
+        // Check for error page
+        const errorCount = await page.locator('text=kunnen niet worden geladen').count();
+        if (errorCount > 0) {
+          this.logger.warning(`Category ${url} also blocked, skipping`);
+          continue;
+        }
+
+        // Wait for products
+        try {
+          await page.waitForSelector(selectors.productCard, { timeout: 5000 });
+        } catch {
+          this.logger.warning(`No products found in ${url}`);
+          continue;
+        }
+
+        // Extract products from this category
+        const productElements = await page.$$(selectors.productCard);
+        this.logger.info(`Found ${productElements.length} products in category`);
+
+        for (const element of productElements) {
+          const product = await this.parseProduct(element);
+          if (product) {
+            products.push(product);
+          }
+        }
+
+        // Small delay between categories
+        await page.waitForTimeout(1000);
+      } catch (error) {
+        this.logger.warning(`Error scraping category ${url}`, error);
+      }
+    }
+
+    this.logger.success(`Scraped ${products.length} products from categories`);
+    return products;
   }
 }

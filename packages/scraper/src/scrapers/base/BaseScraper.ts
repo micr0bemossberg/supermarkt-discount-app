@@ -3,7 +3,7 @@
  * Abstract class that all supermarket-specific scrapers extend
  */
 
-import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import { chromium, firefox, Browser, Page, BrowserContext } from 'playwright';
 import { SCRAPER_CONFIG } from '../../config/constants';
 import { createLogger } from '../../utils/logger';
 import { processProductImage } from '../../utils/imageProcessor';
@@ -35,19 +35,29 @@ export abstract class BaseScraper {
 
   /**
    * Initialize browser and page
+   * Uses Firefox by default as it has better anti-detection properties
    */
   protected async initBrowser(): Promise<Page> {
     this.logger.info('Initializing browser...');
 
-    this.browser = await chromium.launch({
-      headless: SCRAPER_CONFIG.HEADLESS,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-blink-features=AutomationControlled',
-      ],
-    });
+    // Use Firefox for better bot detection evasion
+    const useFirefox = process.env.USE_FIREFOX !== 'false';
+
+    if (useFirefox) {
+      this.browser = await firefox.launch({
+        headless: SCRAPER_CONFIG.HEADLESS,
+      });
+    } else {
+      this.browser = await chromium.launch({
+        headless: SCRAPER_CONFIG.HEADLESS,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-blink-features=AutomationControlled',
+        ],
+      });
+    }
 
     // Create context with random user agent
     const userAgent = this.getRandomUserAgent();
@@ -58,31 +68,46 @@ export abstract class BaseScraper {
       timezoneId: 'Europe/Amsterdam',
     });
 
-    // Add stealth scripts
+    // Add stealth scripts (mainly for Chromium, but doesn't hurt Firefox)
     await this.context.addInitScript(() => {
       // Override navigator.webdriver
       Object.defineProperty(navigator, 'webdriver', {
-        get: () => false,
+        get: () => undefined,
       });
 
-      // Override Chrome detection
-      (window as any).chrome = {
-        runtime: {},
-      };
+      // Remove automation indicators
+      delete (navigator as any).__proto__.webdriver;
+
+      // Override Chrome detection (only affects Chromium)
+      if ((window as any).chrome === undefined) {
+        (window as any).chrome = { runtime: {} };
+      }
 
       // Override permissions
-      const originalQuery = window.navigator.permissions.query;
-      window.navigator.permissions.query = (parameters: any) =>
-        parameters.name === 'notifications'
-          ? Promise.resolve({
-              state: Notification.permission,
-            } as PermissionStatus)
-          : originalQuery(parameters);
+      const originalQuery = window.navigator.permissions?.query;
+      if (originalQuery) {
+        window.navigator.permissions.query = (parameters: any) =>
+          parameters.name === 'notifications'
+            ? Promise.resolve({
+                state: Notification.permission,
+              } as PermissionStatus)
+            : originalQuery.call(window.navigator.permissions, parameters);
+      }
+
+      // Override plugins to look more like a real browser
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // Override languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['nl-NL', 'nl', 'en-US', 'en'],
+      });
     });
 
     this.page = await this.context.newPage();
 
-    this.logger.success('Browser initialized');
+    this.logger.success(`Browser initialized (${useFirefox ? 'Firefox' : 'Chromium'})`);
     return this.page;
   }
 
@@ -113,29 +138,57 @@ export abstract class BaseScraper {
     try {
       this.logger.info('Checking for cookie consent...');
 
-      // Common Dutch cookie consent button selectors
+      // Wait a moment for dialog to appear
+      await page.waitForTimeout(2000);
+
+      // Common Dutch cookie consent button selectors (ordered by specificity)
       const cookieSelectors = [
+        // AH specific - their privacy dialog uses these
+        'button#accept-cookies',
+        'button[data-testid="accept-cookies"]',
+        '[class*="cookie"] button:has-text("Accepteren")',
+        '[class*="privacy"] button:has-text("Accepteren")',
+        '[class*="consent"] button:has-text("Accepteren")',
+        '[role="dialog"] button:has-text("Accepteren")',
+        // Generic Dutch selectors
         'button:has-text("Accepteren")',
+        'button:has-text("Alle cookies accepteren")',
         'button:has-text("Akkoord")',
+        'button:has-text("Accept all")',
         'button:has-text("Accept")',
         '[data-testid="cookie-accept"]',
         '[id*="cookie"][id*="accept"]',
         '.cookie-accept',
         '#onetrust-accept-btn-handler',
+        // OneTrust (used by many Dutch sites)
+        '#accept-recommended-btn-handler',
       ];
 
       for (const selector of cookieSelectors) {
         try {
-          const button = await page.$(selector);
-          if (button) {
+          const button = page.locator(selector).first();
+          if (await button.isVisible({ timeout: 500 })) {
             await button.click();
-            this.logger.success('Cookie consent accepted');
-            await page.waitForTimeout(1000);
+            this.logger.success(`Cookie consent accepted via: ${selector}`);
+            await page.waitForTimeout(1500);
             return;
           }
         } catch (error) {
           // Try next selector
         }
+      }
+
+      // Try clicking by exact text match as last resort
+      try {
+        const acceptButton = page.getByRole('button', { name: 'Accepteren' });
+        if (await acceptButton.isVisible({ timeout: 500 })) {
+          await acceptButton.click();
+          this.logger.success('Cookie consent accepted via role button');
+          await page.waitForTimeout(1500);
+          return;
+        }
+      } catch (error) {
+        // No button found
       }
 
       this.logger.debug('No cookie consent found');

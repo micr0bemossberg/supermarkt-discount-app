@@ -50,7 +50,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
               style={styles.image}
               contentFit="cover"
               transition={200}
-              placeholder={require('../../assets/placeholder.png')}
             />
           ) : (
             <View style={styles.imagePlaceholder}>

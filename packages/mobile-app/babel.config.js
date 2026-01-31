@@ -14,8 +14,7 @@ module.exports = function(api) {
           extensions: ['.ios.js', '.android.js', '.js', '.ts', '.tsx', '.json']
         }
       ],
-      'react-native-paper/babel',
-      'react-native-reanimated/plugin'
+      'react-native-paper/babel'
     ]
   };
 };

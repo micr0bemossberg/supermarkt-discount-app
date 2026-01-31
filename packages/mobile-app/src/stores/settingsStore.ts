@@ -5,7 +5,6 @@
 
 import { create } from 'zustand';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from 'react-native';
 
 const SETTINGS_STORAGE_KEY = '@supermarkt_deals_settings';
 
@@ -85,16 +84,10 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     }
   },
 
-  // Get effective theme based on mode and system preference
+  // Get effective theme based on mode (system preference handled in component)
   getEffectiveTheme: () => {
     const { themeMode } = get().settings;
-
-    if (themeMode === 'auto') {
-      // eslint-disable-next-line react-hooks/rules-of-hooks
-      const systemTheme = useColorScheme();
-      return systemTheme === 'dark' ? 'dark' : 'light';
-    }
-
-    return themeMode;
+    // Return 'light' as default when 'auto' - component should use useColorScheme
+    return themeMode === 'auto' ? 'light' : themeMode;
   },
 }));

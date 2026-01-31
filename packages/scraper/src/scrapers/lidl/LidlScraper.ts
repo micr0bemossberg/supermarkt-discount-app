@@ -57,10 +57,104 @@ export class LidlScraper extends BaseScraper {
 
   /**
    * Parse a single product element
+   * Lidl embeds product data in data-gridbox-impression JSON attribute
    */
   private async parseProduct(element: any): Promise<ScrapedProduct | null> {
     try {
-      // Extract title
+      // Try to get data from JSON attribute first (Lidl's structured data)
+      const dataAttr = await element.getAttribute('data-gridbox-impression');
+      if (dataAttr) {
+        try {
+          const data = JSON.parse(dataAttr);
+          if (data.name && data.price) {
+            const { validFrom, validUntil } = this.getValidityDates();
+
+            // Extract image - try multiple sources
+            let imageUrl: string | undefined;
+
+            // First check if JSON data has image info
+            if (data.imageUrl) {
+              imageUrl = data.imageUrl;
+            } else if (data.image) {
+              imageUrl = data.image;
+            }
+
+            // Try to find image in DOM if not in JSON
+            if (!imageUrl) {
+              // Try picture source first (higher quality)
+              const sourceElement = await element.$('picture source');
+              if (sourceElement) {
+                const srcset = await sourceElement.getAttribute('srcset');
+                if (srcset) {
+                  // Get the best quality image from srcset (usually last one or largest)
+                  const srcsetParts = srcset.split(',').map((s: string) => s.trim());
+                  const lastSrc = srcsetParts[srcsetParts.length - 1] || srcsetParts[0];
+                  if (lastSrc) {
+                    imageUrl = lastSrc.split(' ')[0];
+                  }
+                }
+              }
+
+              // Try img element
+              if (!imageUrl) {
+                const imageElement = await element.$('img');
+                if (imageElement) {
+                  // Try srcset first for better quality
+                  const srcset = await imageElement.getAttribute('srcset');
+                  if (srcset) {
+                    const srcsetParts = srcset.split(',').map((s: string) => s.trim());
+                    const lastSrc = srcsetParts[srcsetParts.length - 1] || srcsetParts[0];
+                    if (lastSrc) {
+                      imageUrl = lastSrc.split(' ')[0];
+                    }
+                  }
+
+                  if (!imageUrl) {
+                    imageUrl =
+                      (await imageElement.getAttribute('src')) ||
+                      (await imageElement.getAttribute('data-src')) ||
+                      (await imageElement.getAttribute('data-lazy-src')) ||
+                      undefined;
+                  }
+                }
+              }
+            }
+
+            // Make URL absolute if needed
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = new URL(imageUrl, 'https://www.lidl.nl').href;
+            }
+
+            // Filter out placeholder/tracking images
+            if (imageUrl && (imageUrl.includes('data:') || imageUrl.includes('blank.gif') || imageUrl.includes('pixel'))) {
+              imageUrl = undefined;
+            }
+
+            // Build product URL from ID
+            const productUrl = data.id
+              ? `https://www.lidl.nl/p/${data.name.toLowerCase().replace(/\s+/g, '-')}/p${data.id}`
+              : undefined;
+
+            return {
+              title: data.name,
+              description: data.category || undefined,
+              original_price: undefined,
+              discount_price: data.price,
+              discount_percentage: undefined,
+              image_url: imageUrl,
+              product_url: productUrl,
+              unit_info: data.categoryPrimary || undefined,
+              valid_from: validFrom,
+              valid_until: validUntil,
+              category_slug: this.detectCategory(data.name),
+            };
+          }
+        } catch (e) {
+          // JSON parsing failed, fall back to DOM extraction
+        }
+      }
+
+      // Fallback: Extract from DOM elements
       const titleElement = await element.$(selectors.title);
       const title = titleElement
         ? (await titleElement.textContent())?.trim()
@@ -107,18 +201,53 @@ export class LidlScraper extends BaseScraper {
         );
       }
 
-      // Extract image URL
-      const imageElement = await element.$(selectors.image);
+      // Extract image URL - try multiple sources
       let imageUrl: string | undefined;
-      if (imageElement) {
-        imageUrl =
-          (await imageElement.getAttribute('src')) ||
-          (await imageElement.getAttribute('data-src')) ||
-          undefined;
 
-        if (imageUrl && !imageUrl.startsWith('http')) {
-          imageUrl = new URL(imageUrl, this.baseUrl).href;
+      // Try picture source first (higher quality)
+      const sourceElement = await element.$('picture source');
+      if (sourceElement) {
+        const srcset = await sourceElement.getAttribute('srcset');
+        if (srcset) {
+          const srcsetParts = srcset.split(',').map((s: string) => s.trim());
+          const lastSrc = srcsetParts[srcsetParts.length - 1] || srcsetParts[0];
+          if (lastSrc) {
+            imageUrl = lastSrc.split(' ')[0];
+          }
         }
+      }
+
+      // Try img element with srcset
+      if (!imageUrl) {
+        const imageElement = await element.$(selectors.image);
+        if (imageElement) {
+          const srcset = await imageElement.getAttribute('srcset');
+          if (srcset) {
+            const srcsetParts = srcset.split(',').map((s: string) => s.trim());
+            const lastSrc = srcsetParts[srcsetParts.length - 1] || srcsetParts[0];
+            if (lastSrc) {
+              imageUrl = lastSrc.split(' ')[0];
+            }
+          }
+
+          if (!imageUrl) {
+            imageUrl =
+              (await imageElement.getAttribute('src')) ||
+              (await imageElement.getAttribute('data-src')) ||
+              (await imageElement.getAttribute('data-lazy-src')) ||
+              undefined;
+          }
+        }
+      }
+
+      // Make URL absolute if needed
+      if (imageUrl && !imageUrl.startsWith('http')) {
+        imageUrl = new URL(imageUrl, this.baseUrl).href;
+      }
+
+      // Filter out placeholder/tracking images
+      if (imageUrl && (imageUrl.includes('data:') || imageUrl.includes('blank.gif') || imageUrl.includes('pixel'))) {
+        imageUrl = undefined;
       }
 
       // Extract product URL
@@ -133,18 +262,6 @@ export class LidlScraper extends BaseScraper {
         }
       }
 
-      // Extract description
-      const descriptionElement = await element.$(selectors.description);
-      const description = descriptionElement
-        ? (await descriptionElement.textContent())?.trim()
-        : undefined;
-
-      // Extract unit info
-      const unitInfoElement = await element.$(selectors.unitInfo);
-      const unitInfo = unitInfoElement
-        ? (await unitInfoElement.textContent())?.trim()
-        : undefined;
-
       // Detect category
       const categorySlug = this.detectCategory(title);
 
@@ -153,13 +270,13 @@ export class LidlScraper extends BaseScraper {
 
       const scrapedProduct: ScrapedProduct = {
         title,
-        description,
+        description: undefined,
         original_price: originalPrice ?? undefined,
         discount_price: discountPrice,
         discount_percentage: discountPercentage,
         image_url: imageUrl,
         product_url: productUrl,
-        unit_info: unitInfo,
+        unit_info: undefined,
         valid_from: validFrom,
         valid_until: validUntil,
         category_slug: categorySlug,
