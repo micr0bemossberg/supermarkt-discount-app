@@ -385,15 +385,74 @@ export class JumboScraper extends BaseScraper {
             discountPrice = 0;
           }
 
-          // Extract deal label (e.g., "voor 6,50", "2e gratis")
+          // Extract deal label (e.g., "voor 6,50", "2e gratis", "25% korting")
           let unitInfo: string | undefined;
-          const dealLabelSelectors = ['[class*="label"]', '[class*="badge"]', '[class*="tag"]', '[class*="promotion"]'];
+          let discountPercentage: number | undefined;
+
+          // Look for deal labels in specific elements
+          const dealLabelSelectors = [
+            '[class*="label"]',
+            '[class*="badge"]',
+            '[class*="tag"]',
+            '[class*="promotion"]',
+            '[class*="discount"]',
+            '[class*="korting"]',
+            '[class*="action"]',
+            'span[style*="background"]' // Often deal labels have colored backgrounds
+          ];
+
           for (const sel of dealLabelSelectors) {
-            const el = await article.$(sel);
-            if (el) {
+            const elements = await article.$$(sel);
+            for (const el of elements) {
               const text = (await el.textContent())?.trim();
-              if (text && text.length < 30 && (text.includes('voor') || text.includes('gratis') || text.includes('%'))) {
-                unitInfo = text;
+              if (text && text.length > 0 && text.length < 40) {
+                // Check if it looks like a deal label
+                const lowerText = text.toLowerCase();
+                if (lowerText.includes('voor') || lowerText.includes('gratis') ||
+                    lowerText.includes('%') || lowerText.includes('korting') ||
+                    lowerText.includes('combi') || lowerText.includes('+')) {
+                  unitInfo = text;
+
+                  // Extract percentage from label like "25% korting"
+                  const percentMatch = text.match(/(\d+)\s*%/);
+                  if (percentMatch) {
+                    discountPercentage = parseInt(percentMatch[1], 10);
+                  }
+
+                  // Extract price from label like "voor 6,50" or "2 voor 5,00"
+                  const priceInLabelMatch = text.match(/voor\s*€?\s*(\d+)[,.](\d{2})/i);
+                  if (priceInLabelMatch && !discountPrice) {
+                    discountPrice = parseFloat(`${priceInLabelMatch[1]}.${priceInLabelMatch[2]}`);
+                  }
+
+                  break;
+                }
+              }
+            }
+            if (unitInfo) break;
+          }
+
+          // Fallback: search in article text for deal patterns
+          if (!unitInfo) {
+            const dealPatterns = [
+              /\d+\s*%\s*korting/i,
+              /\d+\s*\+\s*\d+\s*gratis/i,
+              /\d+e?\s*(halve prijs|gratis)/i,
+              /\d+\s*voor\s*€?\s*[\d,.]+/i,
+              /combikorting/i
+            ];
+
+            for (const pattern of dealPatterns) {
+              const match = articleText.match(pattern);
+              if (match) {
+                unitInfo = match[0].trim();
+
+                // Extract percentage
+                const percentMatch = match[0].match(/(\d+)\s*%/);
+                if (percentMatch && !discountPercentage) {
+                  discountPercentage = parseInt(percentMatch[1], 10);
+                }
+
                 break;
               }
             }
@@ -402,9 +461,8 @@ export class JumboScraper extends BaseScraper {
           // Try to get validity dates from article
           const { validFrom, validUntil } = this.parseValidityDates(articleText) || globalDates;
 
-          // Calculate discount percentage
-          let discountPercentage: number | undefined;
-          if (originalPrice && discountPrice && originalPrice > discountPrice) {
+          // Calculate discount percentage from prices if not found in label
+          if (!discountPercentage && originalPrice && discountPrice && originalPrice > discountPrice) {
             discountPercentage = Math.round((1 - discountPrice / originalPrice) * 100);
           }
 

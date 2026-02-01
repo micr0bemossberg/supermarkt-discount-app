@@ -96,6 +96,31 @@ export async function insertProduct(
     // Check if already exists
     const existing = await productExists(hash);
     if (existing) {
+      // Update existing product if it's missing images or other data
+      const newImageUrl = imageUrl || scrapedProduct.image_url;
+      const needsUpdate = (
+        (!existing.image_url && newImageUrl) ||
+        (!existing.original_price && scrapedProduct.original_price) ||
+        (!existing.discount_percentage && scrapedProduct.discount_percentage) ||
+        (!existing.unit_info && scrapedProduct.unit_info) ||
+        (!existing.product_url && scrapedProduct.product_url)
+      );
+
+      if (needsUpdate) {
+        const updates: Partial<Product> = {};
+        if (!existing.image_url && newImageUrl) updates.image_url = newImageUrl;
+        if (!existing.original_price && scrapedProduct.original_price) updates.original_price = scrapedProduct.original_price;
+        if (!existing.discount_percentage && scrapedProduct.discount_percentage) updates.discount_percentage = scrapedProduct.discount_percentage;
+        if (!existing.unit_info && scrapedProduct.unit_info) updates.unit_info = scrapedProduct.unit_info;
+        if (!existing.product_url && scrapedProduct.product_url) updates.product_url = scrapedProduct.product_url;
+
+        const updated = await updateProduct(existing.id, updates);
+        if (updated) {
+          logger.debug(`Updated existing product with new data: ${scrapedProduct.title}`);
+          return updated;
+        }
+      }
+
       logger.debug(`Product already exists: ${scrapedProduct.title}`);
       return existing;
     }

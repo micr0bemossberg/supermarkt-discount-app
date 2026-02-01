@@ -65,7 +65,9 @@ export class LidlScraper extends BaseScraper {
       const dataAttr = await element.getAttribute('data-gridbox-impression');
       if (dataAttr) {
         try {
-          const data = JSON.parse(dataAttr);
+          // Decode URL-encoded JSON data
+          const decodedData = decodeURIComponent(dataAttr);
+          const data = JSON.parse(decodedData);
           if (data.name && data.price) {
             const { validFrom, validUntil } = this.getValidityDates();
 
@@ -135,6 +137,9 @@ export class LidlScraper extends BaseScraper {
               ? `https://www.lidl.nl/p/${data.name.toLowerCase().replace(/\s+/g, '-')}/p${data.id}`
               : undefined;
 
+            // Always log image status
+            this.logger.info(`IMAGE DEBUG: ${data.name} -> ${imageUrl || 'NULL'}`);
+
             return {
               title: data.name,
               description: data.category || undefined,
@@ -151,6 +156,7 @@ export class LidlScraper extends BaseScraper {
           }
         } catch (e) {
           // JSON parsing failed, fall back to DOM extraction
+          this.logger.warning(`JSON parsing error: ${e}`);
         }
       }
 
