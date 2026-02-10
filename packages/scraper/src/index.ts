@@ -7,7 +7,9 @@
 
 import { AHScraper } from './scrapers/ah/AHScraper';
 import { JumboScraper } from './scrapers/jumbo/JumboScraper';
-import { LidlScraper } from './scrapers/lidl/LidlScraper';
+import { AldiScraper } from './scrapers/aldi/AldiScraper';
+import { DirkScraper } from './scrapers/dirk/DirkScraper';
+import { VomarScraper } from './scrapers/vomar/VomarScraper';
 import { testConnection } from './config/supabase';
 import { deactivateExpiredProducts, getActiveProductCount } from './database/products';
 import { getScraperStats } from './database/scrapeLogs';
@@ -23,8 +25,12 @@ function getScraper(slug: SupermarketSlug) {
       return new AHScraper();
     case 'jumbo':
       return new JumboScraper();
-    case 'lidl':
-      return new LidlScraper();
+    case 'aldi':
+      return new AldiScraper();
+    case 'dirk':
+      return new DirkScraper();
+    case 'vomar':
+      return new VomarScraper();
     default:
       throw new Error(`Unknown supermarket: ${slug}`);
   }
@@ -63,7 +69,7 @@ async function runScraper(slug: SupermarketSlug) {
  * Run all scrapers
  */
 async function runAllScrapers() {
-  const supermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'lidl'];
+  const supermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar'];
   const results: boolean[] = [];
 
   for (const slug of supermarkets) {
@@ -163,7 +169,7 @@ async function main() {
 
   // Default: run scraper for specified supermarket
   if (supermarket) {
-    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'lidl'];
+    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar'];
 
     if (!validSupermarkets.includes(supermarket)) {
       logger.error(`Invalid supermarket: ${supermarket}`);
@@ -189,11 +195,15 @@ Usage:
 Supermarkets:
   ah      Albert Heijn
   jumbo   Jumbo
-  lidl    Lidl
+  aldi    Aldi
+  dirk    Dirk
+  vomar   Vomar
 
 Examples:
   npm run scrape -- --supermarket=ah
   npm run scrape -- --supermarket=jumbo
+  npm run scrape -- --supermarket=aldi
+  npm run scrape -- --supermarket=vomar
   npm run scrape -- all
   npm run scrape -- stats --supermarket=ah
   npm run scrape -- cleanup

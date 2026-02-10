@@ -113,21 +113,27 @@ export abstract class BaseScraper {
     try {
       this.logger.info('Checking for cookie consent...');
 
+      // Wait a moment for consent dialogs to appear (they often load asynchronously)
+      await page.waitForTimeout(3000);
+
       // Common Dutch cookie consent button selectors
       const cookieSelectors = [
         'button:has-text("Accepteren")',
         'button:has-text("Akkoord")',
+        'button:has-text("Alle cookies accepteren")',
+        'button:has-text("Accept all")',
         'button:has-text("Accept")',
         '[data-testid="cookie-accept"]',
         '[id*="cookie"][id*="accept"]',
         '.cookie-accept',
         '#onetrust-accept-btn-handler',
+        '#CybotCookiebotDialogBodyLevelButtonLevelOptinAllowAll',
       ];
 
       for (const selector of cookieSelectors) {
         try {
           const button = await page.$(selector);
-          if (button) {
+          if (button && await button.isVisible()) {
             await button.click();
             this.logger.success('Cookie consent accepted');
             await page.waitForTimeout(1000);
@@ -136,6 +142,29 @@ export abstract class BaseScraper {
         } catch (error) {
           // Try next selector
         }
+      }
+
+      // Also try clicking inside iframes (some consent managers use iframes)
+      try {
+        const frames = page.frames();
+        for (const frame of frames) {
+          if (frame === page.mainFrame()) continue;
+          for (const selector of cookieSelectors.slice(0, 5)) {
+            try {
+              const button = await frame.$(selector);
+              if (button) {
+                await button.click();
+                this.logger.success('Cookie consent accepted (in iframe)');
+                await page.waitForTimeout(1000);
+                return;
+              }
+            } catch {
+              // Try next
+            }
+          }
+        }
+      } catch {
+        // No iframes or frame access failed
       }
 
       this.logger.debug('No cookie consent found');

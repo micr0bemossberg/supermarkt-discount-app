@@ -15,4 +15,4 @@ export interface Supermarket {
   updated_at: string;
 }
 
-export type SupermarketSlug = 'ah' | 'jumbo' | 'lidl' | 'aldi' | 'plus';
+export type SupermarketSlug = 'ah' | 'jumbo' | 'aldi' | 'vomar' | 'dirk' | 'plus';

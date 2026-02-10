@@ -3,11 +3,22 @@
  */
 
 import { BaseScraper } from '../base/BaseScraper';
+import { CATEGORY_KEYWORDS } from '../../config/constants';
 import type { ScrapedProduct } from '@supermarkt-deals/shared';
 
 export class JumboScraper extends BaseScraper {
   constructor() {
     super('jumbo', 'https://www.jumbo.com/aanbiedingen');
+  }
+
+  private detectCategory(title: string): string {
+    const lowerTitle = title.toLowerCase();
+    for (const [keyword, category] of Object.entries(CATEGORY_KEYWORDS)) {
+      if (lowerTitle.includes(keyword)) {
+        return category;
+      }
+    }
+    return 'overig';
   }
 
   protected async scrapeProducts(): Promise<ScrapedProduct[]> {
@@ -91,7 +102,7 @@ export class JumboScraper extends BaseScraper {
             discount_price: price,
             valid_from: monday,
             valid_until: sunday,
-            category_slug: 'overig',
+            category_slug: this.detectCategory(title),
             product_url: productUrl,
             image_url: imageUrl,
           });

@@ -96,6 +96,14 @@ export async function insertProduct(
     // Check if already exists
     const existing = await productExists(hash);
     if (existing) {
+      // Update category if it changed (e.g., from 'overig' to a detected category)
+      if (categoryId && existing.category_id !== categoryId) {
+        const updated = await updateProduct(existing.id, { category_id: categoryId });
+        if (updated) {
+          logger.debug(`Updated category for: ${scrapedProduct.title}`);
+          return updated;
+        }
+      }
       logger.debug(`Product already exists: ${scrapedProduct.title}`);
       return existing;
     }

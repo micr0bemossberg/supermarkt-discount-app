@@ -20,7 +20,7 @@ CREATE TABLE supermarkets (
   is_active BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
-);
+);      
 
 -- Add comment
 COMMENT ON TABLE supermarkets IS 'Dutch supermarket chains that we scrape';
@@ -54,7 +54,7 @@ CREATE TABLE products (
 
   -- Pricing
   original_price DECIMAL(10, 2),
-  discount_price DECIMAL(10, 2) NOT NULL,
+  discount_price DECIMAL(10, 2) jNOT NULL,
   discount_percentage INTEGER,
 
   -- Images
