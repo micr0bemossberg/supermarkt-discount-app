@@ -8,44 +8,44 @@
  */
 
 export const ahSelectors = {
-  // Product grid/list container
-  productGrid: '[data-testhook="product-list"], .product-grid, [class*="ProductGrid"]',
+  // Product grid/list container (lanes contain product grids)
+  productGrid: '[class*="lane_root"], [class*="grid_root"]',
 
-  // Individual product card
-  productCard: '[data-testhook="product-card"], .product-card, [class*="ProductCard"], article',
+  // Individual product card (promotion cards)
+  productCard: '[data-testhook="promotion-card"]',
 
   // Product title
-  title: '[data-testhook="product-title"], .product-title, h3, [class*="ProductTitle"]',
+  title: '[data-testhook="promotion-card-title"]',
 
-  // Product description
-  description: '[data-testhook="product-description"], .product-description',
+  // Product description (subtitle/unit info)
+  description: '[data-testhook="card-description"]',
 
-  // Original price (before discount)
-  originalPrice: '[data-testhook="original-price"], .original-price, .was-price, [class*="OriginalPrice"]',
+  // Original price (AH doesn't always show original price separately)
+  originalPrice: '[data-testhook="original-price"], [class*="was-price"]',
 
-  // Discount price (current price)
-  discountPrice: '[data-testhook="price"], .price, .current-price, [class*="Price"]',
+  // Discount label (shows "2e gratis", "25%", "voor 0.99" etc)
+  discountPrice: '[data-testhook="promotion-labels"]',
 
   // Discount percentage badge
-  discountBadge: '[data-testhook="discount"], .discount-badge, [class*="Discount"], .badge',
+  discountBadge: '[data-testhook="promotion-labels"], [class*="promotion-label"]',
 
   // Product image
-  image: 'img[data-testhook="product-image"], [class*="ProductImage"] img, img',
+  image: '[data-testid="card-image"] img, [class*="promotion-card-image"] img',
 
-  // Product URL/link
-  productLink: 'a[data-testhook="product-link"], a[href*="/producten/"]',
+  // Product URL/link (the card itself is the link)
+  productLink: 'a[href*="/bonus/"]',
 
-  // Unit info (e.g., "per kg")
-  unitInfo: '[data-testhook="unit-info"], .unit-info, [class*="UnitInfo"]',
+  // Unit info (often in description)
+  unitInfo: '[data-testhook="card-description"]',
 
-  // Category tags
-  categoryTag: '[data-testhook="category"], .category',
+  // Category tags (from lane section header)
+  categoryTag: '[class*="area-lane_header"] h3',
 
   // Load more button
-  loadMoreButton: 'button:has-text("Meer producten laden"), button:has-text("Load more")',
+  loadMoreButton: 'button:has-text("Meer laden"), button:has-text("Load more")',
 
-  // Bonus period text (e.g., "Geldig van 15-01 t/m 21-01")
-  bonusPeriod: '[data-testhook="bonus-period"], .bonus-period, [class*="BonusPeriod"]',
+  // Bonus period text
+  bonusPeriod: '[data-testhook="bonus-period"], [class*="BonusPeriod"]',
 };
 
 /**
