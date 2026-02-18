@@ -6,6 +6,56 @@
 import { supabase } from '../config/supabase';
 import type { Product, ProductWithRelations, ProductFilters } from '@supermarkt-deals/shared';
 
+// Fish keywords - fish is always halal
+const FISH_KEYWORDS = [
+  'vis', 'zalm', 'tonijn', 'garnaal', 'garnalen', 'haring', 'makreel',
+  'kabeljauw', 'schelvis', 'pangasius', 'tilapia', 'forel', 'sardine',
+  'sardien', 'mosselen', 'kibbeling', 'lekkerbek', 'visstick', 'fishstick',
+  'calamari', 'inktvis', 'kreeft', 'krab', 'scampi', 'ansjovis', 'zeebaars',
+  'dorade', 'schol', 'scholfilet', 'koolvis', 'wijting', 'heek', 'paling',
+  'zeewolf', 'victoriabaars', 'sushi', 'norsk',
+];
+
+// Vegan/vegetarian keywords - no meat, always fine
+const VEGA_KEYWORDS = [
+  'vega', 'vegetarisch', 'vegan', 'plantaardig', 'tofu', 'tempeh',
+  'seitan', 'beyond', 'impossible', 'groenteburger', 'bonenkroket',
+];
+
+/**
+ * Filter out non-halal meat products.
+ * Keeps: fish (always halal), explicitly halal-labeled, and vegan/vegetarian products.
+ * Removes: other meat products from the "vlees-vis-vega" category.
+ */
+function filterHalalOnly(products: ProductWithRelations[]): ProductWithRelations[] {
+  return products.filter((product) => {
+    // Only filter products in the meat/fish/vega category
+    if (product.category?.slug !== 'vlees-vis-vega') {
+      return true;
+    }
+
+    const title = product.title.toLowerCase();
+
+    // Keep if explicitly labeled halal
+    if (title.includes('halal')) {
+      return true;
+    }
+
+    // Keep if it's a fish product
+    if (FISH_KEYWORDS.some((kw) => title.includes(kw))) {
+      return true;
+    }
+
+    // Keep if it's vegan/vegetarian
+    if (VEGA_KEYWORDS.some((kw) => title.includes(kw))) {
+      return true;
+    }
+
+    // Filter out non-halal meat
+    return false;
+  });
+}
+
 /**
  * Fetch products with optional filters
  */
@@ -57,7 +107,7 @@ export async function getProducts(
       throw error;
     }
 
-    return (data || []) as ProductWithRelations[];
+    return filterHalalOnly((data || []) as ProductWithRelations[]);
   } catch (error) {
     console.error('Failed to fetch products:', error);
     throw error;

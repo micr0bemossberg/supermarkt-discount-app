@@ -28,10 +28,12 @@
     "@supermarkt-deals/shared": "^1.0.0",
     "dotenv": "^16.3.1",
     "node-tesseract-ocr": "^2.2.1",
+    "picnic-api": "^3.2.0",
     "playwright": "^1.40.1",
     "playwright-extra": "^4.3.6",
     "puppeteer-extra-plugin-stealth": "^2.11.2",
-    "sharp": "^0.33.5"
+    "sharp": "^0.33.5",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.11",

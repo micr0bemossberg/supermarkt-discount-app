@@ -10,6 +10,14 @@ import { JumboScraper } from './scrapers/jumbo/JumboScraper';
 import { AldiScraper } from './scrapers/aldi/AldiScraper';
 import { DirkScraper } from './scrapers/dirk/DirkScraper';
 import { VomarScraper } from './scrapers/vomar/VomarScraper';
+import { PicnicScraper } from './scrapers/picnic/PicnicScraper';
+import { JoybuyScraper } from './scrapers/joybuy/JoybuyScraper';
+import { MegafoodstunterScraper } from './scrapers/megafoodstunter/MegafoodstunterScraper';
+import { ButlonScraper } from './scrapers/butlon/ButlonScraper';
+import { HoogvlietScraper } from './scrapers/hoogvliet/HoogvlietScraper';
+import { ActionScraper } from './scrapers/action/ActionScraper';
+import { FlinkScraper } from './scrapers/flink/FlinkScraper';
+import { KruidvatScraper } from './scrapers/kruidvat/KruidvatScraper';
 import { testConnection } from './config/supabase';
 import { deactivateExpiredProducts, getActiveProductCount } from './database/products';
 import { getScraperStats } from './database/scrapeLogs';
@@ -31,6 +39,22 @@ function getScraper(slug: SupermarketSlug) {
       return new DirkScraper();
     case 'vomar':
       return new VomarScraper();
+    case 'picnic':
+      return new PicnicScraper();
+    case 'joybuy':
+      return new JoybuyScraper();
+    case 'megafoodstunter':
+      return new MegafoodstunterScraper();
+    case 'butlon':
+      return new ButlonScraper();
+    case 'hoogvliet':
+      return new HoogvlietScraper();
+    case 'action':
+      return new ActionScraper();
+    case 'flink':
+      return new FlinkScraper();
+    case 'kruidvat':
+      return new KruidvatScraper();
     default:
       throw new Error(`Unknown supermarket: ${slug}`);
   }
@@ -69,7 +93,7 @@ async function runScraper(slug: SupermarketSlug) {
  * Run all scrapers
  */
 async function runAllScrapers() {
-  const supermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar'];
+  const supermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'kruidvat'];
   const results: boolean[] = [];
 
   for (const slug of supermarkets) {
@@ -169,7 +193,7 @@ async function main() {
 
   // Default: run scraper for specified supermarket
   if (supermarket) {
-    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar'];
+    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
 
     if (!validSupermarkets.includes(supermarket)) {
       logger.error(`Invalid supermarket: ${supermarket}`);
@@ -192,18 +216,28 @@ Usage:
   npm run scrape -- stats --supermarket=<slug>  Show statistics
   npm run scrape -- cleanup                Cleanup expired products
 
-Supermarkets:
-  ah      Albert Heijn
-  jumbo   Jumbo
-  aldi    Aldi
-  dirk    Dirk
-  vomar   Vomar
+Supermarkets (Stores):
+  ah               Albert Heijn
+  jumbo            Jumbo
+  aldi             Aldi
+  dirk             Dirk
+  vomar            Vomar
+  hoogvliet        Hoogvliet
+
+Stores (Non-food):
+  action           Action (all product types)
+  kruidvat         Kruidvat (all product types)
+
+Supermarkets (Online):
+  picnic           Picnic (requires account)
+  flink            Flink (DataDome blocked - not in 'all')
+  joybuy           Joybuy (uses Firefox)
+  megafoodstunter  Megafoodstunter
+  butlon           Butlon
 
 Examples:
   npm run scrape -- --supermarket=ah
-  npm run scrape -- --supermarket=jumbo
-  npm run scrape -- --supermarket=aldi
-  npm run scrape -- --supermarket=vomar
+  npm run scrape -- --supermarket=megafoodstunter
   npm run scrape -- all
   npm run scrape -- stats --supermarket=ah
   npm run scrape -- cleanup

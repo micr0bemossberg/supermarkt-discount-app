@@ -10,6 +10,48 @@ import type { ScrapedProduct, Product, SupermarketSlug } from '@supermarkt-deals
 
 const logger = createLogger('ProductsDB');
 
+/** Regex patterns that identify alcohol products (including 0% variants) */
+const ALCOHOL_PATTERNS: RegExp[] = [
+  // Generic terms (word-boundary to avoid matching "original", "palmolievrij", etc.)
+  /\bbier\b/i, /\bpils\b/i, /\bpilsener\b/i, /\blager\b/i, /\bstout\b/i,
+  /\bweizen\b/i, /\bradler\b/i,
+  /\bwijn\b/i, /\bwine\b/i, /\brosé\b/i, /\bprosecco\b/i, /\bchampagne\b/i,
+  /\bcava\b/i, /\bport\b(?!\w)/i, // "port" but not "sportoortjes"
+  /\bwhisky\b/i, /\bwhiskey\b/i, /\bvodka\b/i, /\bwodka\b/i,
+  /\brum\b(?!\w)/i, // "rum" but not "kruidenrum", though that IS alcohol
+  /\bgin\b(?!\w)/i, /\bjenever\b/i,
+  /\blikeur\b/i, /\bliqueur\b/i, /\bcognac\b/i, /\bbrandy\b/i, /\btequila\b/i,
+  /\babsint\b/i, /\balkoholfrei\b/i,
+  /\b0[.,]0\s*%/i, // 0.0% or 0,0%
+  // Grape varieties / wine terms
+  /\bshiraz\b/i, /\bmerlot\b/i, /\bcabernet\b/i, /\bchardonnay\b/i,
+  /\bpinot\b/i, /\bsauvignon\b/i, /\brioja\b/i, /\bchianti\b/i,
+  /\btempranillo\b/i, /\bgrigio\b/i,
+  // Beer brands
+  /\bheineken\b/i, /\bamstel\b/i, /\bhertog jan\b/i, /\bwarsteiner\b/i,
+  /\bgrimbergen\b/i, /\bchouffe\b/i, /\bliefmans\b/i, /\bkarmeliet\b/i,
+  /\balfa pils\b/i, /\btexels\b/i, /\bjupiler\b/i, /\bgrolsch\b/i,
+  /\bleffe\b/i, /\bduvel\b/i, /\bcornet\b/i, /\baffligem\b/i, /\bhoegaarden\b/i,
+  /\bbrouwerij\b/i,
+  // Spirit brands
+  /\bjack daniel/i, /\bglen talloch\b/i, /\bchivas regal\b/i, /\bold captain\b/i,
+  /\bjohnnie walker\b/i, /\bwyborowa\b/i, /\bboomsma\b/i, /\blicor 43\b/i,
+  /\bbaileys\b/i, /\bbacardi\b/i, /\bsmirnoff\b/i, /\bjägermeister\b/i,
+  /\bmonkey shoulder\b/i, /\bglenlivet\b/i,
+  // Wine brands
+  /\bstoney creek\b/i, /\bi heart\b(?!\s+wijn)?\b.*\b(wijn|wine|pinot|grigio|shiraz)/i,
+  /\bla finestra\b/i, /\b2 familias\b/i, /\bbarefoot\b/i,
+  // RTD / mixed
+  /\bbreezer\b/i, /\bdesperados\b/i,
+];
+
+/**
+ * Check if a product title matches alcohol patterns
+ */
+export function isAlcoholProduct(title: string): boolean {
+  return ALCOHOL_PATTERNS.some(pattern => pattern.test(title));
+}
+
 /**
  * Get supermarket ID from slug
  */
@@ -72,6 +114,12 @@ export async function insertProduct(
   imagePath?: string
 ): Promise<Product | null> {
   try {
+    // Filter out alcohol products
+    if (isAlcoholProduct(scrapedProduct.title)) {
+      logger.debug(`Skipped alcohol product: ${scrapedProduct.title}`);
+      return null;
+    }
+
     // Get supermarket ID
     const supermarketId = await getSupermarketId(supermarketSlug);
     if (!supermarketId) {
@@ -96,6 +144,23 @@ export async function insertProduct(
     // Check if already exists
     const existing = await productExists(hash);
     if (existing) {
+      // If deactivated, reactivate and update prices
+      if (!existing.is_active) {
+        const updated = await updateProduct(existing.id, {
+          is_active: true,
+          discount_price: scrapedProduct.discount_price,
+          original_price: scrapedProduct.original_price ?? existing.original_price,
+          discount_percentage: scrapedProduct.discount_percentage ?? existing.discount_percentage,
+          unit_info: scrapedProduct.unit_info || existing.unit_info,
+          image_url: imageUrl || scrapedProduct.image_url || existing.image_url,
+          image_storage_path: imagePath || existing.image_storage_path,
+          category_id: categoryId || existing.category_id,
+        } as Partial<Product>);
+        if (updated) {
+          logger.success(`Reactivated product: ${scrapedProduct.title}`);
+          return updated;
+        }
+      }
       // Update category if it changed (e.g., from 'overig' to a detected category)
       if (categoryId && existing.category_id !== categoryId) {
         const updated = await updateProduct(existing.id, { category_id: categoryId });

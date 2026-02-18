@@ -15,6 +15,7 @@ export async function getSupermarkets(): Promise<Supermarket[]> {
       .from('supermarkets')
       .select('*')
       .eq('is_active', true)
+      .order('is_online_only')
       .order('name');
 
     if (error) {

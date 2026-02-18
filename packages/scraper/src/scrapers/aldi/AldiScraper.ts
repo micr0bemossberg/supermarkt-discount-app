@@ -72,7 +72,7 @@ export class AldiScraper extends BaseScraper {
           'a[href*="/aanbiedingen/"], a[href*="/actie/"], [class*="offer-tile"], [class*="product-tile"]'
         );
 
-        for (const card of cards) {
+        for (const card of Array.from(cards)) {
           // Extract title from heading elements (h2, h3, h4) - these usually contain just the product name
           let title = '';
           const headingEl = card.querySelector('h3, h4, h2');

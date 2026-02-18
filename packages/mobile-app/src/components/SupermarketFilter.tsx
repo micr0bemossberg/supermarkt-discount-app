@@ -1,11 +1,12 @@
 /**
  * SupermarketFilter Component
  * Horizontal scrollable chips for filtering by supermarket
+ * Grouped into "Winkels" (physical stores) and "Online" sections
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Chip } from 'react-native-paper';
+import { Chip, Text } from 'react-native-paper';
 import { getSupermarkets } from '../services/supermarkets';
 import type { Supermarket } from '@supermarkt-deals/shared';
 
@@ -36,22 +37,27 @@ export const SupermarketFilter: React.FC<SupermarketFilterProps> = ({
     }
   };
 
+  const stores = useMemo(
+    () => supermarkets.filter((s) => !s.is_online_only),
+    [supermarkets]
+  );
+  const onlineShops = useMemo(
+    () => supermarkets.filter((s) => s.is_online_only),
+    [supermarkets]
+  );
+
   const handleToggle = (supermarketId: string) => {
     if (selectedIds.includes(supermarketId)) {
-      // Remove from selection
       onSelectionChange(selectedIds.filter((id) => id !== supermarketId));
     } else {
-      // Add to selection
       onSelectionChange([...selectedIds, supermarketId]);
     }
   };
 
   const handleSelectAll = () => {
     if (selectedIds.length === supermarkets.length) {
-      // Deselect all
       onSelectionChange([]);
     } else {
-      // Select all
       onSelectionChange(supermarkets.map((s) => s.id));
     }
   };
@@ -62,53 +68,79 @@ export const SupermarketFilter: React.FC<SupermarketFilterProps> = ({
 
   const allSelected = selectedIds.length === supermarkets.length || selectedIds.length === 0;
 
+  const renderChip = (supermarket: Supermarket) => {
+    const isSelected = selectedIds.includes(supermarket.id);
+    return (
+      <Chip
+        key={supermarket.id}
+        selected={isSelected}
+        onPress={() => handleToggle(supermarket.id)}
+        style={[styles.chip, isSelected && styles.chipSelected]}
+        textStyle={isSelected ? styles.chipTextSelected : undefined}
+      >
+        {supermarket.name}
+      </Chip>
+    );
+  };
+
   return (
     <View style={styles.container}>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
-        {/* All supermarkets chip */}
-        <Chip
-          selected={allSelected}
-          onPress={handleSelectAll}
-          style={[styles.chip, allSelected && styles.chipSelected]}
-          textStyle={allSelected ? styles.chipTextSelected : undefined}
+      {/* Winkels row */}
+      <View style={styles.row}>
+        <Text style={styles.label} variant="labelSmall">Winkels</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
         >
-          Alle
-        </Chip>
+          <Chip
+            selected={allSelected}
+            onPress={handleSelectAll}
+            style={[styles.chip, allSelected && styles.chipSelected]}
+            textStyle={allSelected ? styles.chipTextSelected : undefined}
+          >
+            Alle
+          </Chip>
+          {stores.map(renderChip)}
+        </ScrollView>
+      </View>
 
-        {/* Individual supermarket chips */}
-        {supermarkets.map((supermarket) => {
-          const isSelected = selectedIds.includes(supermarket.id);
-
-          return (
-            <Chip
-              key={supermarket.id}
-              selected={isSelected}
-              onPress={() => handleToggle(supermarket.id)}
-              style={[styles.chip, isSelected && styles.chipSelected]}
-              textStyle={isSelected ? styles.chipTextSelected : undefined}
-            >
-              {supermarket.name}
-            </Chip>
-          );
-        })}
-      </ScrollView>
+      {/* Online row */}
+      {onlineShops.length > 0 && (
+        <View style={styles.row}>
+          <Text style={styles.label} variant="labelSmall">Online</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+          >
+            {onlineShops.map(renderChip)}
+          </ScrollView>
+        </View>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    paddingVertical: 8,
+    paddingVertical: 4,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
   },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  label: {
+    paddingLeft: 16,
+    minWidth: 52,
+    color: '#666',
+  },
   scrollContent: {
-    paddingHorizontal: 16,
+    paddingRight: 16,
     gap: 8,
   },
   chip: {

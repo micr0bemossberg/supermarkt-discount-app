@@ -73,7 +73,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
             <IconButton
               icon={favorite ? 'heart' : 'heart-outline'}
               iconColor={favorite ? '#E74C3C' : '#666'}
-              size={20}
+              size={16}
               onPress={handleFavoriteToggle}
               style={styles.favoriteIconButton}
             />
@@ -126,14 +126,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 8,
-    marginVertical: 6,
+    marginHorizontal: 4,
+    marginVertical: 4,
     flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 160,
+    height: 120,
     backgroundColor: '#f5f5f5',
   },
   image: {
@@ -149,71 +151,83 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     color: '#999',
+    fontSize: 11,
   },
   discountBadge: {
     position: 'absolute',
-    top: 8,
-    left: 8,
+    top: 6,
+    left: 6,
     backgroundColor: '#E74C3C',
     borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   discountText: {
     color: '#fff',
     fontWeight: 'bold',
+    fontSize: 11,
   },
   favoriteButton: {
     position: 'absolute',
-    top: 4,
-    right: 4,
-    borderRadius: 20,
+    top: 2,
+    right: 2,
+    borderRadius: 16,
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    width: 32,
+    height: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   favoriteIconButton: {
     margin: 0,
   },
   supermarketBadge: {
     position: 'absolute',
-    bottom: 8,
-    left: 8,
+    bottom: 6,
+    left: 6,
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   supermarketText: {
     fontWeight: '600',
+    fontSize: 11,
   },
   content: {
-    paddingTop: 12,
-    paddingBottom: 12,
-    minHeight: 120,
+    paddingTop: 8,
+    paddingBottom: 8,
+    paddingHorizontal: 10,
   },
   title: {
-    marginBottom: 4,
-    lineHeight: 20,
+    marginBottom: 2,
+    lineHeight: 18,
+    fontSize: 13,
   },
   unitInfo: {
     color: '#666',
-    marginBottom: 8,
+    marginBottom: 4,
+    fontSize: 11,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
+    gap: 6,
+    marginTop: 4,
   },
   originalPrice: {
     textDecorationLine: 'line-through',
     color: '#999',
+    fontSize: 12,
   },
   discountPrice: {
     color: '#E74C3C',
     fontWeight: 'bold',
+    fontSize: 15,
   },
   validUntil: {
-    color: '#666',
-    marginTop: 4,
+    color: '#888',
+    marginTop: 2,
+    fontSize: 10,
   },
 });

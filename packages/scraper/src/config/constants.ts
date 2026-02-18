@@ -31,12 +31,22 @@ export const SCRAPER_CONFIG = {
 
 // Supermarket configurations
 export const SUPERMARKET_URLS: Record<SupermarketSlug, string> = {
+  // Physical stores
   ah: 'https://www.ah.nl/bonus',
   jumbo: 'https://www.jumbo.com/aanbiedingen',
   aldi: 'https://www.aldi.nl/aanbiedingen',
   vomar: 'https://www.vomar.nl/aanbiedingen',
   dirk: 'https://www.dirk.nl/aanbiedingen',
+  hoogvliet: 'https://www.hoogvliet.com/aanbiedingen',
   plus: 'https://www.plus.nl/aanbiedingen',
+  action: 'https://www.action.com/nl-nl/weekactie/',
+  kruidvat: 'https://www.kruidvat.nl/acties',
+  // Online only
+  flink: 'https://www.goflink.com/shop/nl-NL/',
+  picnic: 'https://www.picnic.app',
+  joybuy: 'https://www.joybuy.nl',
+  megafoodstunter: 'https://www.megafoodstunter.nl',
+  butlon: 'https://www.butlon.nl',
 };
 
 // Image processing
@@ -91,6 +101,12 @@ export const CATEGORY_KEYWORDS: Record<string, string> = {
   'rookworst': 'vlees-vis-vega',
   'shoarma': 'vlees-vis-vega',
   'hamburger': 'vlees-vis-vega',
+  'frikandel': 'vlees-vis-vega',
+  'kroket': 'vlees-vis-vega',
+  'bitterbal': 'vlees-vis-vega',
+  'loempia': 'vlees-vis-vega',
+  'saté': 'vlees-vis-vega',
+  'sate': 'vlees-vis-vega',
 
   // Zuivel & Eieren
   'melk': 'zuivel-eieren',

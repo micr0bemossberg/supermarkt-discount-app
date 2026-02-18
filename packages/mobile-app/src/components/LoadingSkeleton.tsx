@@ -37,19 +37,19 @@ export const ProductGridSkeleton: React.FC<{ count?: number }> = ({ count = 6 })
 
 const styles = StyleSheet.create({
   card: {
-    marginHorizontal: 8,
-    marginVertical: 6,
-    borderRadius: 8,
+    marginHorizontal: 4,
+    marginVertical: 4,
+    borderRadius: 10,
     overflow: 'hidden',
     backgroundColor: '#fff',
   },
   imageSkeleton: {
     width: '100%',
-    height: 160,
+    height: 120,
     backgroundColor: '#e0e0e0',
   },
   content: {
-    padding: 12,
+    padding: 10,
   },
   line: {
     height: 12,

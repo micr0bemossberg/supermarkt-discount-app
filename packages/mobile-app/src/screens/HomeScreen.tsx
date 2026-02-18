@@ -140,7 +140,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={refresh} />
         }
-        contentContainerStyle={products.length === 0 ? styles.emptyContent : undefined}
+        contentContainerStyle={[
+          styles.gridContent,
+          products.length === 0 && styles.emptyContent,
+        ]}
       />
 
       <FAB
@@ -159,6 +162,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  gridContent: {
+    paddingHorizontal: 4,
+    maxWidth: 600,
+    alignSelf: 'center',
+    width: '100%',
   },
   cardContainer: {
     flex: 1 / 2,

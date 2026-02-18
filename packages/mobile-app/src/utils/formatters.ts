@@ -90,6 +90,15 @@ export function getSupermarketColor(slug: string): string {
     lidl: '#0050AA',
     aldi: '#009FE3',
     plus: '#E30613',
+    dirk: '#ED7203',
+    vomar: '#ED1C24',
+    hoogvliet: '#E31937',
+    action: '#0071CE',
+    picnic: '#E4262A',
+    megafoodstunter: '#2ECC40',
+    butlon: '#1A1A2E',
+    flink: '#D9006C',
+    kruidvat: '#00A651',
   };
 
   return colors[slug] || '#666666';
