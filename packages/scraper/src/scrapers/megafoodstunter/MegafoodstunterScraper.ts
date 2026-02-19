@@ -1,24 +1,34 @@
 /**
  * Megafoodstunter Scraper
  * Scrapes discount products from megafoodstunter.nl
- * Elementor/WordPress site - all products displayed on the homepage
+ * WooCommerce site - products displayed on category pages
  *
- * Product card structure:
- *   .product-card
- *     .badge-korting  → "-44%"
- *     .badge-brand    → "HOMEKO"
- *     a.card-link     → product URL
- *       .product-img-wrap img → image
- *       .product-name  → "Kalfsvleeskroket Halal"
- *       .product-detail → "24 st × 90g"
- *       .price-doos    → "doos €18,95"
- *       .price-stuk    → "€0,79"
- *       .price-label   → "per stuk"
+ * Product card structure (li.product):
+ *   .product-inner
+ *     .mfst-discount-badge .mfs-kortingsbalk → "1+1 Gratis t/m 23-02 12:00"
+ *     .onsale                → "-48%"
+ *     img                    → product image
+ *     h3.woocommerce-loop-product__title → "Ciabatta 20×440 gram"
+ *     .mfst-cloud-content    → "20 stuks", "THT: ..."
+ *     .price-box.red-box     → original price (.old-price-label) + current price (.main-price)
+ *     .price-box.blue-box    → per-unit price
  */
 
 import { BaseScraper } from '../base/BaseScraper';
 import { CATEGORY_KEYWORDS } from '../../config/constants';
 import type { ScrapedProduct } from '@supermarkt-deals/shared';
+
+const CATEGORY_URLS = [
+  'https://megafoodstunter.nl/product-categorie/bakkerij/',
+  'https://megafoodstunter.nl/product-categorie/vlees/',
+  'https://megafoodstunter.nl/product-categorie/kip/',
+  'https://megafoodstunter.nl/product-categorie/snacks/',
+  'https://megafoodstunter.nl/product-categorie/patisserie/',
+  'https://megafoodstunter.nl/product-categorie/ijs/',
+  'https://megafoodstunter.nl/product-categorie/groente-en-fruit/groente/',
+  'https://megafoodstunter.nl/product-categorie/vegetarisch/',
+  'https://megafoodstunter.nl/product-categorie/aardappel-producten/',
+];
 
 export class MegafoodstunterScraper extends BaseScraper {
   constructor() {
@@ -47,131 +57,165 @@ export class MegafoodstunterScraper extends BaseScraper {
 
   protected async scrapeProducts(): Promise<ScrapedProduct[]> {
     const page = await this.initBrowser();
+    const allProducts: ScrapedProduct[] = [];
+    const { monday, sunday } = this.getWeekDates();
 
     try {
+      // Visit homepage first for cookies
       this.logger.info(`Navigating to ${this.baseUrl}...`);
       await page.goto(this.baseUrl, { waitUntil: 'domcontentloaded', timeout: 60000 });
       this.logger.success('Page loaded');
       await this.handleCookieConsent(page);
 
-      // Scroll to load all products (they're all on the homepage)
-      await this.scrollToLoad(page);
-
-      const productCards = await page.$$('.product-card');
-      this.logger.info(`Found ${productCards.length} product cards`);
-
-      const products: ScrapedProduct[] = [];
-      const { monday, sunday } = this.getWeekDates();
-
-      for (const card of productCards) {
+      // Scrape each category page
+      for (const catUrl of CATEGORY_URLS) {
         try {
-          // Product name
-          const nameEl = await card.$('.product-name');
-          const title = nameEl ? (await nameEl.textContent())?.trim() : null;
-          if (!title || title.length < 3) continue;
+          const catName = catUrl.split('/product-categorie/')[1]?.replace(/\//g, '');
+          this.logger.info(`Scraping category: ${catName}...`);
+          await this.randomDelay();
+          await page.goto(catUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.waitForTimeout(2000);
 
-          // Box price (the actual price you pay for the box/doos)
-          let discountPrice = 0;
-          const priceDoosEl = await card.$('.price-doos');
-          if (priceDoosEl) {
-            const doosText = (await priceDoosEl.textContent())?.trim() || '';
-            const match = doosText.match(/(\d+)[,.](\d{2})/);
-            if (match) {
-              discountPrice = parseFloat(`${match[1]}.${match[2]}`);
+          const products = await page.evaluate(() => {
+            const results: Array<{
+              title: string;
+              discountPrice: number;
+              originalPrice: number | null;
+              discountPercentage: number | null;
+              unitInfo: string | null;
+              dealType: string | null;
+              imageUrl: string;
+              productUrl: string;
+            }> = [];
+
+            const cards = document.querySelectorAll('li.product');
+            for (const card of Array.from(cards)) {
+              try {
+                // Title
+                const titleEl = card.querySelector('h3.woocommerce-loop-product__title, .product-loop-title h3');
+                const title = titleEl?.textContent?.trim() || '';
+                if (!title || title.length < 3) continue;
+
+                // Current price from .main-price
+                let discountPrice = 0;
+                const mainPriceEl = card.querySelector('.main-price');
+                if (mainPriceEl) {
+                  const intPart = mainPriceEl.querySelector('.price-int')?.textContent?.trim()?.replace('.', '') || '0';
+                  const decPart = mainPriceEl.querySelector('.price-dec')?.textContent?.trim() || '00';
+                  discountPrice = parseFloat(`${intPart}.${decPart}`);
+                }
+                if (discountPrice <= 0) continue;
+
+                // Original price
+                let originalPrice: number | null = null;
+                const oldPriceEl = card.querySelector('.old-price-label');
+                if (oldPriceEl) {
+                  const oldText = oldPriceEl.textContent?.trim() || '';
+                  const match = oldText.match(/(\d+)[,.](\d{2})/);
+                  if (match) originalPrice = parseFloat(`${match[1]}.${match[2]}`);
+                }
+
+                // Discount percentage
+                let discountPercentage: number | null = null;
+                const saleEl = card.querySelector('.onsale');
+                if (saleEl) {
+                  const saleText = saleEl.textContent?.trim() || '';
+                  const match = saleText.match(/(\d+)/);
+                  if (match) discountPercentage = parseInt(match[1]);
+                }
+
+                // Deal type
+                let dealType: string | null = null;
+                const dealEl = card.querySelector('.mfs-kortingsbalk');
+                if (dealEl) {
+                  dealType = dealEl.textContent?.trim() || null;
+                }
+
+                // Unit info
+                const clouds = card.querySelectorAll('.mfst-cloud-content');
+                const unitParts: string[] = [];
+                for (const cloud of Array.from(clouds)) {
+                  const text = cloud.textContent?.trim() || '';
+                  if (text && !text.includes('Spaar') && !text.includes('Punten')) {
+                    unitParts.push(text);
+                  }
+                }
+
+                // Per-unit price — append to unit info
+                const unitPriceEl = card.querySelector('.unit-price');
+                if (unitPriceEl) {
+                  const uIntPart = unitPriceEl.querySelector('.price-int')?.textContent?.trim()?.replace('.', '') || '';
+                  const uDecPart = unitPriceEl.querySelector('.price-dec')?.textContent?.trim() || '';
+                  if (uIntPart) {
+                    const unitLabel = card.querySelector('.unit-label')?.textContent?.trim() || 'per stuk';
+                    unitParts.push(`€${uIntPart}.${uDecPart} ${unitLabel}`);
+                  }
+                }
+
+                const unitInfo = unitParts.length > 0 ? unitParts.join(' · ') : null;
+
+                // Image
+                const img = card.querySelector('.product-image img');
+                const imageUrl = img?.getAttribute('src') || '';
+
+                // Product URL
+                const link = card.querySelector('a.product-loop-title, a[href*="/product/"]') as HTMLAnchorElement;
+                const productUrl = link?.href || '';
+
+                results.push({
+                  title,
+                  discountPrice,
+                  originalPrice,
+                  discountPercentage,
+                  unitInfo,
+                  dealType,
+                  imageUrl,
+                  productUrl,
+                });
+              } catch {}
             }
-          }
-          if (discountPrice <= 0) continue;
-
-          // Discount percentage from badge
-          let discountPercentage: number | undefined;
-          const badgeEl = await card.$('.badge-korting');
-          if (badgeEl) {
-            const badgeText = (await badgeEl.textContent())?.trim() || '';
-            const match = badgeText.match(/(\d+)/);
-            if (match) discountPercentage = parseInt(match[1]);
-          }
-
-          // Compute original price from box price + discount percentage
-          let originalPrice: number | undefined;
-          if (discountPercentage && discountPercentage > 0 && discountPercentage < 100) {
-            originalPrice = Math.round((discountPrice / (1 - discountPercentage / 100)) * 100) / 100;
-          }
-
-          // Unit/detail info — append per-stuk price if available
-          let unitInfo: string | undefined;
-          const detailEl = await card.$('.product-detail');
-          if (detailEl) {
-            unitInfo = (await detailEl.textContent())?.trim() || undefined;
-          }
-          const priceStukEl = await card.$('.price-stuk');
-          if (priceStukEl) {
-            const stukText = (await priceStukEl.textContent())?.trim();
-            if (stukText) {
-              const labelEl = await card.$('.price-label');
-              const labelText = labelEl ? (await labelEl.textContent())?.trim() : 'per stuk';
-              unitInfo = unitInfo ? `${unitInfo} · ${stukText} ${labelText}` : `${stukText} ${labelText}`;
-            }
-          }
-
-          // Brand
-          const brandEl = await card.$('.badge-brand');
-          const brand = brandEl ? (await brandEl.textContent())?.trim() : null;
-
-          // Image
-          let imageUrl: string | undefined;
-          const img = await card.$('.product-img-wrap img');
-          if (img) {
-            const src = (await img.getAttribute('src')) || (await img.getAttribute('data-src'));
-            if (src && src.startsWith('http')) imageUrl = src;
-          }
-
-          // Product URL
-          let productUrl: string | undefined;
-          const link = await card.$('a.card-link');
-          if (link) {
-            const href = await link.getAttribute('href');
-            if (href) productUrl = href;
-          }
-
-          // Build full title with brand
-          const fullTitle = brand ? `${brand} ${title}` : title;
-
-          products.push({
-            title: fullTitle,
-            discount_price: discountPrice,
-            original_price: originalPrice,
-            discount_percentage: discountPercentage,
-            unit_info: unitInfo,
-            valid_from: monday,
-            valid_until: sunday,
-            category_slug: this.detectCategory(fullTitle),
-            product_url: productUrl,
-            image_url: imageUrl,
+            return results;
           });
 
-          this.logger.debug(`Scraped: ${fullTitle} - €${discountPrice}`);
+          for (const p of products) {
+            const fullTitle = p.dealType
+              ? `${p.title} (${p.dealType.replace(/\s+t\/m.*/, '')})`
+              : p.title;
+
+            allProducts.push({
+              title: fullTitle,
+              discount_price: p.discountPrice,
+              original_price: p.originalPrice || undefined,
+              discount_percentage: p.discountPercentage || undefined,
+              unit_info: p.unitInfo || undefined,
+              valid_from: monday,
+              valid_until: sunday,
+              category_slug: this.detectCategory(p.title),
+              product_url: p.productUrl || undefined,
+              image_url: p.imageUrl || undefined,
+            });
+          }
+
+          this.logger.info(`  Found ${products.length} products in ${catName}`);
         } catch (err) {
-          this.logger.warning('Failed to parse product card:', err);
+          this.logger.warning(`  Failed to scrape category: ${catUrl}`);
         }
       }
 
-      this.logger.success(`Total: ${products.length} products from Megafoodstunter`);
-      return products;
+      // Deduplicate by title
+      const seen = new Set<string>();
+      const deduped = allProducts.filter(p => {
+        const key = p.title.toLowerCase();
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+
+      this.logger.success(`Total: ${deduped.length} products from Megafoodstunter`);
+      return deduped;
     } catch (error) {
       this.logger.error('Error', error);
       throw error;
-    }
-  }
-
-  private async scrollToLoad(page: any): Promise<void> {
-    this.logger.info('Scrolling to load all products...');
-    let previousHeight = 0;
-    for (let i = 0; i < 20; i++) {
-      const currentHeight = await page.evaluate(() => document.body.scrollHeight);
-      if (currentHeight === previousHeight && i > 0) break;
-      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(1500);
-      previousHeight = currentHeight;
     }
   }
 }
