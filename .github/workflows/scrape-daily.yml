@@ -1,0 +1,115 @@
+name: Daily Scraper Pipeline
+
+on:
+  schedule:
+    # Run once daily at 05:00 UTC (07:00 CET winter, 07:00 CEST summer)
+    - cron: '0 5 * * *'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Chromium-based scrapers
+          - supermarket: ah
+            browser: chromium
+          - supermarket: jumbo
+            browser: chromium
+          - supermarket: aldi
+            browser: chromium
+          - supermarket: dirk
+            browser: chromium
+          - supermarket: vomar
+            browser: chromium
+          - supermarket: hoogvliet
+            browser: chromium
+          - supermarket: megafoodstunter
+            browser: chromium
+          - supermarket: butlon
+            browser: chromium
+          - supermarket: action
+            browser: chromium
+          # Firefox-based scrapers (TLS fingerprinting blocks Chromium)
+          - supermarket: kruidvat
+            browser: firefox
+          - supermarket: joybuy
+            browser: firefox
+          # API-only scrapers (no browser needed)
+          - supermarket: picnic
+            browser: none
+
+    name: Scrape ${{ matrix.supermarket }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright Chromium
+        if: matrix.browser == 'chromium'
+        run: npx playwright install chromium --with-deps
+        working-directory: packages/scraper
+
+      - name: Install Playwright Firefox
+        if: matrix.browser == 'firefox'
+        run: npx playwright install firefox --with-deps
+        working-directory: packages/scraper
+
+      - name: Run ${{ matrix.supermarket }} scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+          HEADLESS: true
+          SCREENSHOT_ON_ERROR: true
+          PICNIC_EMAIL: ${{ matrix.supermarket == 'picnic' && secrets.PICNIC_EMAIL || '' }}
+          PICNIC_PASSWORD: ${{ matrix.supermarket == 'picnic' && secrets.PICNIC_PASSWORD || '' }}
+        run: npm run scrape -- --supermarket=${{ matrix.supermarket }}
+        working-directory: packages/scraper
+
+      - name: Upload error screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshots-${{ matrix.supermarket }}-${{ github.run_number }}
+          path: packages/scraper/screenshots/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [scrape]
+    if: always()
+
+    name: Cleanup expired products
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run cleanup
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: npm run scrape -- cleanup
+        working-directory: packages/scraper
