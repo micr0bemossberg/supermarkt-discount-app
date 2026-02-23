@@ -3,9 +3,9 @@
  * Main screen showing product grid with filters
  */
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { Appbar, FAB } from 'react-native-paper';
+import { Appbar, FAB, Searchbar } from 'react-native-paper';
 import { useProductsStore } from '../stores/productsStore';
 import { ProductCard } from '../components/ProductCard';
 import { SupermarketFilter } from '../components/SupermarketFilter';
@@ -31,6 +31,9 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     setFilters,
   } = useProductsStore();
 
+  const [searchText, setSearchText] = useState('');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   useEffect(() => {
     // Initial load
     fetchProducts();
@@ -48,8 +51,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate('ProductDetail', { productId });
   };
 
-  const handleSearchPress = () => {
-    navigation.navigate('Search');
+  const handleSearchChange = (text: string) => {
+    setSearchText(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setFilters({ search: text || undefined });
+    }, 400);
   };
 
   const handleEndReached = () => {
@@ -72,6 +79,15 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   const renderHeader = () => (
     <>
+      <View style={styles.searchContainer}>
+        <Searchbar
+          placeholder="Zoek aanbiedingen..."
+          value={searchText}
+          onChangeText={handleSearchChange}
+          style={styles.searchbar}
+          inputStyle={styles.searchInput}
+        />
+      </View>
       <SupermarketFilter
         selectedIds={filters.supermarket_ids || []}
         onSelectionChange={handleSupermarketFilterChange}
@@ -124,7 +140,6 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     <View style={styles.container}>
       <Appbar.Header>
         <Appbar.Content title="SupermarktDeals" />
-        <Appbar.Action icon="magnify" onPress={handleSearchPress} />
       </Appbar.Header>
 
       <FlatList
@@ -162,6 +177,20 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  searchContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+    backgroundColor: '#fff',
+  },
+  searchbar: {
+    elevation: 0,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  searchInput: {
+    fontSize: 14,
   },
   gridContent: {
     paddingHorizontal: 4,

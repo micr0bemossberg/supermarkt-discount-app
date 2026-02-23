@@ -23,4 +23,9 @@ export type CategorySlug =
   | 'snoep-chips'
   | 'persoonlijke-verzorging'
   | 'huishouden'
+  | 'baby-kind'
+  | 'elektronica'
+  | 'wonen-keuken'
+  | 'sport-vrije-tijd'
+  | 'kleding-mode'
   | 'overig';

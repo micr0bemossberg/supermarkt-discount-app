@@ -47,7 +47,10 @@ export class AHScraper extends BaseScraper {
       if (lowerCat.includes('groente') || lowerCat.includes('fruit') || lowerCat.includes('aardappel')) return 'groente-fruit';
       if (lowerCat.includes('diepvries')) return 'diepvries';
       if (lowerCat.includes('fris') || lowerCat.includes('sap') || lowerCat.includes('water') || lowerCat.includes('drank') || lowerCat.includes('bier') || lowerCat.includes('wijn')) return 'dranken';
-      if (lowerCat.includes('ontbijt') || lowerCat.includes('pasta') || lowerCat.includes('rijst') || lowerCat.includes('soep') || lowerCat.includes('saus')) return 'ontbijt-granen-beleg';
+      if (lowerCat.includes('pasta') || lowerCat.includes('rijst') || lowerCat.includes('soep') || lowerCat.includes('saus') || lowerCat.includes('conserven')) return 'bewaren';
+      if (lowerCat.includes('ontbijt') || lowerCat.includes('granen') || lowerCat.includes('beleg')) return 'ontbijt';
+      if (lowerCat.includes('baby') || lowerCat.includes('kind')) return 'baby-kind';
+      if (lowerCat.includes('elektr') || lowerCat.includes('batterij')) return 'elektronica';
       if (lowerCat.includes('snoep') || lowerCat.includes('koek') || lowerCat.includes('chips') || lowerCat.includes('noot')) return 'snoep-chips';
       if (lowerCat.includes('schoonmaak') || lowerCat.includes('wasmiddel') || lowerCat.includes('huishoud')) return 'huishouden';
       if (lowerCat.includes('verzorging') || lowerCat.includes('tandpasta') || lowerCat.includes('shampoo')) return 'persoonlijke-verzorging';

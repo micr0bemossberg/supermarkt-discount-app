@@ -176,7 +176,7 @@ export class KruidvatScraper extends BaseScraper {
 
       // For individual product tiles, we can scrape the product page directly
       // But for efficiency, let's first get products from top deal pages
-      const maxDealPages = 15;
+      const maxDealPages = 10;
       const dealPagesToVisit = dealPageTiles.slice(0, maxDealPages);
 
       // Scrape deal pages
@@ -208,33 +208,6 @@ export class KruidvatScraper extends BaseScraper {
         } catch (err) {
           this.logger.warning(`  Failed to scrape deal page: ${tile.title}`);
         }
-      }
-
-      // Also create entries for remaining tiles that we didn't visit
-      const visitedCodes = new Set(dealPagesToVisit.map(t => t.code));
-      for (const tile of tiles) {
-        if (visitedCodes.has(tile.code)) continue;
-        if (!tile.localizedURLLink) continue;
-
-        const dealType = this.parseDealType(tile.localizedURLLink);
-        const price = this.parsePrice(tile.localizedURLLink);
-
-        // Only include tiles where we can extract a price or deal type
-        if (!dealType && price <= 0) continue;
-
-        const imageUrl = tile.image?.url
-          ? (tile.image.url.startsWith('http') ? tile.image.url : `https://www.kruidvat.nl${tile.image.url}`)
-          : undefined;
-
-        products.push({
-          title: dealType ? `${tile.title} (${dealType})` : tile.title,
-          discount_price: price > 0 ? price : 0.01, // Nominal price for deals without explicit price
-          valid_from: monday,
-          valid_until: sunday,
-          category_slug: this.detectCategory(tile.title),
-          product_url: `https://www.kruidvat.nl${tile.localizedURLLink}`,
-          image_url: imageUrl,
-        });
       }
 
       // Deduplicate by title

@@ -78,6 +78,7 @@ export const CategoryChips: React.FC<CategoryChipsProps> = ({
               onPress={() => handleSelect(category.id)}
               style={[styles.chip, isSelected && styles.chipSelected]}
               textStyle={isSelected ? styles.chipTextSelected : undefined}
+              icon={category.icon_name || undefined}
             >
               {category.name}
             </Chip>
