@@ -367,7 +367,7 @@ export class KruidvatScraper extends BaseScraper {
   /**
    * Extract a single product's data from an individual product page (/p/ URL).
    */
-  private async extractSingleProduct(page: Page, url: string): Promise<{
+  private async extractSingleProduct(page: Page, _url: string): Promise<{
     title: string;
     price: number;
     originalPrice: number | null;
