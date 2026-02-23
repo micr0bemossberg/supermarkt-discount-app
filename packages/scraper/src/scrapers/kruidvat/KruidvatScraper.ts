@@ -163,8 +163,7 @@ export class KruidvatScraper extends BaseScraper {
         return await this.scrapeDomTiles(page, monday, sunday);
       }
 
-      // Visit top deal pages to extract individual products with prices
-      // Limit to ~20 deal pages to keep runtime reasonable
+      // Visit ALL deal pages to extract individual products with prices
       const tiles = Array.from(uniqueTiles.values()).filter(t => t.available !== false);
       this.logger.info(`Processing ${tiles.length} available deal tiles...`);
 
@@ -174,13 +173,8 @@ export class KruidvatScraper extends BaseScraper {
 
       this.logger.info(`  ${productPageTiles.length} individual product tiles, ${dealPageTiles.length} deal page tiles`);
 
-      // For individual product tiles, we can scrape the product page directly
-      // But for efficiency, let's first get products from top deal pages
-      const maxDealPages = 10;
-      const dealPagesToVisit = dealPageTiles.slice(0, maxDealPages);
-
-      // Scrape deal pages
-      for (const tile of dealPagesToVisit) {
+      // Visit ALL deal pages (each contains multiple products with real prices)
+      for (const tile of dealPageTiles) {
         const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
         try {
           await this.randomDelay();
@@ -207,6 +201,35 @@ export class KruidvatScraper extends BaseScraper {
           this.logger.info(`  Got ${pageProducts.length} products from "${tile.title}"`);
         } catch (err) {
           this.logger.warning(`  Failed to scrape deal page: ${tile.title}`);
+        }
+      }
+
+      // Visit individual product pages (/p/ links) to get real product data
+      for (const tile of productPageTiles) {
+        const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
+        try {
+          await this.randomDelay();
+          this.logger.info(`Visiting product: ${tile.title}...`);
+          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+          await page.waitForTimeout(2000);
+
+          const productData = await this.extractSingleProduct(page, url);
+          if (productData && productData.price > 0) {
+            const dealType = this.parseDealType(tile.localizedURLLink);
+            products.push({
+              title: dealType ? `${productData.title} (${dealType})` : productData.title,
+              discount_price: productData.price,
+              original_price: productData.originalPrice || undefined,
+              valid_from: monday,
+              valid_until: sunday,
+              category_slug: this.detectCategory(productData.title),
+              product_url: url,
+              image_url: productData.imageUrl || undefined,
+            });
+            this.logger.info(`  Got product: ${productData.title}`);
+          }
+        } catch (err) {
+          this.logger.warning(`  Failed to scrape product page: ${tile.title}`);
         }
       }
 
@@ -342,6 +365,58 @@ export class KruidvatScraper extends BaseScraper {
   }
 
   /**
+   * Extract a single product's data from an individual product page (/p/ URL).
+   */
+  private async extractSingleProduct(page: Page, url: string): Promise<{
+    title: string;
+    price: number;
+    originalPrice: number | null;
+    imageUrl: string;
+  } | null> {
+    return await page.evaluate(() => {
+      // Title from product detail page
+      const titleEl = document.querySelector('h1.product-title, h1[class*="product"], .pdp-header__title');
+      const title = titleEl?.textContent?.trim() || '';
+      if (!title || title.length < 3) return null;
+
+      // Price from pricebadge on product page
+      let price = 0;
+      const priceBadge = document.querySelector('.pricebadge');
+      if (priceBadge) {
+        const newPriceEl = priceBadge.querySelector('.pricebadge__new-price .pricetext, .pricebadge__price .pricetext');
+        if (newPriceEl) {
+          const decimal = newPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
+          const fractional = newPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
+          price = parseFloat(`${decimal}.${fractional}`);
+        }
+        if (price <= 0) {
+          const anyPrice = priceBadge.querySelector('.pricetext');
+          if (anyPrice) {
+            const decimal = anyPrice.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
+            const fractional = anyPrice.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
+            price = parseFloat(`${decimal}.${fractional}`);
+          }
+        }
+      }
+
+      // Original price
+      let originalPrice: number | null = null;
+      const oldPriceEl = document.querySelector('.pricebadge__old-price .pricetext');
+      if (oldPriceEl) {
+        const decimal = oldPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
+        const fractional = oldPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
+        originalPrice = parseFloat(`${decimal}.${fractional}`);
+      }
+
+      // Image
+      const img = document.querySelector('.product-image img, img[class*="product-detail"]');
+      const imageUrl = img?.getAttribute('src') || '';
+
+      return { title, price, originalPrice, imageUrl };
+    });
+  }
+
+  /**
    * Fallback: scrape promotion tiles directly from the DOM.
    */
   private async scrapeDomTiles(page: Page, monday: Date, sunday: Date): Promise<ScrapedProduct[]> {
@@ -374,13 +449,16 @@ export class KruidvatScraper extends BaseScraper {
       const dealType = this.parseDealType(tile.href);
       const price = this.parsePrice(tile.href);
 
+      // Skip products without a real price - don't use placeholders
+      if (price <= 0) continue;
+
       const imageUrl = tile.src
         ? (tile.src.startsWith('http') ? tile.src : `https://www.kruidvat.nl${tile.src}`)
         : undefined;
 
       products.push({
         title: dealType ? `${title} (${dealType})` : title,
-        discount_price: price > 0 ? price : 0.01,
+        discount_price: price,
         valid_from: monday,
         valid_until: sunday,
         category_slug: this.detectCategory(title),

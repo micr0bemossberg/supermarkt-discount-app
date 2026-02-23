@@ -22,6 +22,23 @@ const VEGA_KEYWORDS = [
   'seitan', 'beyond', 'impossible', 'groenteburger', 'bonenkroket',
 ];
 
+// Exclude female-specific products (make-up, perfume, lingerie, skincare, etc.)
+const FEMALE_EXCLUDE_KEYWORDS = [
+  'mascara', 'lippenstift', 'lipstick', 'lipgloss', 'lip gloss',
+  'foundation', 'concealer', 'blush', 'rouge', 'oogschaduw', 'eyeshadow',
+  'eyeliner', 'wenkbrauw', 'make-up', 'make up', 'makeup',
+  'nagellak', 'nail polish', 'gelnagel',
+  'parfum', 'perfume', 'eau de toilette', 'eau de parfum', 'body mist',
+  'lingerie', 'beha', 'bh ', 'string', 'slip dames',
+  'tampon', 'maandverband', 'inlegkruisje',
+  'gezichtscrème', 'gezichtscreme', 'dagcrème', 'dagcreme', 'nachtcrème', 'nachtcreme',
+  'serum', 'toner', 'micellair', 'micellar', 'reinigingsmelk',
+  'gezichtsmasker', 'face mask', 'sheet mask', 'peel off',
+  'anti-rimpel', 'anti rimpel', 'retinol', 'hyaluron',
+  'bb cream', 'cc cream', 'primer',
+  'wax strip', 'ontharings', 'epileer', 'epilator',
+];
+
 /**
  * Filter out non-halal meat products.
  * Keeps: fish (always halal), explicitly halal-labeled, and vegan/vegetarian products.
@@ -53,6 +70,16 @@ function filterHalalOnly(products: ProductWithRelations[]): ProductWithRelations
 
     // Filter out non-halal meat
     return false;
+  });
+}
+
+/**
+ * Filter out female-specific products (make-up, perfume, lingerie, skincare, etc.)
+ */
+function filterExcludeFemale(products: ProductWithRelations[]): ProductWithRelations[] {
+  return products.filter((product) => {
+    const title = product.title.toLowerCase();
+    return !FEMALE_EXCLUDE_KEYWORDS.some((kw) => title.includes(kw));
   });
 }
 
@@ -107,7 +134,8 @@ export async function getProducts(
       throw error;
     }
 
-    return filterHalalOnly((data || []) as ProductWithRelations[]);
+    const halal = filterHalalOnly((data || []) as ProductWithRelations[]);
+    return filterExcludeFemale(halal);
   } catch (error) {
     console.error('Failed to fetch products:', error);
     throw error;
