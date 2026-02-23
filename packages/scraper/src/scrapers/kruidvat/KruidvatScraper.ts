@@ -173,8 +173,9 @@ export class KruidvatScraper extends BaseScraper {
 
       this.logger.info(`  ${productPageTiles.length} individual product tiles, ${dealPageTiles.length} deal page tiles`);
 
-      // Visit ALL deal pages (each contains multiple products with real prices)
-      for (const tile of dealPageTiles) {
+      // Visit top deal pages (limit to 10 to keep runtime reasonable)
+      const maxDealPages = 10;
+      for (const tile of dealPageTiles.slice(0, maxDealPages)) {
         const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
         try {
           await this.randomDelay();
@@ -204,8 +205,9 @@ export class KruidvatScraper extends BaseScraper {
         }
       }
 
-      // Visit individual product pages (/p/ links) to get real product data
-      for (const tile of productPageTiles) {
+      // Visit individual product pages (/p/ links) to get real product data (limit to 20)
+      const maxProductPages = 20;
+      for (const tile of productPageTiles.slice(0, maxProductPages)) {
         const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
         try {
           await this.randomDelay();
