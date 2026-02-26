@@ -112,19 +112,48 @@ export class ButlonScraper extends BaseScraper {
         if (!title || title.length < 3) continue;
 
         // Prices from the price area
+        // Butlon shows: "ELDERS X,XX" (strikethrough) + deal price
+        // The deal price may be split across elements (e.g. "2," in one, "99" in another)
         let discountPrice = 0;
         let originalPrice: number | undefined;
 
         const priceArea = await tile.$('.product-tile__price');
         if (priceArea) {
           const priceText = (await priceArea.textContent())?.trim() || '';
-          // Extract all number pairs (e.g. "4,99" and "0,99")
+
+          // Extract all number pairs (e.g. "7,98" and "2,99")
           const allPrices = [...priceText.matchAll(/(\d+)[,.](\d{2})/g)];
+
           if (allPrices.length >= 2) {
+            // First price = ELDERS/original, Last price = deal price
             originalPrice = parseFloat(`${allPrices[0][1]}.${allPrices[0][2]}`);
-            discountPrice = parseFloat(`${allPrices[1][1]}.${allPrices[1][2]}`);
+            discountPrice = parseFloat(`${allPrices[allPrices.length - 1][1]}.${allPrices[allPrices.length - 1][2]}`);
           } else if (allPrices.length === 1) {
-            discountPrice = parseFloat(`${allPrices[0][1]}.${allPrices[0][2]}`);
+            // Only one price found in .product-tile__price — might be the ELDERS price
+            // Check if there's a separate sale price element
+            const saleEl = await tile.$('.product-tile__sale-price, .product-tile__current-price, [class*="sale"], [class*="current"]');
+            if (saleEl) {
+              const saleText = (await saleEl.textContent())?.trim() || '';
+              const saleMatch = saleText.match(/(\d+)[,.](\d{2})/);
+              if (saleMatch) {
+                originalPrice = parseFloat(`${allPrices[0][1]}.${allPrices[0][2]}`);
+                discountPrice = parseFloat(`${saleMatch[1]}.${saleMatch[2]}`);
+              }
+            }
+            if (discountPrice <= 0) {
+              discountPrice = parseFloat(`${allPrices[0][1]}.${allPrices[0][2]}`);
+            }
+          }
+
+          // Also try: price might be formatted as "2,\n99" with split elements
+          if (allPrices.length < 2 && discountPrice <= 0) {
+            // Join all digits and try to parse
+            const digits = priceText.replace(/[^\d,.\s]/g, '').trim();
+            const splitPrices = [...digits.matchAll(/(\d+)[,.](\d{2})/g)];
+            if (splitPrices.length >= 2) {
+              originalPrice = parseFloat(`${splitPrices[0][1]}.${splitPrices[0][2]}`);
+              discountPrice = parseFloat(`${splitPrices[splitPrices.length - 1][1]}.${splitPrices[splitPrices.length - 1][2]}`);
+            }
           }
         }
 

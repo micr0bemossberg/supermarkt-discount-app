@@ -24,6 +24,7 @@ interface PromoTile {
   storeOnly?: boolean;
   dayWeekendDeal?: boolean;
   available?: boolean;
+  dealCategory?: string; // deal type from API category (e.g. "1+1 gratis", "50% korting")
 }
 
 export class KruidvatScraper extends BaseScraper {
@@ -51,6 +52,13 @@ export class KruidvatScraper extends BaseScraper {
     return { monday, sunday };
   }
 
+  private normalizeImageUrl(url: string | undefined): string | undefined {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/')) return `https://www.kruidvat.nl${url}`;
+    return undefined;
+  }
+
   /**
    * Parse deal type from URL slug.
    * E.g. "/a/5203081/loreal-paris-11-gratis" → "1+1 gratis"
@@ -75,6 +83,45 @@ export class KruidvatScraper extends BaseScraper {
     // "2e-voor-1-00" → "2e voor €1,00"
     const tweedeMatch = slug.match(/2e-voor-(\d+)-(\d{2})/);
     if (tweedeMatch) return `2e voor €${tweedeMatch[1]},${tweedeMatch[2]}`;
+    return null;
+  }
+
+  /**
+   * Extract deal type from tile title text as fallback when URL parsing fails.
+   * E.g. "Kruidvat vitaminen 1+1 gratis" → "1+1 gratis"
+   *      "AH Pasta 2e halve prijs" → "2e halve prijs"
+   */
+  private parseDealTypeFromTitle(title: string): string | null {
+    const lower = title.toLowerCase();
+    // "1+1 gratis"
+    if (lower.includes('1+1 gratis') || lower.includes('1 + 1 gratis')) return '1+1 gratis';
+    // "2+1 gratis", "2+3 gratis", etc.
+    const plusGratis = lower.match(/(\d)\s*\+\s*(\d)\s*gratis/);
+    if (plusGratis) return `${plusGratis[1]}+${plusGratis[2]} gratis`;
+    // "2e halve prijs"
+    if (lower.includes('2e halve prijs')) return '2e halve prijs';
+    // "2e gratis"
+    if (lower.includes('2e gratis')) return '2e gratis';
+    // "3e gratis"
+    if (lower.includes('3e gratis')) return '3e gratis';
+    // "XX% korting"
+    const kortingMatch = lower.match(/(\d+)\s*%\s*korting/);
+    if (kortingMatch) return `${kortingMatch[1]}% korting`;
+    // "voor €X,XX" or "voor X.XX"
+    const voorMatch = lower.match(/voor\s*€?\s*(\d+)[,.](\d{2})/);
+    if (voorMatch) return `voor €${voorMatch[1]},${voorMatch[2]}`;
+    // "2e voor €X,XX"
+    const tweedeVoor = lower.match(/2e\s+voor\s*€?\s*(\d+)[,.](\d{2})/);
+    if (tweedeVoor) return `2e voor €${tweedeVoor[1]},${tweedeVoor[2]}`;
+    // "alle ... X.XX" or "alle ... €X,XX"
+    const alleMatch = lower.match(/alle\s+.*?(\d+)[,.](\d{2})/);
+    if (alleMatch) return `alle voor €${alleMatch[1]},${alleMatch[2]}`;
+    // Generic "gratis" mention
+    if (lower.includes('gratis')) return 'gratis';
+    // "actie" or "actieprijs"
+    if (lower.includes('actieprijs')) return 'actieprijs';
+    // "sale" or "deal"
+    if (lower.includes('sale') || lower.includes('deal')) return 'aanbieding';
     return null;
   }
 
@@ -129,7 +176,11 @@ export class KruidvatScraper extends BaseScraper {
               if (tab.categories) {
                 for (const cat of tab.categories) {
                   if (cat.promotionTiles) {
-                    promoTiles.push(...cat.promotionTiles);
+                    // Preserve the deal category name (e.g. "1+1 gratis", "2e halve prijs")
+                    const dealCategory = cat.title || cat.name || '';
+                    for (const tile of cat.promotionTiles) {
+                      promoTiles.push({ ...tile, dealCategory });
+                    }
                   }
                 }
               }
@@ -173,8 +224,18 @@ export class KruidvatScraper extends BaseScraper {
 
       this.logger.info(`  ${productPageTiles.length} individual product tiles, ${dealPageTiles.length} deal page tiles`);
 
-      // Visit top deal pages (limit to 10 to keep runtime reasonable)
-      const maxDealPages = 10;
+      // Log deal categories found
+      const dealCategories = new Map<string, number>();
+      for (const t of tiles) {
+        const cat = t.dealCategory || 'unknown';
+        dealCategories.set(cat, (dealCategories.get(cat) || 0) + 1);
+      }
+      for (const [cat, count] of dealCategories) {
+        this.logger.info(`  Deal category: "${cat}" (${count} tiles)`);
+      }
+
+      // Visit deal pages (cap at 100 to keep runtime reasonable ~10min)
+      const maxDealPages = Math.min(dealPageTiles.length, 100);
       for (const tile of dealPageTiles.slice(0, maxDealPages)) {
         const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
         try {
@@ -183,10 +244,27 @@ export class KruidvatScraper extends BaseScraper {
           await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
           await page.waitForTimeout(3000);
 
-          const pageProducts = await this.extractProductsFromDealPage(page);
-          const dealType = this.parseDealType(tile.localizedURLLink);
+          const result = await this.extractProductsFromDealPage(page);
 
-          for (const p of pageProducts) {
+          // Skip expired deals
+          if (result.expired) {
+            this.logger.info(`  Skipping expired deal: ${tile.title}`);
+            continue;
+          }
+
+          // Deal type priority: page <h1> > URL slug > tile title
+          const dealType = result.pageDealType
+            || this.parseDealType(tile.localizedURLLink)
+            || this.parseDealTypeFromTitle(tile.title);
+
+          // Card requirement: from page h1 or API deal category
+          const isCardDeal = result.requiresCard || tile.dealCategory?.toLowerCase().includes('kaart') || false;
+
+          for (const p of result.products) {
+            // Skip products with no deal indication: no deal type AND no original price
+            if (!dealType && !p.originalPrice) {
+              continue;
+            }
             products.push({
               title: dealType ? `${p.title} (${dealType})` : p.title,
               discount_price: p.price,
@@ -195,18 +273,19 @@ export class KruidvatScraper extends BaseScraper {
               valid_until: sunday,
               category_slug: this.detectCategory(p.title),
               product_url: p.url || undefined,
-              image_url: p.imageUrl || undefined,
+              image_url: this.normalizeImageUrl(p.imageUrl),
+              requires_card: isCardDeal,
             });
           }
 
-          this.logger.info(`  Got ${pageProducts.length} products from "${tile.title}"`);
+          this.logger.info(`  Got ${result.products.length} products from "${tile.title}"${dealType ? ` (${dealType})` : ' (no deal type found)'}`);
         } catch (err) {
           this.logger.warning(`  Failed to scrape deal page: ${tile.title}`);
         }
       }
 
-      // Visit individual product pages (/p/ links) to get real product data (limit to 20)
-      const maxProductPages = 20;
+      // Visit individual product pages (/p/ links) to get real product data
+      const maxProductPages = productPageTiles.length;
       for (const tile of productPageTiles.slice(0, maxProductPages)) {
         const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
         try {
@@ -217,7 +296,15 @@ export class KruidvatScraper extends BaseScraper {
 
           const productData = await this.extractSingleProduct(page, url);
           if (productData && productData.price > 0) {
-            const dealType = this.parseDealType(tile.localizedURLLink);
+            const dealType = tile.dealCategory
+              || this.parseDealType(tile.localizedURLLink)
+              || this.parseDealTypeFromTitle(tile.title);
+            // Skip products with no deal indication
+            if (!dealType && !productData.originalPrice) {
+              this.logger.info(`  Skipping (no deal info): ${productData.title}`);
+              continue;
+            }
+            const isCardDeal = tile.dealCategory?.toLowerCase().includes('kaart') || false;
             products.push({
               title: dealType ? `${productData.title} (${dealType})` : productData.title,
               discount_price: productData.price,
@@ -226,7 +313,8 @@ export class KruidvatScraper extends BaseScraper {
               valid_until: sunday,
               category_slug: this.detectCategory(productData.title),
               product_url: url,
-              image_url: productData.imageUrl || undefined,
+              image_url: this.normalizeImageUrl(productData.imageUrl),
+              requires_card: isCardDeal,
             });
             this.logger.info(`  Got product: ${productData.title}`);
           }
@@ -256,14 +344,20 @@ export class KruidvatScraper extends BaseScraper {
   /**
    * Extract products from a deal page (like /a/{code}/{slug}).
    * These pages have product cards with prices in the tile__product-slide-content structure.
+   * Also extracts the page-level deal type from the <h1> heading.
    */
-  private async extractProductsFromDealPage(page: Page): Promise<Array<{
-    title: string;
-    price: number;
-    originalPrice: number | null;
-    url: string;
-    imageUrl: string;
-  }>> {
+  private async extractProductsFromDealPage(page: Page): Promise<{
+    pageDealType: string | null;
+    expired: boolean;
+    requiresCard: boolean;
+    products: Array<{
+      title: string;
+      price: number;
+      originalPrice: number | null;
+      url: string;
+      imageUrl: string;
+    }>;
+  }> {
     return await page.evaluate(() => {
       const results: Array<{
         title: string;
@@ -273,15 +367,94 @@ export class KruidvatScraper extends BaseScraper {
         imageUrl: string;
       }> = [];
 
+      // Extract deal type from page heading (e.g. "Therme 1+1 gratis", "Dove 50% korting")
+      const h1 = document.querySelector('h1')?.textContent?.trim() || '';
+      let pageDealType: string | null = null;
+      const expired = h1.toLowerCase().includes('verlopen');
+      const requiresCard = h1.toLowerCase().includes('kaart');
+
+      // Parse deal type from h1
+      const h1Lower = h1.toLowerCase();
+      if (h1Lower.includes('1+1 gratis') || h1Lower.includes('1 + 1 gratis')) pageDealType = '1+1 gratis';
+      else if (h1Lower.match(/(\d)\s*\+\s*(\d)\s*gratis/)) {
+        const m = h1Lower.match(/(\d)\s*\+\s*(\d)\s*gratis/)!;
+        pageDealType = `${m[1]}+${m[2]} gratis`;
+      }
+      else if (h1Lower.includes('2e halve prijs')) pageDealType = '2e halve prijs';
+      else if (h1Lower.includes('2e gratis')) pageDealType = '2e gratis';
+      else if (h1Lower.includes('3e gratis')) pageDealType = '3e gratis';
+      else if (h1Lower.match(/(\d+)\s*%\s*korting/)) {
+        const m = h1Lower.match(/(\d+)\s*%\s*korting/)!;
+        pageDealType = `${m[1]}% korting`;
+      }
+      else if (h1Lower.match(/voor\s*€?\s*(\d+)[,.](\d{2})/)) {
+        const m = h1Lower.match(/voor\s*€?\s*(\d+)[,.](\d{2})/)!;
+        pageDealType = `voor €${m[1]},${m[2]}`;
+      }
+      else if (h1Lower.match(/2e\s+voor\s*€?\s*(\d+)[,.](\d{2})/)) {
+        const m = h1Lower.match(/2e\s+voor\s*€?\s*(\d+)[,.](\d{2})/)!;
+        pageDealType = `2e voor €${m[1]},${m[2]}`;
+      }
+      else if (h1Lower.includes('gratis')) pageDealType = 'gratis';
+      else if (h1Lower.includes('actieprijs')) pageDealType = 'actieprijs';
+
       // Find product tiles on the deal page
-      const tiles = document.querySelectorAll('.tile__product-slide-content');
+      const tiles = document.querySelectorAll('.tile__product-slide-content, [class*="product-slide"], [class*="product-card"], [class*="product-tile"]');
 
       for (const tile of Array.from(tiles)) {
         try {
-          // Title from product link text
-          const linkEl = tile.querySelector('a[href*="/p/"]');
-          const title = linkEl?.textContent?.trim() || '';
+          // Title: try specific product name elements first
+          let title = '';
+
+          // Strategy 1: Product name from specific class
+          const nameEl = tile.querySelector(
+            '[class*="product-name"], [class*="product-title"], ' +
+            '[class*="slide-content-name"], [class*="tile-name"]'
+          );
+          if (nameEl) {
+            title = nameEl.textContent?.trim() || '';
+          }
+
+          // Strategy 2: Heading elements
+          if (!title || title.length < 3) {
+            const headingEl = tile.querySelector('h2, h3, h4');
+            if (headingEl) {
+              title = headingEl.textContent?.trim() || '';
+            }
+          }
+
+          // Strategy 3: Image alt text (often has the product name)
+          if (!title || title.length < 3) {
+            const img = tile.querySelector('img[alt]');
+            const alt = img?.getAttribute('alt')?.trim() || '';
+            if (alt && alt.length >= 3 && !alt.startsWith('product') && !/^\d/.test(alt)) {
+              title = alt;
+            }
+          }
+
+          // Strategy 4: product link text, cleaned of review counts
+          if (!title || title.length < 3) {
+            const linkEl = tile.querySelector('a[href*="/p/"]');
+            const linkText = linkEl?.textContent?.trim() || '';
+            // Remove review counts like "(204)", prices, and leading numbers
+            title = linkText
+              .replace(/\(\d+\)/g, '')  // Remove "(204)" review counts
+              .replace(/€\s*\d+[,.]\d{2}/g, '') // Remove prices
+              .replace(/\d+\.\s*\d{2}/g, '')  // Remove "14. 99" style prices
+              .replace(/^\d+\s*/, '')    // Remove leading numbers
+              .replace(/\s{2,}/g, ' ')   // Collapse whitespace
+              .trim();
+            // Take only the first meaningful line if multi-line
+            if (title.includes('\n')) {
+              const lines = title.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+              title = lines[0] || title;
+            }
+          }
+
           if (!title || title.length < 3) continue;
+          // Skip if title is just a number, review count, or measurement
+          if (/^\d+$/.test(title) || /^\(\d+\)$/.test(title)) continue;
+          if (/^\d+\s*(ml|g|kg|l|cl|stuks?)\b/i.test(title)) continue;
 
           // Current price from pricebadge
           let price = 0;
@@ -325,11 +498,12 @@ export class KruidvatScraper extends BaseScraper {
           }
 
           // Image
-          const img = tile.querySelector('img[class*="product"], img[data-src*="medias"]');
+          const img = tile.querySelector('img[class*="product"], img[data-src*="medias"], img[src*="medias"], img[alt]');
           const imageUrl = img?.getAttribute('src') || img?.getAttribute('data-src') || '';
 
           // Product URL
-          const url = (linkEl as HTMLAnchorElement)?.href || '';
+          const productLink = tile.querySelector('a[href*="/p/"]') as HTMLAnchorElement | null;
+          const url = productLink?.href || '';
 
           results.push({ title, price, originalPrice, url, imageUrl });
         } catch {}
@@ -362,7 +536,7 @@ export class KruidvatScraper extends BaseScraper {
         }
       }
 
-      return results;
+      return { pageDealType, expired, requiresCard, products: results };
     });
   }
 

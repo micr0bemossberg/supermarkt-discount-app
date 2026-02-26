@@ -5,7 +5,7 @@
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { Appbar, FAB, Searchbar } from 'react-native-paper';
+import { Appbar, Chip, FAB, Searchbar } from 'react-native-paper';
 import { useProductsStore } from '../stores/productsStore';
 import { ProductCard } from '../components/ProductCard';
 import { SupermarketFilter } from '../components/SupermarketFilter';
@@ -96,6 +96,34 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         selectedId={filters.category_id || null}
         onSelectionChange={handleCategoryChange}
       />
+      <View style={styles.cardFilterRow}>
+        <Chip
+          icon={
+            filters.requires_card === true
+              ? 'card-account-details'
+              : filters.requires_card === false
+                ? 'card-off-outline'
+                : 'card-account-details-outline'
+          }
+          selected={filters.requires_card !== undefined}
+          onPress={() => {
+            if (filters.requires_card === undefined) {
+              setFilters({ requires_card: true });
+            } else if (filters.requires_card === true) {
+              setFilters({ requires_card: false });
+            } else {
+              setFilters({ requires_card: undefined });
+            }
+          }}
+          style={styles.cardFilterChip}
+        >
+          {filters.requires_card === true
+            ? 'Alleen pas-deals'
+            : filters.requires_card === false
+              ? 'Zonder pas-deals'
+              : 'Pas filter'}
+        </Chip>
+      </View>
     </>
   );
 
@@ -191,6 +219,13 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     fontSize: 14,
+  },
+  cardFilterRow: {
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  cardFilterChip: {
+    alignSelf: 'flex-start',
   },
   gridContent: {
     paddingHorizontal: 4,

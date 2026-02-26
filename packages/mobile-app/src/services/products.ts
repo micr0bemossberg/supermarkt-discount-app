@@ -22,6 +22,34 @@ const VEGA_KEYWORDS = [
   'seitan', 'beyond', 'impossible', 'groenteburger', 'bonenkroket',
 ];
 
+// Meat keywords - non-halal unless explicitly labeled
+const MEAT_KEYWORDS = [
+  'kip', 'chicken', 'kippenpoot', 'kipfilet', 'kipnugget', 'kipschnitzel',
+  'rund', 'beef', 'biefstuk', 'entrecote', 'ossenstaart', 'rosbief',
+  'varken', 'pork', 'spek', 'bacon', 'ham', 'karbonade', 'schnitzel',
+  'gehakt', 'hamburger', 'worst', 'rookworst', 'knakworst', 'braadworst',
+  'salami', 'cervelaat', 'chorizo', 'parmaham', 'serrano',
+  'lam', 'lamb', 'lamsvlees', 'lamsbout',
+  'steak', 'filet americain', 'tartaar',
+  'shoarma', 'döner', 'doner', 'kebab', 'gyros',
+  'pulled pork', 'spare rib', 'spareribs',
+  'vlees', 'meat', 'bbq', 'grillen',
+  'fricandel', 'frikandel', 'kroket',
+  'draadjes', 'riblap', 'sukade', 'rollade',
+];
+
+// Alcohol/wine keywords — backup filter (primary filter is at scraper insert level)
+const ALCOHOL_KEYWORDS = [
+  'wijn', 'wine', 'rosé', 'prosecco', 'champagne', 'cava',
+  'bier', 'pils', 'pilsener', 'radler', 'stout', 'weizen',
+  'whisky', 'whiskey', 'vodka', 'wodka', 'rum', 'gin', 'jenever',
+  'likeur', 'cognac', 'brandy', 'tequila',
+  'shiraz', 'merlot', 'cabernet', 'chardonnay', 'pinot', 'sauvignon',
+  'rioja', 'chianti', 'tempranillo', 'grigio',
+  'heineken', 'amstel', 'hertog jan', 'grolsch', 'jupiler',
+  'jack daniel', 'baileys', 'bacardi', 'smirnoff', 'jägermeister',
+];
+
 // Exclude female-specific products (make-up, perfume, lingerie, skincare, etc.)
 const FEMALE_EXCLUDE_KEYWORDS = [
   'mascara', 'lippenstift', 'lipstick', 'lipgloss', 'lip gloss',
@@ -40,36 +68,42 @@ const FEMALE_EXCLUDE_KEYWORDS = [
 ];
 
 /**
- * Filter out non-halal meat products.
+ * Filter out non-halal meat products across ALL categories.
  * Keeps: fish (always halal), explicitly halal-labeled, and vegan/vegetarian products.
- * Removes: other meat products from the "vlees-vis-vega" category.
+ * Removes: products containing meat keywords from ANY category (not just vlees-vis-vega).
  */
 function filterHalalOnly(products: ProductWithRelations[]): ProductWithRelations[] {
   return products.filter((product) => {
-    // Only filter products in the meat/fish/vega category
-    if (product.category?.slug !== 'vlees-vis-vega') {
-      return true;
-    }
-
     const title = product.title.toLowerCase();
 
-    // Keep if explicitly labeled halal
-    if (title.includes('halal')) {
-      return true;
+    // Products in vlees-vis-vega: remove all unless fish/halal/vegan
+    if (product.category?.slug === 'vlees-vis-vega') {
+      if (title.includes('halal')) return true;
+      if (FISH_KEYWORDS.some((kw) => title.includes(kw))) return true;
+      if (VEGA_KEYWORDS.some((kw) => title.includes(kw))) return true;
+      return false;
     }
 
-    // Keep if it's a fish product
-    if (FISH_KEYWORDS.some((kw) => title.includes(kw))) {
-      return true;
-    }
+    // Products in ANY other category: check for meat keywords
+    const hasMeatKeyword = MEAT_KEYWORDS.some((kw) => title.includes(kw));
+    if (!hasMeatKeyword) return true;
 
-    // Keep if it's vegan/vegetarian
-    if (VEGA_KEYWORDS.some((kw) => title.includes(kw))) {
-      return true;
-    }
+    // Has meat keyword — keep only if halal/fish/vegan
+    if (title.includes('halal')) return true;
+    if (FISH_KEYWORDS.some((kw) => title.includes(kw))) return true;
+    if (VEGA_KEYWORDS.some((kw) => title.includes(kw))) return true;
 
-    // Filter out non-halal meat
     return false;
+  });
+}
+
+/**
+ * Filter out alcohol products (backup — primary filter is at scraper insert level)
+ */
+function filterExcludeAlcohol(products: ProductWithRelations[]): ProductWithRelations[] {
+  return products.filter((product) => {
+    const title = product.title.toLowerCase();
+    return !ALCOHOL_KEYWORDS.some((kw) => title.includes(kw));
   });
 }
 
@@ -122,6 +156,10 @@ export async function getProducts(
       query = query.lte('discount_price', filters.max_price);
     }
 
+    if (filters?.requires_card !== undefined) {
+      query = query.eq('requires_card', filters.requires_card);
+    }
+
     // Pagination
     const limit = filters?.limit || 20;
     const offset = filters?.offset || 0;
@@ -134,7 +172,8 @@ export async function getProducts(
       throw error;
     }
 
-    const halal = filterHalalOnly((data || []) as ProductWithRelations[]);
+    const noAlcohol = filterExcludeAlcohol((data || []) as ProductWithRelations[]);
+    const halal = filterHalalOnly(noAlcohol);
     return filterExcludeFemale(halal);
   } catch (error) {
     console.error('Failed to fetch products:', error);

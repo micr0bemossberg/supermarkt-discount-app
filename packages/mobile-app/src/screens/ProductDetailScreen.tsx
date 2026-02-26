@@ -175,6 +175,16 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             </Chip>
           )}
 
+          {/* Card Required Notice */}
+          {product.requires_card && (
+            <Surface style={styles.cardNotice} elevation={0}>
+              <Text variant="bodySmall" style={styles.cardNoticeText}>
+                Pas of app vereist — voor deze aanbieding heb je een klantenkaart of de app van{' '}
+                {product.supermarket?.name || 'de winkel'} nodig.
+              </Text>
+            </Surface>
+          )}
+
           {/* Title */}
           <Text variant="headlineSmall" style={styles.title}>
             {product.title}
@@ -310,6 +320,18 @@ const styles = StyleSheet.create({
   },
   supermarketChipText: {
     fontWeight: '600',
+  },
+  cardNotice: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1,
+    borderColor: '#FF9800',
+  },
+  cardNoticeText: {
+    color: '#E65100',
+    fontWeight: '500',
   },
   title: {
     marginBottom: 8,

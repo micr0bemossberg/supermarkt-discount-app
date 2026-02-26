@@ -27,6 +27,9 @@ export interface ScrapedProduct {
 
   // Category (if detected during scraping)
   category_slug?: string;
+
+  // Loyalty card requirement
+  requires_card?: boolean;
 }
 
 /**

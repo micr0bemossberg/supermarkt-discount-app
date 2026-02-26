@@ -30,6 +30,10 @@ interface AHProduct {
   subCategory?: string;
   brand?: string;
   discountLabels?: Array<{ code: string; defaultDescription: string; percentage?: number }>;
+  alcoholPercentage?: number;
+  isOnlineOnly?: boolean;
+  isOrderable?: boolean;
+  propertyIcons?: string[];
 }
 
 export class AHScraper extends BaseScraper {
@@ -133,23 +137,40 @@ export class AHScraper extends BaseScraper {
     const seenIds = new Set<number>();
 
     const PAGE_SIZE = 200;
-    const MAX_PAGES = 10; // Up to 2000 products scanned
 
-    for (let page = 0; page < MAX_PAGES; page++) {
+    // Scan ALL pages — bonus products are spread across the entire 10000+ catalog
+    let page = 0;
+    let totalElements = 0;
+
+    while (true) {
       this.logger.info(`Fetching page ${page + 1}...`);
-      const { products, totalElements } = await this.fetchProductPage(token, page, PAGE_SIZE);
+
+      let result: { products: AHProduct[]; totalElements: number };
+      try {
+        result = await this.fetchProductPage(token, page, PAGE_SIZE);
+      } catch (err: any) {
+        // AH API returns 400 after ~15 pages (3000 products) even though totalElements says 10000+
+        // Gracefully stop and keep what we've found so far
+        this.logger.warning(`API returned error on page ${page + 1}: ${err.message}`);
+        this.logger.info(`Stopping pagination — collected ${bonusProducts.length} bonus products so far`);
+        break;
+      }
 
       if (page === 0) {
+        totalElements = result.totalElements;
         this.logger.info(`Total products in catalog: ${totalElements}`);
       }
 
-      if (products.length === 0) break;
+      if (result.products.length === 0) break;
 
       // Filter for bonus products
-      for (const product of products) {
+      for (const product of result.products) {
         if (!product.isBonus) continue;
         if (seenIds.has(product.webshopId)) continue;
         seenIds.add(product.webshopId);
+
+        // Skip alcohol products (AH API provides alcoholPercentage)
+        if (product.alcoholPercentage && product.alcoholPercentage > 0) continue;
 
         const price = product.currentPrice || product.priceBeforeBonus;
         if (!price || price <= 0) continue;
@@ -169,10 +190,24 @@ export class AHScraper extends BaseScraper {
           discountPercentage = Math.round(((product.priceBeforeBonus - product.currentPrice) / product.priceBeforeBonus) * 100);
         }
 
+        // Build title with deal type for multi-buy deals
+        let title = product.title;
+        const dealLabel = product.discountLabels?.[0]?.defaultDescription;
+        if (dealLabel && product.currentPrice === product.priceBeforeBonus) {
+          // Multi-buy deal where per-item price doesn't change (e.g., "2 voor 3.49")
+          title = `${product.title} (${dealLabel})`;
+        }
+
+        // Log unique bonusMechanism values for investigation
+        if (product.bonusMechanism && !['BONUS', 'BONUS_PRICE'].includes(product.bonusMechanism)) {
+          this.logger.debug(`AH bonusMechanism: "${product.bonusMechanism}" for ${product.title}`);
+        }
+
         bonusProducts.push({
-          title: product.title,
+          title,
           discount_price: product.currentPrice || price,
-          original_price: product.priceBeforeBonus,
+          original_price: product.priceBeforeBonus && product.priceBeforeBonus > (product.currentPrice || 0)
+            ? product.priceBeforeBonus : undefined,
           discount_percentage: discountPercentage,
           valid_from: monday,
           valid_until: sunday,
@@ -183,14 +218,15 @@ export class AHScraper extends BaseScraper {
         });
       }
 
-      this.logger.info(`Page ${page + 1}: ${products.length} products, ${bonusProducts.length} bonus found so far`);
+      this.logger.info(`Page ${page + 1}: ${result.products.length} products, ${bonusProducts.length} bonus found so far`);
 
-      // If we've scanned enough and found a good amount, stop early
-      // (bonus products are spread across the catalog)
-      if (bonusProducts.length > 150 && page >= 3) break;
+      // Stop when we've scanned all pages
+      if ((page + 1) * PAGE_SIZE >= totalElements) break;
+
+      page++;
 
       // Small delay between API calls
-      await new Promise(resolve => setTimeout(resolve, 500));
+      await new Promise(resolve => setTimeout(resolve, 300));
     }
 
     this.logger.success(`Found ${bonusProducts.length} bonus products from AH API`);

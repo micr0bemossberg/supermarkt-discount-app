@@ -9,6 +9,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { BottomTabNavigator } from './BottomTabNavigator';
 import { ProductDetailScreen } from '../screens/ProductDetailScreen';
 import { SearchScreen } from '../screens/SearchScreen';
+import { ShoppingPlanScreen } from '../screens/ShoppingPlanScreen';
 import type { RootStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -33,6 +34,14 @@ export const AppNavigator: React.FC = () => {
         <Stack.Screen
           name="Search"
           component={SearchScreen}
+          options={{
+            headerShown: false,
+            presentation: 'modal',
+          }}
+        />
+        <Stack.Screen
+          name="ShoppingPlan"
+          component={ShoppingPlanScreen}
           options={{
             headerShown: false,
             presentation: 'modal',

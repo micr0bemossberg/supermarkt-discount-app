@@ -87,6 +87,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
               </Text>
             </Surface>
           )}
+
+          {/* Card Required Badge */}
+          {product.requires_card && (
+            <Surface style={styles.cardBadge} elevation={1}>
+              <Text variant="labelSmall" style={styles.cardBadgeText}>
+                Pas
+              </Text>
+            </Surface>
+          )}
         </View>
 
         <Card.Content style={styles.content}>
@@ -193,6 +202,20 @@ const styles = StyleSheet.create({
   supermarketText: {
     fontWeight: '600',
     fontSize: 11,
+  },
+  cardBadge: {
+    position: 'absolute',
+    bottom: 6,
+    right: 6,
+    backgroundColor: '#FF9800',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  cardBadgeText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 9,
   },
   content: {
     paddingTop: 8,

@@ -7,7 +7,9 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFavoritesStore } from '../stores/favoritesStore';
+import { useGroceryListStore } from '../stores/groceryListStore';
 import { HomeScreen } from '../screens/HomeScreen';
+import { GroceryListScreen } from '../screens/GroceryListScreen';
 import { FavoritesScreen } from '../screens/FavoritesScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
 import type { MainTabParamList } from './types';
@@ -16,6 +18,7 @@ const Tab = createBottomTabNavigator<MainTabParamList>();
 
 export const BottomTabNavigator: React.FC = () => {
   const favoriteCount = useFavoritesStore((state) => state.getFavoriteCount());
+  const groceryCount = useGroceryListStore((state) => state.getUncheckedCount());
 
   return (
     <Tab.Navigator
@@ -40,6 +43,18 @@ export const BottomTabNavigator: React.FC = () => {
           tabBarLabel: 'Aanbiedingen',
           tabBarIcon: ({ color, size }) => (
             <MaterialCommunityIcons name="home" color={color} size={size} />
+          ),
+        }}
+      />
+
+      <Tab.Screen
+        name="GroceryList"
+        component={GroceryListScreen}
+        options={{
+          tabBarLabel: 'Boodschappen',
+          tabBarBadge: groceryCount > 0 ? groceryCount : undefined,
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="cart-outline" color={color} size={size} />
           ),
         }}
       />

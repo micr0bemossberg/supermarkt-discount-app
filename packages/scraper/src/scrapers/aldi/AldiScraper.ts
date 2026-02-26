@@ -1,7 +1,16 @@
 /**
  * Aldi Scraper
  * Scrapes discount offers from Aldi Netherlands website
- * Aldi uses a Next.js app - we extract product data from embedded JSON
+ * Aldi uses Next.js with product-tile components for each product.
+ *
+ * DOM structure:
+ * .product-tile
+ *   .product-tile__content__upper__brand-name → brand (e.g. "FARMERS FAVOURITE")
+ *   .product-tile__content__upper__product-name → product name (e.g. "Aardbeien")
+ *   .tag__label--price → deal price (e.g. "2.39")
+ *   .tag__cross-price → original price (e.g. "3.49")
+ *   .product-tile__image-section__picture img → product image
+ *   parent a[href] → product URL
  */
 
 import { BaseScraper } from '../base/BaseScraper';
@@ -34,131 +43,114 @@ export class AldiScraper extends BaseScraper {
       this.logger.success('Page loaded');
       await this.handleCookieConsent(page);
 
-      // Wait for content to render (Next.js app needs time to hydrate)
+      // Wait for Next.js to hydrate
       this.logger.info('Waiting for content to render...');
-      await page.waitForTimeout(10000);
+      await page.waitForTimeout(8000);
 
-      // Strategy 1: Try to extract from __NEXT_DATA__ (Next.js embedded JSON)
-      const jsonProducts = await this.extractFromNextData(page);
-      if (jsonProducts.length > 0) {
-        this.logger.success(`Extracted ${jsonProducts.length} products from JSON data`);
-        return jsonProducts;
-      }
-
-      // Strategy 2: Try to extract from any embedded JSON/script tags
-      const scriptProducts = await this.extractFromScriptTags(page);
-      if (scriptProducts.length > 0) {
-        this.logger.success(`Extracted ${scriptProducts.length} products from script tags`);
-        return scriptProducts;
-      }
-
-      // Strategy 3: Fallback to DOM scraping - extract structured data from each card
-      this.logger.info('JSON extraction failed, falling back to DOM scraping...');
+      // Scroll to load all products (lazy loaded)
       await this.scrollToLoad(page);
 
       const { monday, sunday } = this.getWeekDates();
 
-      // Extract all product data in a single page.evaluate to avoid per-element round-trips
+      // Extract products from .product-tile elements
       const extractedProducts = await page.evaluate(() => {
         const results: Array<{
-          title: string;
+          brand: string;
+          name: string;
           price: string;
-          imageUrl: string | null;
-          productUrl: string | null;
+          originalPrice: string;
+          discount: string;
+          imageUrl: string;
+          productUrl: string;
+          unitInfo: string;
+          promoLabel: string;
         }> = [];
 
-        // Find all product tile elements
-        const cards = document.querySelectorAll(
-          'a[href*="/aanbiedingen/"], a[href*="/actie/"], [class*="offer-tile"], [class*="product-tile"]'
-        );
+        const tiles = document.querySelectorAll('.product-tile');
 
-        for (const card of Array.from(cards)) {
-          // Extract title from heading elements (h2, h3, h4) - these usually contain just the product name
-          let title = '';
-          const headingEl = card.querySelector('h3, h4, h2');
-          if (headingEl) {
-            title = (headingEl as HTMLElement).innerText?.trim() || '';
-          }
-          if (!title) {
-            const titleEl = card.querySelector('[class*="title"], [class*="name"], [class*="description"]');
-            if (titleEl) {
-              title = (titleEl as HTMLElement).innerText?.trim() || '';
-            }
-          }
-          if (!title || title.length < 3) continue;
+        for (const tile of Array.from(tiles)) {
+          const brandEl = tile.querySelector('.product-tile__content__upper__brand-name');
+          const nameEl = tile.querySelector('.product-tile__content__upper__product-name');
+          const priceEl = tile.querySelector('.tag__label--price');
+          const crossEl = tile.querySelector('.tag__cross-price');
+          const img = tile.querySelector('.product-tile__image-section__picture img, .product-tile__image-section img');
+          const link = tile.closest('a') || tile.querySelector('a');
+          const unitEl = tile.querySelector('.tag__marker--base-price');
 
-          // Extract price from price elements
-          let priceText = '';
-          const priceEl = card.querySelector('[class*="price"], [class*="Price"]');
-          if (priceEl) {
-            priceText = (priceEl as HTMLElement).innerText?.trim() || '';
-          }
-          // Fallback: get all text and find price pattern
-          if (!priceText) {
-            priceText = (card as HTMLElement).innerText || '';
-          }
+          // Get discount percentage from the price tag text
+          const priceTagEl = tile.querySelector('.tag__price');
+          const priceTagText = priceTagEl?.textContent?.trim() || '';
+          const percentMatch = priceTagText.match(/-?\d+%/);
 
-          // Extract image
-          const img = card.querySelector('img');
-          let imageUrl: string | null = null;
-          if (img) {
-            imageUrl = img.getAttribute('src') || img.getAttribute('data-src') || null;
-          }
+          // Check for promotional labels like "OP=OP"
+          const tileText = tile.textContent || '';
+          const hasOpOp = /OP\s*=\s*OP/i.test(tileText);
 
-          // Extract link
-          let productUrl: string | null = null;
-          const link = card.closest('a') || card.querySelector('a');
-          if (link) {
-            productUrl = link.getAttribute('href');
-          }
+          const brand = brandEl?.textContent?.trim() || '';
+          const name = nameEl?.textContent?.trim() || '';
+          const price = priceEl?.textContent?.trim() || '';
+          const originalPrice = crossEl?.textContent?.trim() || '';
+          const imageUrl = img?.getAttribute('src') || '';
+          const productUrl = link?.getAttribute('href') || '';
+          const unitInfo = unitEl?.textContent?.trim() || '';
+          const discount = percentMatch ? percentMatch[0] : '';
+          const promoLabel = hasOpOp ? 'OP=OP' : '';
 
-          results.push({ title, price: priceText, imageUrl, productUrl });
+          if (name) {
+            results.push({ brand, name, price, originalPrice, discount, imageUrl, productUrl, unitInfo, promoLabel });
+          }
         }
 
         return results;
       });
 
-      this.logger.info(`Found ${extractedProducts.length} product candidates via DOM`);
+      this.logger.info(`Found ${extractedProducts.length} product tiles`);
 
       const seenTitles = new Set<string>();
 
       for (const item of extractedProducts) {
-        // Clean title: remove anything after price/percentage patterns
-        let title = item.title
-          .replace(/-?\d+%.*$/, '')  // Remove from percentage onward
-          .replace(/\d+[,.]\d{2}.*$/, '') // Remove from price onward
-          .replace(/OP=OP.*$/i, '')  // Remove OP=OP suffix
-          .replace(/Boodschappenlijstje.*$/i, '')  // Remove UI button text
-          .replace(/\{.*$/s, '')  // Remove JSON remnants
-          .trim();
+        if (!item.name || item.name.length < 2) continue;
 
-        if (!title || title.length < 3 || title.length > 100) continue;
+        // Build title: "Brand ProductName" or just "ProductName"
+        let title = item.name;
+        if (item.brand && !item.name.toLowerCase().includes(item.brand.toLowerCase())) {
+          title = `${item.brand} ${item.name}`;
+        }
 
-        // Skip titles that are clearly not product names
-        if (/^\d/.test(title)) continue; // Starts with number
-        if (/^(kg|g|ml|l|cl|per|van|op=op)\b/i.test(title)) continue; // Starts with unit/keyword
-        if (/^[€$]/.test(title)) continue; // Starts with currency
+        // Append promotional label (e.g., "OP=OP")
+        if (item.promoLabel) {
+          title = `${title} (${item.promoLabel})`;
+        }
 
-        // Skip Aldi section/category headers (not actual products)
-        const sectionHeaders = [
-          'aardappelen, groenten en fruit', 'vlees, vis & vega', 'bloemen en planten',
-          'alleen dit weekend', 'brood & bakkerij', 'zuivel & eieren', 'kaas',
-          'dranken', 'huishouden', 'diepvries', 'snoep & chips',
-        ];
-        if (sectionHeaders.includes(title.toLowerCase())) continue;
-
-        // Deduplicate by normalized title
+        // Deduplicate
         const normalizedTitle = title.toLowerCase();
         if (seenTitles.has(normalizedTitle)) continue;
         seenTitles.add(normalizedTitle);
 
-        // Extract price
-        let price = 0;
-        const priceMatch = item.price.match(/(\d+)[,.](\d{2})/);
-        if (priceMatch) {
-          price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
-        }
+        // Parse price
+        const priceMatch = item.price.match(/(\d+)[.,](\d{2})/);
+        if (!priceMatch) continue;
+        const price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
         if (price <= 0) continue;
+
+        // Parse original price
+        let originalPrice: number | undefined;
+        if (item.originalPrice) {
+          const origMatch = item.originalPrice.match(/(\d+)[.,](\d{2})/);
+          if (origMatch) {
+            originalPrice = parseFloat(`${origMatch[1]}.${origMatch[2]}`);
+            if (originalPrice <= price) originalPrice = undefined;
+          }
+        }
+
+        // Parse discount percentage
+        let discountPercentage: number | undefined;
+        if (item.discount) {
+          const discMatch = item.discount.match(/-?(\d+)%/);
+          if (discMatch) {
+            discountPercentage = parseInt(discMatch[1], 10);
+          }
+        }
 
         // Build URLs
         let imageUrl: string | undefined;
@@ -174,11 +166,14 @@ export class AldiScraper extends BaseScraper {
         products.push({
           title,
           discount_price: price,
+          original_price: originalPrice,
+          discount_percentage: discountPercentage,
           valid_from: monday,
           valid_until: sunday,
           category_slug: this.detectCategory(title),
           product_url: productUrl,
           image_url: imageUrl,
+          unit_info: item.unitInfo || undefined,
         });
       }
 
@@ -191,143 +186,19 @@ export class AldiScraper extends BaseScraper {
     return products;
   }
 
-  private async extractFromNextData(page: any): Promise<ScrapedProduct[]> {
-    const products: ScrapedProduct[] = [];
-    try {
-      const nextData = await page.evaluate(() => {
-        const el = document.querySelector('script#__NEXT_DATA__');
-        return el ? el.textContent : null;
-      });
-
-      if (!nextData) return products;
-
-      const parsed = JSON.parse(nextData);
-      const { monday, sunday } = this.getWeekDates();
-
-      // Navigate the Next.js data structure to find products
-      const findProducts = (obj: any): any[] => {
-        if (!obj || typeof obj !== 'object') return [];
-        if (Array.isArray(obj)) {
-          return obj.flatMap(item => findProducts(item));
-        }
-        // Look for objects that look like products (have name/title and price)
-        if (obj.name && (obj.currentPrice || obj.price || obj.priceValue)) {
-          return [obj];
-        }
-        // Look for algoliaDataMap or similar
-        if (obj.algoliaDataMap) {
-          return Object.values(obj.algoliaDataMap);
-        }
-        return Object.values(obj).flatMap(v => findProducts(v));
-      };
-
-      const productData = findProducts(parsed);
-      this.logger.info(`Found ${productData.length} products in __NEXT_DATA__`);
-
-      for (const item of productData) {
-        try {
-          const title = item.name || item.title;
-          if (!title) continue;
-
-          let price = 0;
-          if (item.currentPrice?.priceValue) {
-            price = parseFloat(item.currentPrice.priceValue);
-          } else if (item.price) {
-            price = typeof item.price === 'string' ? parseFloat(item.price.replace(',', '.')) : item.price;
-          }
-          if (price <= 0) continue;
-
-          let originalPrice: number | undefined;
-          if (item.currentPrice?.strikePrice?.strikePriceValue) {
-            originalPrice = parseFloat(item.currentPrice.strikePrice.strikePriceValue);
-          }
-
-          let imageUrl: string | undefined;
-          if (item.assets?.[0]?.url) {
-            imageUrl = item.assets[0].url;
-          } else if (item.image) {
-            imageUrl = item.image;
-          }
-
-          let productUrl: string | undefined;
-          if (item.productSlug) {
-            productUrl = `https://www.aldi.nl/aanbiedingen/${item.productSlug}.html`;
-          } else if (item.url) {
-            productUrl = item.url.startsWith('http') ? item.url : `https://www.aldi.nl${item.url}`;
-          }
-
-          products.push({
-            title,
-            discount_price: price,
-            original_price: originalPrice,
-            valid_from: monday,
-            valid_until: sunday,
-            category_slug: this.detectCategory(title),
-            product_url: productUrl,
-            image_url: imageUrl,
-          });
-        } catch (err) {
-          // Skip individual product errors
-        }
-      }
-    } catch (err) {
-      this.logger.debug('__NEXT_DATA__ extraction failed:', err);
-    }
-    return products;
-  }
-
-  private async extractFromScriptTags(page: any): Promise<ScrapedProduct[]> {
-    const products: ScrapedProduct[] = [];
-    try {
-      // Look for JSON-LD structured data
-      const jsonLdData = await page.evaluate(() => {
-        const scripts = document.querySelectorAll('script[type="application/ld+json"]');
-        return Array.from(scripts).map(s => s.textContent).filter(Boolean);
-      });
-
-      const { monday, sunday } = this.getWeekDates();
-
-      for (const jsonStr of jsonLdData) {
-        try {
-          const data = JSON.parse(jsonStr!);
-          const items = Array.isArray(data) ? data : data.itemListElement || data.offers || [data];
-
-          for (const item of items) {
-            if (item['@type'] === 'Product' || item['@type'] === 'Offer' || item.name) {
-              const title = item.name;
-              if (!title) continue;
-
-              let price = 0;
-              if (item.offers?.price) price = parseFloat(item.offers.price);
-              else if (item.price) price = parseFloat(item.price);
-              if (price <= 0) continue;
-
-              products.push({
-                title,
-                discount_price: price,
-                valid_from: monday,
-                valid_until: sunday,
-                category_slug: this.detectCategory(title),
-                product_url: item.url,
-                image_url: item.image,
-              });
-            }
-          }
-        } catch (e) {
-          // Skip invalid JSON
-        }
-      }
-    } catch (err) {
-      this.logger.debug('Script tag extraction failed:', err);
-    }
-    return products;
-  }
-
   private async scrollToLoad(page: any): Promise<void> {
-    for (let i = 0; i < 10; i++) {
+    this.logger.info('Scrolling to load all products...');
+    let previousHeight = 0;
+    for (let i = 0; i < 30; i++) {
+      const currentHeight = await page.evaluate(() => document.body.scrollHeight);
+      if (currentHeight === previousHeight && i > 3) break;
       await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(2000);
+      previousHeight = currentHeight;
     }
+    // Scroll back to top and wait for any lazy elements
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.waitForTimeout(1000);
   }
 
   private getWeekDates(): { monday: Date; sunday: Date } {

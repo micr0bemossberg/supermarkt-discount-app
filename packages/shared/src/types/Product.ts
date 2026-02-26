@@ -34,6 +34,7 @@ export interface Product {
 
   // Status
   is_active: boolean;
+  requires_card: boolean;
 
   // Deduplication
   scrape_hash: string | null;
@@ -65,6 +66,7 @@ export interface ProductFilters {
   search?: string;
   min_discount?: number;
   max_price?: number;
+  requires_card?: boolean;
   valid_on?: string; // ISO date string
   limit?: number;
   offset?: number;

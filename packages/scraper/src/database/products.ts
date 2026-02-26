@@ -155,6 +155,7 @@ export async function insertProduct(
           image_url: imageUrl || scrapedProduct.image_url || existing.image_url,
           image_storage_path: imagePath || existing.image_storage_path,
           category_id: categoryId || existing.category_id,
+          requires_card: scrapedProduct.requires_card || false,
         } as Partial<Product>);
         if (updated) {
           logger.success(`Reactivated product: ${scrapedProduct.title}`);
@@ -189,6 +190,7 @@ export async function insertProduct(
       valid_from: scrapedProduct.valid_from.toISOString().split('T')[0],
       valid_until: scrapedProduct.valid_until.toISOString().split('T')[0],
       is_active: true,
+      requires_card: scrapedProduct.requires_card || false,
       scrape_hash: hash,
     };
 

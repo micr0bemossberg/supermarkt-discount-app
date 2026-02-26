@@ -1,7 +1,18 @@
 /**
  * Dirk Scraper
  * Scrapes discount offers from Dirk van den Broek website
- * Dirk uses Vue.js - avoid data-v-* attributes as they change between builds
+ * Dirk uses Vue.js with a specific price structure:
+ *
+ * DOM structure per article:
+ *   .title → product name
+ *   .regular-price → "van X.XX" (original price)
+ *   .hasEuros.price-large → euros part of deal price (e.g. "1")
+ *   .price-small → cents part of deal price (e.g. "98")
+ *   When price < €1: .price-large (without .hasEuros) → cents only (e.g. "99")
+ *   .main-image → product image
+ *   a[href] → product link
+ *
+ * JSON-LD: @graph → ItemList → itemListElement (37 items, correct prices but no original_price)
  */
 
 import { BaseScraper } from '../base/BaseScraper';
@@ -38,147 +49,147 @@ export class DirkScraper extends BaseScraper {
       this.logger.info('Waiting for content to render...');
       await page.waitForTimeout(8000);
 
-      // Strategy 1: Try JSON-LD structured data first
-      const jsonLdProducts = await this.extractFromJsonLd(page);
-      if (jsonLdProducts.length > 0) {
-        this.logger.success(`Extracted ${jsonLdProducts.length} products from JSON-LD`);
-        return jsonLdProducts;
-      }
-
-      // Strategy 2: DOM scraping
-      this.logger.info('JSON-LD extraction failed, using DOM scraping...');
+      // Scroll to load all products
       await this.scrollToLoad(page);
 
+      // Build JSON-LD price map for cross-reference
+      const jsonLdPriceMap = await this.buildJsonLdPriceMap(page);
+      this.logger.info(`JSON-LD has ${jsonLdPriceMap.size} products`);
+
+      // DOM scraping - primary strategy
       const articles = await page.$$(selectors.productCard);
       this.logger.info(`Found ${articles.length} article elements`);
 
       if (articles.length === 0) {
-        // Try broader selectors
-        const altCards = await page.$$('[class*="product"], [class*="offer"], .card');
-        this.logger.info(`Fallback found ${altCards.length} cards`);
-        if (altCards.length === 0) throw new Error('No products found');
-        return this.parseArticles(altCards);
+        throw new Error('No products found');
       }
 
-      return this.parseArticles(articles);
+      return this.parseArticles(articles, jsonLdPriceMap);
     } catch (error) {
       this.logger.error('Error', error);
       throw error;
     }
   }
 
-  private async extractFromJsonLd(page: any): Promise<ScrapedProduct[]> {
-    const products: ScrapedProduct[] = [];
+  /**
+   * Build a map of product name → price from JSON-LD data for cross-reference.
+   */
+  private async buildJsonLdPriceMap(page: any): Promise<Map<string, number>> {
+    const priceMap = new Map<string, number>();
     try {
       const jsonLdTexts = await page.evaluate(() => {
         const scripts = document.querySelectorAll('script[type="application/ld+json"]');
         return Array.from(scripts).map(s => s.textContent).filter(Boolean);
       });
 
-      const { monday, sunday } = this.getWeekDates();
-
       for (const jsonStr of jsonLdTexts) {
         try {
           const data = JSON.parse(jsonStr!);
-          const items = Array.isArray(data) ? data : [data];
+
+          // Handle @graph wrapper
+          const items = data['@graph'] || (Array.isArray(data) ? data : [data]);
 
           for (const item of items) {
-            // Handle ItemList with itemListElement
             if (item['@type'] === 'ItemList' && item.itemListElement) {
               for (const listItem of item.itemListElement) {
                 const product = listItem.item || listItem;
-                const parsed = this.parseJsonLdProduct(product, monday, sunday);
-                if (parsed) products.push(parsed);
+                if (product.name && product.offers?.price) {
+                  priceMap.set(product.name.toLowerCase(), parseFloat(product.offers.price));
+                }
               }
             }
-            // Handle direct Product entries
-            else if (item['@type'] === 'Product') {
-              const parsed = this.parseJsonLdProduct(item, monday, sunday);
-              if (parsed) products.push(parsed);
-            }
           }
-        } catch (e) {
-          // Skip invalid JSON
-        }
+        } catch {}
       }
     } catch (err) {
       this.logger.debug('JSON-LD extraction failed:', err);
     }
-    return products;
+    return priceMap;
   }
 
-  private parseJsonLdProduct(item: any, monday: Date, sunday: Date): ScrapedProduct | null {
-    const title = item.name;
-    if (!title) return null;
-
-    let price = 0;
-    if (item.offers?.price) {
-      price = parseFloat(item.offers.price);
-    } else if (item.offers?.lowPrice) {
-      price = parseFloat(item.offers.lowPrice);
-    }
-    if (price <= 0) return null;
-
-    return {
-      title,
-      discount_price: price,
-      valid_from: monday,
-      valid_until: sunday,
-      category_slug: this.detectCategory(title),
-      product_url: item.url || item.offers?.url,
-      image_url: Array.isArray(item.image) ? item.image[0] : item.image,
-    };
-  }
-
-  private async parseArticles(articles: any[]): Promise<ScrapedProduct[]> {
+  private async parseArticles(articles: any[], jsonLdPriceMap: Map<string, number>): Promise<ScrapedProduct[]> {
     const products: ScrapedProduct[] = [];
     const { monday, sunday } = this.getWeekDates();
 
     for (let i = 0; i < articles.length; i++) {
       try {
         const article = articles[i];
-        const text = (await article.textContent())?.trim() || '';
-        if (!text || text.length < 3) continue;
 
         // Extract title
-        let title: string | null = null;
-        const titleEl = await article.$('.title, h3, h4, [class*="title"], [class*="name"]');
-        if (titleEl) {
-          title = (await titleEl.textContent())?.trim() || null;
+        const titleEl = await article.$('.title, h3, h4, [class*="title"]');
+        let title = titleEl ? (await titleEl.textContent())?.trim() || '' : '';
+        if (!title || title.length < 3) continue;
+
+        // Extract deal price using Dirk's specific price structure
+        let price = 0;
+        let originalPrice: number | undefined;
+
+        // Strategy 1 (PRIMARY): DOM price extraction — the deal/Actie price
+        // .price-large.hasEuros = euros, .price-small = cents
+        const priceLargeEl = await article.$('.price-large');
+        const priceSmallEl = await article.$('.price-small');
+
+        if (priceLargeEl) {
+          const priceLargeText = (await priceLargeEl.textContent())?.trim() || '';
+          const hasEuros = await priceLargeEl.evaluate((el: Element) => el.classList.contains('hasEuros'));
+
+          if (hasEuros && priceSmallEl) {
+            // Price >= €1: euros.cents
+            const priceSmallText = (await priceSmallEl.textContent())?.trim() || '';
+            price = parseFloat(`${priceLargeText}.${priceSmallText}`);
+          } else if (priceLargeText && /^\d+$/.test(priceLargeText)) {
+            // Price < €1: just cents
+            price = parseFloat(`0.${priceLargeText}`);
+          }
         }
-        if (!title) {
-          const bottomEl = await article.$('.bottom a, a');
-          if (bottomEl) {
-            const linkText = (await bottomEl.textContent())?.trim();
-            if (linkText && linkText.length > 3) {
-              // First meaningful line
-              const lines = linkText.split('\n').filter((l: string) => l.trim());
-              title = lines[0]?.trim();
+
+        // Strategy 2: Fallback regex from full text
+        if (price <= 0) {
+          const fullText = (await article.textContent())?.trim() || '';
+          const priceMatch = fullText.match(/van\s+\d+[.,]\d{2}\s*(\d{1,4})/);
+          if (priceMatch) {
+            const rawNum = priceMatch[1];
+            if (rawNum.length <= 2) {
+              price = parseFloat(`0.${rawNum.padStart(2, '0')}`);
+            } else if (rawNum.length === 3) {
+              price = parseFloat(`${rawNum[0]}.${rawNum.slice(1)}`);
+            } else if (rawNum.length === 4) {
+              price = parseFloat(`${rawNum.slice(0, 2)}.${rawNum.slice(2)}`);
             }
           }
         }
-        if (!title || title.length < 3) continue;
 
-        // Extract price
-        let price = 0;
-        const priceEl = await article.$('.price, [class*="price"]');
-        if (priceEl) {
-          const priceText = (await priceEl.textContent())?.trim() || '';
-          const priceMatch = priceText.match(/(\d+)[,.](\d{2})/);
-          if (priceMatch) {
-            price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
-          }
-        }
+        // Strategy 3: JSON-LD as last resort (may contain original prices)
         if (price <= 0) {
-          const priceMatch = text.match(/€?\s*(\d+)[,.](\d{2})/);
-          if (priceMatch) {
-            price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+          const jsonLdPrice = jsonLdPriceMap.get(title.toLowerCase());
+          if (jsonLdPrice && jsonLdPrice > 0) {
+            price = jsonLdPrice;
           }
         }
+
         if (price <= 0) continue;
 
+        // Extract original price from .regular-price "van X.XX"
+        const regularPriceEl = await article.$('.regular-price');
+        if (regularPriceEl) {
+          const regularText = (await regularPriceEl.textContent())?.trim() || '';
+          const origMatch = regularText.match(/(\d+)[.,](\d{2})/);
+          if (origMatch) {
+            originalPrice = parseFloat(`${origMatch[1]}.${origMatch[2]}`);
+            if (originalPrice <= price) originalPrice = undefined;
+          }
+        }
+
+        // If no original_price from DOM, check JSON-LD (it often has the catalog price)
+        if (!originalPrice) {
+          const jsonLdPrice = jsonLdPriceMap.get(title.toLowerCase());
+          if (jsonLdPrice && jsonLdPrice > price) {
+            originalPrice = jsonLdPrice;
+          }
+        }
+
         // Extract image
-        const img = await article.$('img');
+        const img = await article.$('img.main-image, img');
         let imageUrl: string | undefined;
         if (img) {
           const src = (await img.getAttribute('src')) || (await img.getAttribute('data-src'));
@@ -200,6 +211,7 @@ export class DirkScraper extends BaseScraper {
         products.push({
           title,
           discount_price: price,
+          original_price: originalPrice,
           valid_from: monday,
           valid_until: sunday,
           category_slug: this.detectCategory(title),
@@ -207,7 +219,7 @@ export class DirkScraper extends BaseScraper {
           image_url: imageUrl,
         });
 
-        this.logger.debug(`Scraped: ${title} - €${price}`);
+        this.logger.debug(`Scraped: ${title} - €${price}${originalPrice ? ` (was €${originalPrice})` : ''}`);
       } catch (err) {
         this.logger.warning(`Failed to parse article ${i}:`, err);
       }

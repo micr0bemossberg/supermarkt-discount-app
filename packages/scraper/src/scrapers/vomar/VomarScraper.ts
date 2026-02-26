@@ -794,6 +794,7 @@ export class VomarScraper extends BaseScraper {
         category_slug: this.detectCategory(title),
         product_url: productUrl,
         image_url: imageUrl,
+        requires_card: p.isVoucherDeal || false,
       });
 
       this.logger.debug(`  ${title} — €${discountPrice}${originalPrice ? ` (was €${originalPrice})` : ''} [${p.dealType || ''}]`);
