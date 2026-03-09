@@ -173,41 +173,46 @@ export class ActionScraper extends BaseScraper {
         // Subtitle (size/variant) is usually the second meaningful line
         const subtitle = meaningful.length > 1 ? meaningful[1] : '';
 
-        // Find price: look for €X,XX pattern or X,XX pattern
-        let price = 0;
-        for (const line of lines) {
-          const priceMatch = line.match(/€\s*(\d+)[,.](\d{2})/);
-          if (priceMatch) {
-            price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
-            break;
-          }
-        }
-
-        // Also try matching unit price format like "€ 1,38/l"
+        // Identify unit price lines (€X,XX/kg, €X,XX/l, etc.) — NOT the deal price
         let unitPrice = '';
         for (const line of lines) {
-          if (line.match(/€.*\/(?:st|kg|l|m|cm)/i)) {
+          if (line.match(/€.*\/(?:st|kg|l|m|cm|ml)\b/i)) {
             unitPrice = line;
-            if (price === 0) {
-              const match = line.match(/€\s*(\d+)[,.](\d{2})/);
-              if (match) price = parseFloat(`${match[1]}.${match[2]}`);
-            }
             break;
           }
         }
 
-        // Last resort: try to parse price from integer (Action sometimes shows "138" for €1.38)
-        if (price === 0) {
-          for (const line of lines) {
-            const intMatch = line.match(/^(\d{2,5})$/);
-            if (intMatch) {
-              const cents = parseInt(intMatch[1]);
-              if (cents > 0 && cents < 100000) {
-                price = cents / 100;
-                break;
-              }
+        // Priority 1: integer cents format (Action's primary price display)
+        // "234" = €2.34, "851" = €8.51
+        let price = 0;
+        for (const line of lines) {
+          const intMatch = line.match(/^(\d{2,5})$/);
+          if (intMatch) {
+            const cents = parseInt(intMatch[1]);
+            if (cents > 0 && cents < 100000) {
+              price = cents / 100;
+              break;
             }
           }
+        }
+
+        // Priority 2: €X,XX that is NOT a unit price (skip lines with /kg, /l, etc.)
+        if (price === 0) {
+          for (const line of lines) {
+            // Skip unit price lines
+            if (line.match(/\/(?:st|kg|l|m|cm|ml)\b/i)) continue;
+            const priceMatch = line.match(/€\s*(\d+)[,.](\d{2})/);
+            if (priceMatch) {
+              price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+              break;
+            }
+          }
+        }
+
+        // Priority 3: fall back to unit price if nothing else found
+        if (price === 0 && unitPrice) {
+          const match = unitPrice.match(/€\s*(\d+)[,.](\d{2})/);
+          if (match) price = parseFloat(`${match[1]}.${match[2]}`);
         }
 
         if (price <= 0) continue;

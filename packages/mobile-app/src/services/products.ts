@@ -41,13 +41,66 @@ const MEAT_KEYWORDS = [
 // Alcohol/wine keywords — backup filter (primary filter is at scraper insert level)
 const ALCOHOL_KEYWORDS = [
   'wijn', 'wine', 'rosé', 'prosecco', 'champagne', 'cava',
-  'bier', 'pils', 'pilsener', 'radler', 'stout', 'weizen',
-  'whisky', 'whiskey', 'vodka', 'wodka', 'rum', 'gin', 'jenever',
-  'likeur', 'cognac', 'brandy', 'tequila',
+  'sangria', 'glühwein', 'gluhwein', 'port ', 'sherry',
+  'flessen', 'fles wijn', 'fles bier',
+  'bier', 'pils', 'pilsener', 'radler', 'stout', 'weizen', 'ipa ',
+  'whisky', 'whiskey', 'vodka', 'wodka', 'rum ', 'gin ', 'jenever',
+  'likeur', 'cognac', 'brandy', 'tequila', 'amaretto', 'absint',
   'shiraz', 'merlot', 'cabernet', 'chardonnay', 'pinot', 'sauvignon',
-  'rioja', 'chianti', 'tempranillo', 'grigio',
+  'rioja', 'chianti', 'tempranillo', 'grigio', 'riesling', 'malbec',
+  'syrah', 'verdejo', 'bordeaux', 'bourgogne', 'beaujolais',
+  'viognier', 'zinfandel', 'primitivo', 'garnacha', 'monastrell',
   'heineken', 'amstel', 'hertog jan', 'grolsch', 'jupiler',
   'jack daniel', 'baileys', 'bacardi', 'smirnoff', 'jägermeister',
+  'el maestro',
+  // Spirit brands
+  'captain morgan', 'disaronno', 'spiced gold', 'absolut ',
+  'grey goose', 'havana club', 'malibu', 'gordon', 'beefeater',
+  'bombay sapphire', 'tanqueray', 'hendrick', 'jameson',
+  'johnnie walker', 'chivas regal', 'glenfiddich', 'glenlivet',
+  'hennessy', 'rémy martin', 'remy martin', 'courvoisier',
+  'martini', 'aperol', 'campari', 'limoncello', 'sambuca',
+  'kahlúa', 'kahlua', 'cointreau', 'grand marnier', 'tia maria',
+  'passoa', 'coebergh', 'ketel one', 'belvedere', 'stolichnaya',
+  'flügel', 'flugel', 'goldstrike', 'peachtree', 'sourz',
+];
+
+// Animal food keywords — dairy, eggs, fish, meat, honey (removes all animal products)
+const ANIMAL_FOOD_KEYWORDS = [
+  // Dairy
+  'melk', 'milk', 'zuivel', 'kaas', 'cheese', 'gouda', 'edammer', 'maasdammer',
+  'brie', 'camembert', 'parmigiano', 'parmesan', 'parmezaan', 'mozzarella',
+  'cheddar', 'gruyère', 'gruyere', 'feta', 'gorgonzola', 'manchego',
+  'emmentaler', 'havarti', 'provolone', 'ricotta', 'mascarpone', 'pecorino',
+  'geitenkaas', 'boerenkaas', 'plakken kaas', 'geraspte kaas', 'smeerkaas',
+  'yoghurt', 'yogurt', 'kwark', 'skyr', 'karnemelk', 'roomboter',
+  'boter', 'butter', 'room', 'slagroom', 'kookroom', 'crème fraîche',
+  'creme fraiche', 'créme', 'vla', 'custard', 'pudding',
+  'roomijs', 'ijs ', 'ijsje', 'magnum', 'cornetto', 'Ben & Jerry',
+  'whey', 'wei',
+  // Eggs
+  'ei ', 'eier', 'eggs', 'omelet', 'eiersalade', 'scharreleier',
+  // Fish / seafood
+  'vis', 'zalm', 'tonijn', 'garnaal', 'garnalen', 'haring', 'makreel',
+  'kabeljauw', 'schelvis', 'pangasius', 'tilapia', 'forel', 'sardine',
+  'sardien', 'mosselen', 'kibbeling', 'lekkerbek', 'visstick', 'fishstick',
+  'calamari', 'inktvis', 'kreeft', 'krab', 'scampi', 'ansjovis', 'zeebaars',
+  'dorade', 'schol', 'scholfilet', 'koolvis', 'wijting', 'heek', 'paling',
+  'zeewolf', 'sushi', 'norsk',
+  // Meat (comprehensive — catches products halal filter might miss in labeling)
+  'kip', 'chicken', 'kipfilet', 'kipnugget', 'kipschnitzel', 'kippenpoot',
+  'rund', 'beef', 'biefstuk', 'entrecote', 'ossenstaart', 'rosbief',
+  'varken', 'pork', 'spek', 'bacon', 'ham', 'karbonade', 'schnitzel',
+  'gehakt', 'hamburger', 'worst', 'rookworst', 'knakworst', 'braadworst',
+  'salami', 'cervelaat', 'chorizo', 'parmaham', 'serrano',
+  'lam', 'lamb', 'lamsvlees', 'lamsbout',
+  'steak', 'filet americain', 'tartaar',
+  'shoarma', 'döner', 'doner', 'kebab', 'gyros',
+  'pulled pork', 'spare rib', 'spareribs',
+  'vlees', 'meat', 'fricandel', 'frikandel', 'kroket',
+  'draadjes', 'riblap', 'sukade', 'rollade',
+  // Honey
+  'honing', 'honey',
 ];
 
 // Exclude female-specific products (make-up, perfume, lingerie, skincare, etc.)
@@ -108,6 +161,19 @@ function filterExcludeAlcohol(products: ProductWithRelations[]): ProductWithRela
 }
 
 /**
+ * Filter out all animal food products (meat, fish, dairy, eggs, honey).
+ * Keeps plant-based / vegan products only.
+ */
+function filterExcludeAnimalFoods(products: ProductWithRelations[]): ProductWithRelations[] {
+  return products.filter((product) => {
+    const title = product.title.toLowerCase();
+    // Allow explicitly vegan/plantaardig products even if they mention animal words
+    if (VEGA_KEYWORDS.some((kw) => title.includes(kw))) return true;
+    return !ANIMAL_FOOD_KEYWORDS.some((kw) => title.includes(kw));
+  });
+}
+
+/**
  * Filter out female-specific products (make-up, perfume, lingerie, skincare, etc.)
  */
 function filterExcludeFemale(products: ProductWithRelations[]): ProductWithRelations[] {
@@ -118,12 +184,20 @@ function filterExcludeFemale(products: ProductWithRelations[]): ProductWithRelat
 }
 
 /**
- * Fetch products with optional filters
+ * Fetch products with optional filters.
+ * Over-fetches from Supabase to compensate for client-side filtering
+ * (alcohol, halal, female products). Returns { products, rawCount } so
+ * the caller can determine if more pages exist.
  */
 export async function getProducts(
   filters?: ProductFilters
-): Promise<ProductWithRelations[]> {
+): Promise<{ products: ProductWithRelations[]; rawCount: number }> {
   try {
+    const requestedLimit = filters?.limit || 20;
+    const offset = filters?.offset || 0;
+    // Over-fetch 3x to compensate for client-side filtering
+    const fetchLimit = requestedLimit * 3;
+
     let query = supabase
       .from('products')
       .select(`
@@ -160,10 +234,7 @@ export async function getProducts(
       query = query.eq('requires_card', filters.requires_card);
     }
 
-    // Pagination
-    const limit = filters?.limit || 20;
-    const offset = filters?.offset || 0;
-    query = query.range(offset, offset + limit - 1);
+    query = query.range(offset, offset + fetchLimit - 1);
 
     const { data, error } = await query;
 
@@ -172,9 +243,13 @@ export async function getProducts(
       throw error;
     }
 
+    const rawCount = (data || []).length;
     const noAlcohol = filterExcludeAlcohol((data || []) as ProductWithRelations[]);
     const halal = filterHalalOnly(noAlcohol);
-    return filterExcludeFemale(halal);
+    const noAnimal = filterExcludeAnimalFoods(halal);
+    const filtered = filterExcludeFemale(noAnimal);
+
+    return { products: filtered.slice(0, requestedLimit), rawCount };
   } catch (error) {
     console.error('Failed to fetch products:', error);
     throw error;
@@ -213,12 +288,13 @@ export async function getProductById(id: string): Promise<ProductWithRelations |
  */
 export async function searchProducts(
   query: string,
-  limit: number = 20
+  limit: number = 50
 ): Promise<ProductWithRelations[]> {
-  return getProducts({
+  const { products } = await getProducts({
     search: query,
     limit,
   });
+  return products;
 }
 
 /**

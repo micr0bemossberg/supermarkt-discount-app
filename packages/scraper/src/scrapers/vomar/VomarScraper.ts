@@ -79,9 +79,9 @@ export class VomarScraper extends BaseScraper {
   }
 
   /**
-   * Fetch spreads.json from Publitas viewer via Playwright
+   * Fetch spreads.json from a Publitas viewer URL via Playwright
    */
-  private async fetchSpreadsData(): Promise<any[]> {
+  private async fetchSpreadsData(publitasUrl: string, label: string): Promise<any[]> {
     const page = await this.initBrowser();
 
     return new Promise(async (resolve, reject) => {
@@ -92,23 +92,23 @@ export class VomarScraper extends BaseScraper {
         if (url.includes('spreads.json')) {
           try {
             spreadsData = await response.json();
-            this.logger.success(`Got spreads.json with ${Array.isArray(spreadsData) ? spreadsData.length : Object.keys(spreadsData).length} entries`);
+            this.logger.success(`Got ${label} spreads.json with ${Array.isArray(spreadsData) ? spreadsData.length : Object.keys(spreadsData).length} entries`);
           } catch (e) {
-            this.logger.warning('Failed to parse spreads.json');
+            this.logger.warning(`Failed to parse ${label} spreads.json`);
           }
         }
       });
 
       try {
-        this.logger.info('Loading Publitas folder viewer...');
-        await page.goto('https://view.publitas.com/folder-deze-week', {
+        this.logger.info(`Loading ${label} Publitas viewer...`);
+        await page.goto(publitasUrl, {
           waitUntil: 'networkidle',
           timeout: 30000,
         });
         await page.waitForTimeout(3000);
 
         if (!spreadsData) {
-          reject(new Error('Failed to capture spreads.json from Publitas'));
+          reject(new Error(`Failed to capture spreads.json from ${label}`));
           return;
         }
 
@@ -173,6 +173,14 @@ export class VomarScraper extends BaseScraper {
         i += 3;
         continue;
       }
+      // Join "O=P" + "OP" → "OP=OP" (alternate Publitas text extraction)
+      if (i + 1 < lines.length &&
+          /^O=P$/i.test(lines[i]) &&
+          /^OP$/i.test(lines[i + 1])) {
+        result.push('OP=OP');
+        i += 2;
+        continue;
+      }
       // Join "XX%" + "KORTING" or lines with partial KORTING
       if (i + 1 < lines.length &&
           /\d+%$/.test(lines[i]) &&
@@ -222,7 +230,8 @@ export class VomarScraper extends BaseScraper {
       const line = lines[i].trim();
 
       // Match explicit "X.XX" or "X,XX" prices (with optional ¤/€ prefix)
-      const explicitMatches = line.match(/[¤€]?\s*(\d+)[.,](\d{2})\b/g);
+      // Also handle truncated prices like "¤4.9" (1 decimal digit from Publitas)
+      const explicitMatches = line.match(/[¤€]?\s*(\d+)[.,](\d{1,2})\b/g);
       if (explicitMatches) {
         for (const m of explicitMatches) {
           const cleaned = m.replace(/[¤€\s]/g, '').replace(',', '.');
@@ -243,6 +252,115 @@ export class VomarScraper extends BaseScraper {
     if (prices.length === 0) return undefined;
     // Return the lowest price (most likely the deal price)
     return Math.min(...prices);
+  }
+
+  /**
+   * Specialized parser for the dagknaller page.
+   * The dagknaller page has a known structure: 7 daily "Vaste dagacties"
+   * each preceded by OP=OP marker with garbled day name text.
+   * Pattern: OP=OP → product name → description → unit info → original price → deal price code
+   */
+  private parseDagknallerProducts(pages: Array<{ pageNum: number; text: string }>): FolderProduct[] {
+    const products: FolderProduct[] = [];
+    const seenNames = new Set<string>();
+
+    for (const { text } of pages) {
+      const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+
+      // Find all OP=OP markers
+      for (let i = 0; i < lines.length; i++) {
+        if (!/^OP\s*=\s*OP$/i.test(lines[i])) continue;
+
+        // Collect product name lines BELOW, plus price info
+        const nameParts: string[] = [];
+        let priceCode: number | undefined;
+        let originalPrice: number | undefined;
+
+        for (let j = i + 1; j < Math.min(lines.length, i + 20); j++) {
+          const line = lines[j];
+          if (!line) continue;
+
+          // Stop at next OP=OP or "Vaste" (next day section)
+          if (/^OP\s*=\s*OP$/i.test(line)) break;
+          if (/^Vaste$/i.test(line)) break;
+
+          // Price code (e.g. "0t" = €0.99, "3j" = €3.49)
+          if (/^\d{1,2}[a-z]$/i.test(line)) {
+            const decoded = this.decodePriceCode(line);
+            if (decoded !== undefined) {
+              // If we don't have a price yet, this is the deal price
+              // If we already have one, this might be the original price of the NEXT product
+              if (!priceCode) {
+                priceCode = decoded;
+              }
+            }
+            continue;
+          }
+
+          // Explicit price (original price, e.g. "1.49", "4.99")
+          if (/^\d+[.,]\d{2}$/.test(line)) {
+            originalPrice = parseFloat(line.replace(',', '.'));
+            continue;
+          }
+
+          // Price range (e.g. "8.69 - 9.99") - take the higher end
+          if (/^\d+[.,]\d{2}\s*-\s*\d+[.,]\d{2}$/.test(line)) {
+            const parts = line.split('-').map(p => parseFloat(p.trim().replace(',', '.')));
+            originalPrice = Math.max(...parts);
+            continue;
+          }
+
+          // Skip unit/quantity info
+          if (/^(ZAK|TRAY|PAK|DOOS|BOS|SCHAAL|BAK|POT|FLES|SET|PER\s)/i.test(line)) continue;
+          if (/^\d+\s*(GRAM|KILO|LITER|ML|CL|STUKS)/i.test(line)) continue;
+          if (/^Max\./i.test(line)) continue;
+
+          // Skip description/variant lines
+          if (/^(Jong,|Belegen|Extra\s+Belegen|Stuk\s|Maat\s|Emmer\s|Ongezouten|Rol\s|Om\s)/i.test(line)) continue;
+
+          // Skip garbled day names and dagknaller decorative text
+          if (/knall/i.test(line)) continue;
+          if (/^(MAAND|DINSD|WOENS|DONDER|VRIJDA|ZATERD|ZONDA)/i.test(line)) continue;
+          if (/^k\s+n\s+a\s+l/i.test(line)) continue;
+          if (/^(VOORDEELSTUK|PER KILO|!$|r!G$|r!$)/i.test(line)) continue;
+          if (/^(Ni|eu|w!)$/i.test(line)) continue;
+          if (/^(Dat is|Alle scherpe|dezelfde|terug|pakken|voordeel|komen elke)/i.test(line)) continue;
+          if (/^(goedkop|Vomar|kansatlel|dagac)/i.test(line)) continue;
+
+          // Price comparison table data (from page 25/26)
+          if (/^\d+[.,]\d{2}$/.test(line)) continue;
+          if (/^(EUR|JUMBO|ALBERT|PICNIC|AH\s|LIDL|PLUS)/i.test(line)) continue;
+          if (/\d{1,2}-\d{1,2}-\d{4}/.test(line)) continue;
+          if (/^[A-Z\s]+\d+\s*(GRAM|ML|STUKS|LITER)/i.test(line) && line.length > 30) continue;
+
+          // This looks like a product name
+          if (/[A-Za-zÀ-ÿ]/.test(line) && line.length >= 3 && line.length <= 40) {
+            // Only collect 1-2 name lines (dagknaller products have short names)
+            if (nameParts.length < 2) {
+              nameParts.push(line);
+            } else if (nameParts.length === 2) {
+              break; // We have enough name parts
+            }
+          }
+        }
+
+        if (nameParts.length > 0 && priceCode !== undefined) {
+          const name = nameParts.join(' ').replace(/\s+/g, ' ').trim();
+          if (name.length >= 4 && !seenNames.has(name.toLowerCase())) {
+            seenNames.add(name.toLowerCase());
+            products.push({
+              name,
+              dealType: 'OP=OP',
+              folderPrice: priceCode,
+              ...(originalPrice ? {} : {}),
+            });
+            this.logger.debug(`  Dagknaller: ${name} → €${priceCode}${originalPrice ? ` (was €${originalPrice})` : ''}`);
+          }
+        }
+      }
+    }
+
+    return products;
   }
 
   /**
@@ -395,17 +513,70 @@ export class VomarScraper extends BaseScraper {
       }
 
       // Strategy 6: Find "VOUCHER" / "ACTIE" products
+      // Also detect "Met voucher" / "Zonder voucher" pricing pattern
       for (let i = 0; i < lines.length; i++) {
-        if (/^VOUCHER$/i.test(lines[i].trim()) || /^ACTIE$/i.test(lines[i].trim())) {
+        const isVoucher = /^VOUCHER$/i.test(lines[i].trim());
+        const isActie = /^ACTIE$/i.test(lines[i].trim());
+        if (isVoucher || isActie) {
+          // Check if VOUCHER appears nearby (indicates voucher-required deal)
+          let hasVoucher = isVoucher;
+          if (!hasVoucher) {
+            for (let j = Math.max(0, i - 3); j <= Math.min(lines.length - 1, i + 3); j++) {
+              if (/^VOUCHER$/i.test(lines[j].trim())) { hasVoucher = true; break; }
+            }
+          }
           const name = this.findProductNameNear(lines, i);
           if (name && !isDuplicate(name)) {
             markSeen(name);
-            const price = this.findPriceNear(lines, i);
-            products.push({
+
+            // For voucher deals, look for "Met voucher" / "Zonder voucher" pricing pattern
+            // Pattern: "Zonder voucher" → price (original), "Met voucher" → price (deal)
+            let voucherPrice: number | undefined;
+            let originalVoucherPrice: number | undefined;
+            if (hasVoucher) {
+              for (let j = i; j < Math.min(lines.length, i + 25); j++) {
+                if (/^Met$/i.test(lines[j]) && j + 1 < lines.length && /^voucher$/i.test(lines[j + 1])) {
+                  // Look for coded price or explicit price after "Met voucher"
+                  for (let k = j + 2; k < Math.min(lines.length, j + 5); k++) {
+                    if (/^\d{1,2}[a-z]$/i.test(lines[k])) {
+                      voucherPrice = this.decodePriceCode(lines[k]);
+                      break;
+                    }
+                    const priceMatch = lines[k].match(/^[¤€]?\s*(\d+)[.,](\d{1,2})$/);
+                    if (priceMatch) {
+                      voucherPrice = parseFloat(lines[k].replace(/[¤€\s]/g, '').replace(',', '.'));
+                      break;
+                    }
+                  }
+                }
+                if (/^Zonder$/i.test(lines[j]) && j + 1 < lines.length && /^voucher$/i.test(lines[j + 1])) {
+                  for (let k = j + 2; k < Math.min(lines.length, j + 5); k++) {
+                    if (/^\d{1,2}[a-z]$/i.test(lines[k])) {
+                      originalVoucherPrice = this.decodePriceCode(lines[k]);
+                      break;
+                    }
+                    const priceMatch = lines[k].match(/^[¤€]?\s*(\d+)[.,](\d{1,2})$/);
+                    if (priceMatch) {
+                      originalVoucherPrice = parseFloat(lines[k].replace(/[¤€\s]/g, '').replace(',', '.'));
+                      break;
+                    }
+                  }
+                }
+              }
+            }
+
+            const price = voucherPrice || this.findPriceNear(lines, i);
+            const product: FolderProduct = {
               name,
               dealType: 'ACTIE',
               folderPrice: price,
-            });
+              isVoucherDeal: hasVoucher,
+            };
+            // If we found both voucher prices, calculate discount percentage
+            if (voucherPrice && originalVoucherPrice && originalVoucherPrice > voucherPrice) {
+              product.dealPercentage = Math.round((1 - voucherPrice / originalVoucherPrice) * 100);
+            }
+            products.push(product);
           }
         }
       }
@@ -497,16 +668,27 @@ export class VomarScraper extends BaseScraper {
     if (!name || name.length < 4) return false;
     if (!/[A-Za-zÀ-ÿ]{3}/.test(name)) return false;
     if (!/^[A-Za-zÀ-ÿ'"]/.test(name)) return false;
-    if (/^\d+\s*(GRAM|KILO|LITER|ML|CL|STUKS|PAKKEN|ROLLEN|BLIKKEN|ZAKKEN|FLESSEN|PACK)\b/i.test(name)) return false;
-    if (/^\d+\s*(STUK|PAK|ZAK|POT|FLES|BOS|BLIK|TRAY)\b/i.test(name)) return false;
+    // Quantity + unit at start (with possible trailing chars like "6 KILO9")
+    if (/^\d+\s*(GRAM|KILO|LITER|ML|CL|STUKS|PAKKEN|ROLLEN|BLIKKEN|ZAKKEN|FLESSEN|PACK)/i.test(name)) return false;
+    if (/^\d+\s*(STUK|PAK|ZAK|POT|FLES|BOS|BLIK|TRAY)/i.test(name)) return false;
     if (/\d+\s*(feb|mrt|apr|mei|jun|jul|aug|sep|okt|nov|dec|jan)\b/i.test(name)) return false;
     if (/^\d+[-x]\d+/i.test(name)) return false;
     if (/^[\d\s.,\-]+$/.test(name)) return false;
     if (/^[•\-]\s/.test(name)) return false;
     if (/^\d+[a-z]$/i.test(name.trim())) return false;
     if (/^(stuks|gram|kilo|liter|ml|cl|laags|rollen|blik|pak|zak|tray|fles)\b/i.test(name)) return false;
-    if (/^(DE BESTE|VAN NEDERLAND|VOOR DE|VERS VAN|Dagelijks|Met de|Spaar|Bij Vomar|Altijd|Schrijf|Zet-|Acties zijn|lage prijzen|Bovenop|PROFITEER|Ontdek|Lees m|BIJ\s+\d|BIJ\s+V|TOT\s+\d|Prijsvoorbeeld|Download|Vomar-app|Meer halen|Penn\s|Rodi\s|Vaste\b|Kies\s.*Mix|Bos\s+\d+\s+stelen|Verse buitenlandse|Last minute|ACTIVEER|Versgesneden|Scharreleieren)/i.test(name)) return false;
-    if (/Hotelkadetten/i.test(name)) return false;
+    // Promotional / informational text
+    if (/^(DE BESTE|VAN NEDERLAND|VOOR DE|VERS VAN|Dagelijks|Met de|Spaar|Bij Vomar|Altijd|Schrijf|Zet-|Acties zijn|lage prijzen|Bovenop|PROFITEER|Ontdek|Lees m|BIJ\s+\d|BIJ\s+V|TOT\s+\d|Prijsvoorbeeld|Download|Vomar-app|Meer halen|Penn\s|Rodi\s|Vaste\b|Kies\s.*Mix|Bos\s+\d+\s+stelen|Verse buitenlandse|Last minute|ACTIVEER|Versgesneden|Scharreleieren|Pr\s*ijs\s*door|Concurrentieprijzen|Prijzen zijn)/i.test(name)) return false;
+    // Price comparison sections (Bij Mediamarkt, Bij Bol.com, Bij Kruidvat, etc.)
+    if (/^Bij\s/i.test(name)) return false;
+    if (/\bBij\s+(Mediamarkt|Bol\.com|Kruidvat|Amazon|Coolblue|Blokker|HEMA|Praxis|Gamma|Karwei)/i.test(name)) return false;
+    if (/Mediamarkt|Bol\.com|Kruidvat\.nl|Amazon\.nl/i.test(name)) return false;
+    // Customer limit text
+    if (/perklant|per\s*klant/i.test(name)) return false;
+    // Garbled OP=OP fragments
+    if (/^O=P\s/i.test(name)) return false;
+    if (/^OP\s*=\s*OP$/i.test(name)) return false;
+    // Hotelkadetten is a real product (bread rolls), NOT filtered
     if (/^OM\s+\d/i.test(name)) return false;
     if (/^of\s/i.test(name)) return false;
     if (/^(XL|XXL|GIGA|MINI|MAXI)[-\s]*(PAK|PACK)$/i.test(name)) return false;
@@ -526,6 +708,23 @@ export class VomarScraper extends BaseScraper {
     if (name.length > 45) return false;  // overly long names are descriptions, not product names
     if (/\b(gemaakt in onze|wijze gemaakt|ingekocht voor)\b/i.test(name)) return false;  // description text
     if (/^Pluche\s/i.test(name)) return false;
+    // Names that are just "klant" fragments or garbled text
+    if (/^(klant|perklant)\b/i.test(name)) return false;
+    if (/^[A-Z]=[A-Z]\s/i.test(name) && name.length < 15) return false; // "O=P OP..." type garbage (must have = sign)
+    // Garbled day names with "knall" (dagknaller text corruption)
+    if (/knall\b/i.test(name) && !/knaller/i.test(name)) return false; // "MAANDeA knall r!", "WOENSeDrA!G ll knall"
+    if (/^(MAAND|DINSD|WOENS|DONDER|VRIJDA|ZATERD|ZONDA)/i.test(name) && name.length < 25) return false;
+    // Supermarket names as product names (from price comparison pages)
+    if (/^(JUMBO|ALBERT HEIJN|LIDL|PLUS|COOP|DEKAMARKT|BONI|POIESZ)\s*\d*[a-z]*\.?$/i.test(name)) return false;
+    // Garbled text with too many consecutive consonants or mixed case chaos
+    if (/[A-Z][a-z][A-Z][a-z][A-Z]/.test(name) && name.length < 20) return false; // "leAG kRnIaJlD"
+    // Garbled promotional text
+    if (/^(weeeek|brraaak|goedkop\s*er)/i.test(name)) return false;
+    if (/^(drinks of bars|pakje à)/i.test(name)) return false;
+    // "van X.XX tot X.XX" price comparison text
+    if (/^van\s+\d/i.test(name)) return false;
+    // "Alléén geldig" (promo text, not product)
+    if (/^Alléén\s+geldig/i.test(name)) return false;
     return true;
   }
 
@@ -560,7 +759,17 @@ export class VomarScraper extends BaseScraper {
         if (nameParts.length > 0) break;
         continue;
       }
-      if (/^(Dagelijks|Bovenop|Download|Prijsvoorbeeld|Alléén|Meer halen|Keuze uit|Kies|Diverse|Alle soorten|Per stuk|Per\s\d|Geschikt|Inclusief|Fles\s|Zak\s|Pak\s|Bak\s|Pot\s|Schaal\s|Net\s|Stuk\s|Heel\.|Om\sthuis|Maat\s|Maten\s)/i.test(line)) {
+      if (/^(Dagelijks|Bovenop|Download|Prijsvoorbeeld|Alléén|Meer halen|Keuze uit|Kies|Diverse|Alle soorten|Per stuk|Per\s\d|Geschikt|Inclusief|Fles\s|Zak\s|Pak\s|Bak\s|Pot\s|Schaal\s|Net\s|Stuk\s|Heel\.|Om\sthuis|Maat\s|Maten\s|Doos\s)/i.test(line)) {
+        if (nameParts.length > 0) break;
+        continue;
+      }
+      // Garbled OP=OP fragments
+      if (/^O=P$/i.test(line) || /^OP$/i.test(line)) {
+        if (nameParts.length > 0) break;
+        continue;
+      }
+      // Price comparison and customer limit text
+      if (/^Bij\s/i.test(line) || /perklant|per\s+klant/i.test(line) || /Mediamarkt|Bol\.com|Kruidvat\.nl|Amazon/i.test(line)) {
         if (nameParts.length > 0) break;
         continue;
       }
@@ -614,11 +823,23 @@ export class VomarScraper extends BaseScraper {
         continue;
       }
       if (/^\d+[.,]\d{2}\s*-\s*\d+[.,]\d{2}$/.test(line)) continue;
-      if (/^\d+\s*(GRAM|KILO|LITER|ML|CL|STUKS|PAKKEN)\b/i.test(line)) continue;
+      if (/^\d+\s*(GRAM|KILO|LITER|ML|CL|STUKS|PAKKEN)/i.test(line)) continue;
       if (/^(STUKS|GRAM|KILO|LITER)\b/i.test(line)) continue;
+      // Price comparison and customer limit text
+      if (/^Bij\s/i.test(line) || /perklant|per\s+klant/i.test(line) || /Mediamarkt|Bol\.com|Kruidvat\.nl|Amazon/i.test(line)) continue;
+      // Packaging/container lines (e.g. "Doos 6 kilo", "Blik 250 ml")
+      if (/^(Doos|Blik|Tray|Flesje|Busje|Tube|Rol)\s/i.test(line)) {
+        if (nameParts.length > 0) break;
+        continue;
+      }
+      // Garbled OP=OP fragments
+      if (/^O=P$/i.test(line) || (/^OP$/i.test(line) && nameParts.length > 0)) {
+        if (nameParts.length > 0) break;
+        continue;
+      }
 
       // Stop at description/detail lines once we have a name
-      if (nameParts.length > 0 && /^(Alle soorten|Keuze uit|Per stuk|Per\s\d|Pak\s|Fles\s|Zak\s|Bak\s|Pot\s|Schaal\s|Stuk\s|Los\.|Diverse)/i.test(line)) break;
+      if (nameParts.length > 0 && /^(Alle soorten|Keuze uit|Per stuk|Per\s\d|Pak\s|Fles\s|Zak\s|Bak\s|Pot\s|Schaal\s|Stuk\s|Los\.|Diverse|Doos\s)/i.test(line)) break;
 
       // Looks like a product name
       if (/[A-Za-zÀ-ÿ]/.test(line) && line.length >= 2 && line.length <= 50) {
@@ -640,9 +861,11 @@ export class VomarScraper extends BaseScraper {
 
     const name = nameParts.join(' ')
       .replace(/\s+/g, ' ')
-      .replace(/^(OP=OP|NIEUW|DIEPVRIES)\s*/i, '')
+      .replace(/^(OP=OP|NIEUW|DIEPVRIES|SET|KRAT|TRAY)\s+/i, '')
       .replace(/\s+\d+[a-z]$/i, '')
       .replace(/\s+(of|en|met)\s*$/i, '')  // trim trailing conjunctions
+      .replace(/\s+O=P$/i, '')  // remove trailing garbled OP=OP
+      .replace(/\s+OP$/i, '')   // remove trailing "OP"
       .trim();
 
     if (!this.isValidProductName(name)) return null;
@@ -706,26 +929,16 @@ export class VomarScraper extends BaseScraper {
     return null;
   }
 
-  protected async scrapeProducts(): Promise<ScrapedProduct[]> {
-    const { monday, sunday } = this.getWeekDates();
-
-    // Step 1: Get folder text from Publitas
-    this.logger.info('Fetching Publitas folder data...');
-    const spreads = await this.fetchSpreadsData();
-    const pageTexts = this.extractPageTexts(spreads);
-    this.logger.info(`Got text from ${pageTexts.length} pages`);
-
-    // Step 2: Parse products from text
-    this.logger.info('Parsing products from folder...');
-    const parsed = this.parseProducts(pageTexts);
-    this.logger.success(`Found ${parsed.length} products in folder`);
-
-    for (const p of parsed) {
-      this.logger.debug(`  ${p.name} [${p.dealType || 'no deal'}] ${p.folderPrice ? '€' + p.folderPrice : ''}`);
-    }
-
-    // Step 3: Enrich with prices and images from Vomar API
-    this.logger.info('Fetching catalog prices and images from Vomar API...');
+  /**
+   * Enrich parsed folder products with API data and convert to ScrapedProduct[]
+   */
+  private async enrichProducts(
+    parsed: FolderProduct[],
+    validFrom: Date,
+    validUntil: Date,
+    label: string,
+  ): Promise<ScrapedProduct[]> {
+    this.logger.info(`Enriching ${parsed.length} ${label} products from Vomar API...`);
     const products: ScrapedProduct[] = [];
     let apiHits = 0;
     let apiMisses = 0;
@@ -742,24 +955,20 @@ export class VomarScraper extends BaseScraper {
 
       if (apiResult) {
         apiHits++;
-        const catalogPrice = apiResult.price; // API returns euros
+        const catalogPrice = apiResult.price;
 
         if (apiResult.images?.[0]?.imageUrl) {
           imageUrl = `${VOMAR_IMAGE_CDN}/${apiResult.images[0].imageUrl}`;
         }
 
         if (p.dealPercentage && p.dealPercentage > 0) {
-          // Known percentage deal (1+1 GRATIS = 50%, XX% KORTING, 2e HALVE PRIJS = 25%)
           originalPrice = catalogPrice;
           discountPrice = Math.round(catalogPrice * (1 - p.dealPercentage / 100) * 100) / 100;
           discountPercentage = p.dealPercentage;
-        } else if (p.folderPrice && p.folderPrice < catalogPrice) {
-          // Folder shows a lower price than catalog → real discount
-          discountPrice = p.folderPrice;
-          originalPrice = catalogPrice;
-          discountPercentage = Math.round((1 - p.folderPrice / catalogPrice) * 100);
         } else {
-          // OP=OP, AANBIEDING, ACTIE — show at catalog price with deal label
+          // OP=OP, AANBIEDING, ACTIE, dagknaller — just use catalog price.
+          // Don't trust folderPrice when we have an API match because
+          // findPriceNear() often grabs prices from nearby unrelated products.
           discountPrice = catalogPrice;
         }
 
@@ -770,7 +979,6 @@ export class VomarScraper extends BaseScraper {
       } else {
         apiMisses++;
 
-        // No API match — include if we have a folder price (explicit or decoded)
         if (!p.folderPrice) {
           this.logger.debug(`  No API match and no folder price for: ${p.name}`);
           continue;
@@ -789,8 +997,8 @@ export class VomarScraper extends BaseScraper {
         unit_info: p.isVoucherDeal
           ? (p.dealType?.includes('Vomar app') ? p.dealType : `${p.dealType || 'ACTIE'} (Vomar app)`)
           : p.dealType,
-        valid_from: monday,
-        valid_until: sunday,
+        valid_from: validFrom,
+        valid_until: validUntil,
         category_slug: this.detectCategory(title),
         product_url: productUrl,
         image_url: imageUrl,
@@ -799,12 +1007,82 @@ export class VomarScraper extends BaseScraper {
 
       this.logger.debug(`  ${title} — €${discountPrice}${originalPrice ? ` (was €${originalPrice})` : ''} [${p.dealType || ''}]`);
 
-      // Rate limit API calls
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
-    this.logger.info(`API matches: ${apiHits}/${parsed.length} (${apiMisses} missed)`);
-    this.logger.success(`Found ${products.length} deal products from Vomar folder`);
+    this.logger.info(`${label} API matches: ${apiHits}/${parsed.length} (${apiMisses} missed)`);
     return products;
+  }
+
+  protected async scrapeProducts(): Promise<ScrapedProduct[]> {
+    const { monday, sunday } = this.getWeekDates();
+    const allProducts: ScrapedProduct[] = [];
+
+    // === Part 1: Weekly folder ===
+    this.logger.info('=== Fetching weekly folder ===');
+    try {
+      const spreads = await this.fetchSpreadsData(
+        'https://view.publitas.com/folder-deze-week',
+        'weekly folder'
+      );
+      const pageTexts = this.extractPageTexts(spreads);
+      this.logger.info(`Got text from ${pageTexts.length} pages`);
+
+      const parsed = this.parseProducts(pageTexts);
+      this.logger.success(`Found ${parsed.length} products in weekly folder`);
+      for (const p of parsed) {
+        this.logger.debug(`  ${p.name} [${p.dealType || 'no deal'}] ${p.folderPrice ? '€' + p.folderPrice : ''}`);
+      }
+
+      const weeklyProducts = await this.enrichProducts(parsed, monday, sunday, 'Weekly');
+      allProducts.push(...weeklyProducts);
+      this.logger.success(`${weeklyProducts.length} weekly folder products enriched`);
+    } catch (err) {
+      this.logger.error(`Failed to scrape weekly folder: ${err}`);
+    }
+
+    // Close browser before opening a new page for dagknallers
+    await this.cleanup();
+
+    // === Part 2: Dagknallers (day deals) ===
+    this.logger.info('=== Fetching dagknallers ===');
+    try {
+      const dagSpreads = await this.fetchSpreadsData(
+        'https://view.publitas.com/dagknallers',
+        'dagknallers'
+      );
+      const dagPages = this.extractPageTexts(dagSpreads);
+      this.logger.info(`Got text from ${dagPages.length} dagknaller pages`);
+
+      // Use specialized dagknaller parser (generic parser struggles with garbled day-name text)
+      const dagParsed = this.parseDagknallerProducts(dagPages);
+      this.logger.success(`Found ${dagParsed.length} products in dagknallers`);
+      for (const p of dagParsed) {
+        this.logger.debug(`  ${p.name} [${p.dealType || 'no deal'}] ${p.folderPrice ? '€' + p.folderPrice : ''}`);
+      }
+
+      // Dagknallers recur weekly — valid for the whole week
+      const dagProducts = await this.enrichProducts(dagParsed, monday, sunday, 'Dagknaller');
+
+      // Mark dagknaller products with deal type prefix for clarity
+      for (const dp of dagProducts) {
+        if (dp.unit_info && !dp.unit_info.startsWith('Dagknaller')) {
+          dp.unit_info = `Dagknaller: ${dp.unit_info}`;
+        } else if (!dp.unit_info) {
+          dp.unit_info = 'Dagknaller';
+        }
+      }
+
+      // Dedup against weekly products (same title = skip dagknaller version)
+      const weeklyTitles = new Set(allProducts.map(p => p.title.toLowerCase()));
+      const uniqueDag = dagProducts.filter(p => !weeklyTitles.has(p.title.toLowerCase()));
+      allProducts.push(...uniqueDag);
+      this.logger.success(`${uniqueDag.length} unique dagknaller products added (${dagProducts.length - uniqueDag.length} duplicates skipped)`);
+    } catch (err) {
+      this.logger.warning(`Failed to scrape dagknallers (non-fatal): ${err}`);
+    }
+
+    this.logger.success(`Total: ${allProducts.length} deal products from Vomar`);
+    return allProducts;
   }
 }

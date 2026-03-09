@@ -85,7 +85,7 @@ export function truncate(text: string, maxLength: number): string {
  */
 export function getSupermarketColor(slug: string): string {
   const colors: Record<string, string> = {
-    ah: '#0066CC',
+    ah: '#00A0E2',
     jumbo: '#FFD700',
     lidl: '#0050AA',
     aldi: '#009FE3',
@@ -99,6 +99,7 @@ export function getSupermarketColor(slug: string): string {
     butlon: '#1A1A2E',
     flink: '#D9006C',
     kruidvat: '#00A651',
+    joybuy: '#E4393C',
   };
 
   return colors[slug] || '#666666';

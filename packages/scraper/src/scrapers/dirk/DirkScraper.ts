@@ -107,8 +107,22 @@ export class DirkScraper extends BaseScraper {
     return priceMap;
   }
 
+  /**
+   * Normalize title for dedup comparison: lowercase, collapse whitespace,
+   * strip trailing weight/volume (e.g. "360g", "1.5L"), trim punctuation.
+   */
+  private normalizeTitleForDedup(title: string): string {
+    return title
+      .toLowerCase()
+      .replace(/\s+/g, ' ')           // collapse whitespace
+      .replace(/\s*\d+\s*(g|gr|kg|ml|cl|l|liter|stuks?|st)\b/gi, '') // strip weight/volume
+      .replace(/[^\w\s]/g, '')         // strip punctuation
+      .trim();
+  }
+
   private async parseArticles(articles: any[], jsonLdPriceMap: Map<string, number>): Promise<ScrapedProduct[]> {
     const products: ScrapedProduct[] = [];
+    const seenTitles = new Map<string, number>(); // normalized title → index in products array (keep lowest price)
     const { monday, sunday } = this.getWeekDates();
 
     for (let i = 0; i < articles.length; i++) {
@@ -208,7 +222,10 @@ export class DirkScraper extends BaseScraper {
           }
         }
 
-        products.push({
+        const normalizedTitle = this.normalizeTitleForDedup(title);
+        const existingIndex = seenTitles.get(normalizedTitle);
+
+        const product: ScrapedProduct = {
           title,
           discount_price: price,
           original_price: originalPrice,
@@ -217,7 +234,20 @@ export class DirkScraper extends BaseScraper {
           category_slug: this.detectCategory(title),
           product_url: productUrl,
           image_url: imageUrl,
-        });
+        };
+
+        if (existingIndex !== undefined) {
+          // Duplicate title: keep the one with the lower deal price
+          if (price < products[existingIndex].discount_price) {
+            this.logger.debug(`Dedup: replacing ${title} €${products[existingIndex].discount_price} → €${price}`);
+            products[existingIndex] = product;
+          } else {
+            this.logger.debug(`Dedup: skipping ${title} €${price} (keeping €${products[existingIndex].discount_price})`);
+          }
+        } else {
+          seenTitles.set(normalizedTitle, products.length);
+          products.push(product);
+        }
 
         this.logger.debug(`Scraped: ${title} - €${price}${originalPrice ? ` (was €${originalPrice})` : ''}`);
       } catch (err) {

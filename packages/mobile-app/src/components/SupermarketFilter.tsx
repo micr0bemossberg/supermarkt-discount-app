@@ -1,12 +1,13 @@
 /**
  * SupermarketFilter Component
- * Horizontal scrollable chips for filtering by supermarket
- * Grouped into "Winkels" (physical stores) and "Online" sections
+ * Wrapping pill layout for filtering by supermarket
+ * Grouped into "Winkels" (physical) and "Online" sections
  */
 
 import React, { useEffect, useState, useMemo } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { Chip, Text } from 'react-native-paper';
+import { View, StyleSheet, Pressable } from 'react-native';
+import { Text } from 'react-native-paper';
+import { getSupermarketColor } from '../utils/formatters';
 import { getSupermarkets } from '../services/supermarkets';
 import type { Supermarket } from '@supermarkt-deals/shared';
 
@@ -68,54 +69,68 @@ export const SupermarketFilter: React.FC<SupermarketFilterProps> = ({
 
   const allSelected = selectedIds.length === supermarkets.length || selectedIds.length === 0;
 
-  const renderChip = (supermarket: Supermarket) => {
+  const renderPill = (supermarket: Supermarket) => {
     const isSelected = selectedIds.includes(supermarket.id);
+    const brandColor = getSupermarketColor(supermarket.slug);
+
     return (
-      <Chip
+      <Pressable
         key={supermarket.id}
-        selected={isSelected}
         onPress={() => handleToggle(supermarket.id)}
-        style={[styles.chip, isSelected && styles.chipSelected]}
-        textStyle={isSelected ? styles.chipTextSelected : undefined}
+        style={[
+          styles.pill,
+          isSelected && { backgroundColor: brandColor, borderColor: brandColor },
+        ]}
       >
-        {supermarket.name}
-      </Chip>
+        {isSelected && (
+          <View style={[styles.pillDot, { backgroundColor: '#fff' }]} />
+        )}
+        <Text
+          style={[
+            styles.pillText,
+            isSelected && styles.pillTextSelected,
+          ]}
+          numberOfLines={1}
+        >
+          {supermarket.name}
+        </Text>
+      </Pressable>
     );
   };
 
   return (
     <View style={styles.container}>
-      {/* Winkels row */}
-      <View style={styles.row}>
-        <Text style={styles.label} variant="labelSmall">Winkels</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <Chip
-            selected={allSelected}
+      {/* Winkels section */}
+      <View style={styles.section}>
+        <Text style={styles.label}>Winkels</Text>
+        <View style={styles.pillWrap}>
+          <Pressable
             onPress={handleSelectAll}
-            style={[styles.chip, allSelected && styles.chipSelected]}
-            textStyle={allSelected ? styles.chipTextSelected : undefined}
+            style={[
+              styles.pill,
+              allSelected && styles.pillAllSelected,
+            ]}
           >
-            Alle
-          </Chip>
-          {stores.map(renderChip)}
-        </ScrollView>
+            <Text
+              style={[
+                styles.pillText,
+                allSelected && styles.pillTextSelected,
+              ]}
+            >
+              Alle
+            </Text>
+          </Pressable>
+          {stores.map(renderPill)}
+        </View>
       </View>
 
-      {/* Online row */}
+      {/* Online section */}
       {onlineShops.length > 0 && (
-        <View style={styles.row}>
-          <Text style={styles.label} variant="labelSmall">Online</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
-          >
-            {onlineShops.map(renderChip)}
-          </ScrollView>
+        <View style={styles.section}>
+          <Text style={styles.label}>Online</Text>
+          <View style={styles.pillWrap}>
+            {onlineShops.map(renderPill)}
+          </View>
         </View>
       )}
     </View>
@@ -125,31 +140,51 @@ export const SupermarketFilter: React.FC<SupermarketFilterProps> = ({
 const styles = StyleSheet.create({
   container: {
     paddingVertical: 4,
-    backgroundColor: '#fff',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    paddingHorizontal: 12,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 4,
+  section: {
+    marginBottom: 4,
   },
   label: {
-    paddingLeft: 16,
-    minWidth: 52,
-    color: '#666',
+    color: '#9E9E9E',
+    fontSize: 10,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+    marginLeft: 4,
   },
-  scrollContent: {
-    paddingRight: 16,
-    gap: 8,
+  pillWrap: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 5,
   },
-  chip: {
-    marginVertical: 0,
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 14,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  chipSelected: {
-    backgroundColor: '#0066CC',
+  pillAllSelected: {
+    backgroundColor: '#1B5E20',
+    borderColor: '#1B5E20',
   },
-  chipTextSelected: {
-    color: '#fff',
+  pillDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+  },
+  pillText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#424242',
+  },
+  pillTextSelected: {
+    color: '#FFFFFF',
   },
 });

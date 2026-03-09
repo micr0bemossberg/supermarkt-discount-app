@@ -11,19 +11,19 @@ import {
   Linking,
   Share,
   Dimensions,
+  Pressable,
 } from 'react-native';
 import {
-  Appbar,
   Text,
   Button,
-  Surface,
-  Chip,
   ActivityIndicator,
+  IconButton,
 } from 'react-native-paper';
 import { Image } from 'expo-image';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { getProductById } from '../services/products';
-import { formatPrice, formatDate, getValidityText } from '../utils/formatters';
+import { formatPrice, formatDate, getValidityText, daysUntil, getSupermarketColor } from '../utils/formatters';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import type { ProductWithRelations } from '@supermarkt-deals/shared';
@@ -87,12 +87,11 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <Appbar.Header>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Product Details" />
-        </Appbar.Header>
+        <View style={styles.topBar}>
+          <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />
+        </View>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" />
+          <ActivityIndicator size="large" color="#1B5E20" />
         </View>
       </View>
     );
@@ -101,12 +100,11 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   if (!product) {
     return (
       <View style={styles.container}>
-        <Appbar.Header>
-          <Appbar.BackAction onPress={() => navigation.goBack()} />
-          <Appbar.Content title="Product niet gevonden" />
-        </Appbar.Header>
+        <View style={styles.topBar}>
+          <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />
+        </View>
         <View style={styles.loadingContainer}>
-          <Text>Product niet gevonden</Text>
+          <Text style={styles.notFoundText}>Product niet gevonden</Text>
         </View>
       </View>
     );
@@ -124,22 +122,43 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 
   const favorite = isFavorite(product.id);
   const validityText = getValidityText(product.valid_until);
+  const days = daysUntil(product.valid_until);
+  const isUrgent = days >= 0 && days <= 2;
+  const brandColor = getSupermarketColor(product.supermarket?.slug || '');
+  const savings = product.original_price
+    ? product.original_price - product.discount_price
+    : 0;
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.BackAction onPress={() => navigation.goBack()} />
-        <Appbar.Content title="" />
-        <Appbar.Action
-          icon={favorite ? 'heart' : 'heart-outline'}
-          onPress={handleFavoriteToggle}
+      {/* Floating top bar over image */}
+      <View style={styles.topBar}>
+        <IconButton
+          icon="arrow-left"
+          onPress={() => navigation.goBack()}
+          style={styles.topBarButton}
+          iconColor="#333"
         />
-        <Appbar.Action icon="share-variant" onPress={handleShare} />
-      </Appbar.Header>
+        <View style={styles.topBarRight}>
+          <IconButton
+            icon={favorite ? 'heart' : 'heart-outline'}
+            onPress={handleFavoriteToggle}
+            style={styles.topBarButton}
+            iconColor={favorite ? '#E53935' : '#333'}
+          />
+          <IconButton
+            icon="share-variant"
+            onPress={handleShare}
+            style={styles.topBarButton}
+            iconColor="#333"
+          />
+        </View>
+      </View>
 
-      <ScrollView>
+      <ScrollView style={styles.scrollView} bounces={false}>
         {/* Product Image */}
         <View style={styles.imageContainer}>
+          <View style={[styles.imageBrandBar, { backgroundColor: brandColor }]} />
           {product.image_url ? (
             <Image
               source={{ uri: product.image_url }}
@@ -149,119 +168,115 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             />
           ) : (
             <View style={styles.imagePlaceholder}>
-              <Text>Geen afbeelding beschikbaar</Text>
+              <MaterialCommunityIcons name="image-off-outline" size={48} color="#BDBDBD" />
+              <Text style={styles.placeholderText}>Geen afbeelding</Text>
             </View>
           )}
 
           {/* Discount Badge */}
-          {discountPercentage && discountPercentage > 0 && (
-            <Surface style={styles.discountBadge} elevation={2}>
-              <Text variant="headlineSmall" style={styles.discountText}>
-                -{discountPercentage}%
-              </Text>
-            </Surface>
+          {discountPercentage != null && discountPercentage > 0 && (
+            <View style={styles.discountBadge}>
+              <Text style={styles.discountText}>-{discountPercentage}%</Text>
+            </View>
           )}
         </View>
 
         <View style={styles.content}>
-          {/* Supermarket Badge */}
-          {product.supermarket && (
-            <Chip
-              icon="store"
-              style={styles.supermarketChip}
-              textStyle={styles.supermarketChipText}
-            >
-              {product.supermarket.name}
-            </Chip>
-          )}
+          {/* Supermarket + Category row */}
+          <View style={styles.metaRow}>
+            <Pressable style={[styles.supermarketPill, { backgroundColor: brandColor }]}>
+              <Text style={styles.supermarketPillText}>
+                {product.supermarket?.name || ''}
+              </Text>
+            </Pressable>
+            {product.category && (
+              <View style={styles.categoryPill}>
+                <Text style={styles.categoryPillText}>{product.category.name}</Text>
+              </View>
+            )}
+          </View>
 
           {/* Card Required Notice */}
           {product.requires_card && (
-            <Surface style={styles.cardNotice} elevation={0}>
-              <Text variant="bodySmall" style={styles.cardNoticeText}>
-                Pas of app vereist — voor deze aanbieding heb je een klantenkaart of de app van{' '}
-                {product.supermarket?.name || 'de winkel'} nodig.
+            <View style={styles.cardNotice}>
+              <MaterialCommunityIcons name="card-account-details" size={16} color="#E65100" />
+              <Text style={styles.cardNoticeText}>
+                Pas of app van {product.supermarket?.name || 'de winkel'} vereist
               </Text>
-            </Surface>
+            </View>
           )}
 
           {/* Title */}
-          <Text variant="headlineSmall" style={styles.title}>
-            {product.title}
-          </Text>
+          <Text style={styles.title}>{product.title}</Text>
 
           {/* Description */}
           {product.description && (
-            <Text variant="bodyMedium" style={styles.description}>
-              {product.description}
-            </Text>
+            <Text style={styles.description}>{product.description}</Text>
           )}
 
           {/* Unit Info */}
           {product.unit_info && (
-            <Text variant="bodySmall" style={styles.unitInfo}>
-              {product.unit_info}
-            </Text>
+            <Text style={styles.unitInfo}>{product.unit_info}</Text>
           )}
 
-          {/* Prices */}
-          <Surface style={styles.priceContainer} elevation={1}>
-            {product.original_price && (
-              <View style={styles.originalPriceRow}>
-                <Text variant="bodySmall" style={styles.label}>
-                  Normale prijs:
-                </Text>
-                <Text variant="bodyLarge" style={styles.originalPrice}>
-                  {formatPrice(product.original_price)}
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.discountPriceRow}>
-              <Text variant="bodySmall" style={styles.label}>
-                Aanbieding:
-              </Text>
-              <Text variant="displaySmall" style={styles.discountPrice}>
+          {/* Price Card */}
+          <View style={styles.priceCard}>
+            <View style={styles.priceMain}>
+              <Text style={styles.priceLabel}>Aanbiedingsprijs</Text>
+              <Text style={styles.priceValue}>
                 {formatPrice(product.discount_price)}
               </Text>
             </View>
 
-            {product.original_price && discountPercentage && (
-              <Text variant="bodyMedium" style={styles.savings}>
-                Bespaar {formatPrice(product.original_price - product.discount_price)}
-              </Text>
+            {product.original_price && (
+              <>
+                <View style={styles.priceDivider} />
+                <View style={styles.priceSecondary}>
+                  <View style={styles.priceSecondaryRow}>
+                    <Text style={styles.priceSecondaryLabel}>Normaal</Text>
+                    <Text style={styles.originalPrice}>
+                      {formatPrice(product.original_price)}
+                    </Text>
+                  </View>
+                  {savings > 0 && (
+                    <View style={styles.savingsRow}>
+                      <MaterialCommunityIcons name="piggy-bank-outline" size={16} color="#1B5E20" />
+                      <Text style={styles.savingsText}>
+                        Bespaar {formatPrice(savings)}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+              </>
             )}
-          </Surface>
+          </View>
 
-          {/* Validity Period */}
-          <Surface style={styles.validityContainer} elevation={0}>
-            <Text variant="bodySmall" style={styles.validityLabel}>
-              Geldigheid
-            </Text>
-            <Text variant="bodyMedium" style={styles.validityText}>
-              {formatDate(product.valid_from)} t/m {formatDate(product.valid_until)}
-            </Text>
-            <Text variant="bodySmall" style={styles.validityStatus}>
-              {validityText}
-            </Text>
-          </Surface>
-
-          {/* Category */}
-          {product.category && (
-            <View style={styles.categoryRow}>
-              <Text variant="bodySmall" style={styles.label}>
-                Categorie:
+          {/* Validity */}
+          <View style={[styles.validityCard, isUrgent && styles.validityCardUrgent]}>
+            <MaterialCommunityIcons
+              name={isUrgent ? 'clock-alert-outline' : 'calendar-range'}
+              size={20}
+              color={isUrgent ? '#C62828' : '#616161'}
+            />
+            <View style={styles.validityContent}>
+              <Text style={[styles.validityMain, isUrgent && styles.validityMainUrgent]}>
+                {validityText}
               </Text>
-              <Chip compact>{product.category.name}</Chip>
+              <Text style={styles.validityDates}>
+                {formatDate(product.valid_from)} t/m {formatDate(product.valid_until)}
+              </Text>
             </View>
-          )}
+          </View>
 
-          {/* Action Buttons */}
+          {/* CTA Button */}
           <Button
             mode="contained"
             icon="open-in-new"
             onPress={handleOpenInStore}
-            style={styles.storeButton}
+            style={styles.ctaButton}
+            buttonColor={brandColor}
+            contentStyle={styles.ctaButtonContent}
+            labelStyle={styles.ctaButtonLabel}
           >
             Bekijk bij {product.supermarket?.name}
           </Button>
@@ -274,18 +289,51 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#FFFFFF',
+  },
+  scrollView: {
+    flex: 1,
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  notFoundText: {
+    fontSize: 16,
+    color: '#757575',
+  },
+  topBar: {
+    position: 'absolute',
+    top: 44,
+    left: 8,
+    right: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  topBarRight: {
+    flexDirection: 'row',
+  },
+  topBarButton: {
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 20,
+    margin: 4,
+  },
   imageContainer: {
     width: '100%',
-    height: width,
-    backgroundColor: '#f5f5f5',
+    height: width * 0.85,
+    backgroundColor: '#FAFAFA',
     position: 'relative',
+  },
+  imageBrandBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 4,
+    zIndex: 1,
   },
   image: {
     width: '100%',
@@ -296,116 +344,192 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#F5F5F5',
+  },
+  placeholderText: {
+    color: '#BDBDBD',
+    fontSize: 13,
+    marginTop: 8,
   },
   discountBadge: {
     position: 'absolute',
-    top: 16,
-    right: 16,
-    backgroundColor: '#E74C3C',
-    borderRadius: 8,
-    paddingHorizontal: 16,
+    bottom: 16,
+    left: 16,
+    backgroundColor: '#C62828',
+    borderRadius: 10,
+    paddingHorizontal: 14,
     paddingVertical: 8,
   },
   discountText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '800',
+    fontSize: 18,
   },
   content: {
-    padding: 16,
+    padding: 20,
   },
-  supermarketChip: {
-    alignSelf: 'flex-start',
+  metaRow: {
+    flexDirection: 'row',
+    gap: 8,
     marginBottom: 12,
+    flexWrap: 'wrap',
   },
-  supermarketChipText: {
+  supermarketPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  supermarketPillText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  categoryPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: '#F1F3F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  categoryPillText: {
+    color: '#616161',
     fontWeight: '600',
+    fontSize: 12,
   },
   cardNotice: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
-    backgroundColor: '#FFF3E0',
-    borderWidth: 1,
-    borderColor: '#FF9800',
-  },
-  cardNoticeText: {
-    color: '#E65100',
-    fontWeight: '500',
-  },
-  title: {
-    marginBottom: 8,
-    fontWeight: 'bold',
-  },
-  description: {
-    marginBottom: 12,
-    color: '#666',
-  },
-  unitInfo: {
-    marginBottom: 16,
-    color: '#999',
-  },
-  priceContainer: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    backgroundColor: '#f8f9fa',
-  },
-  originalPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  discountPriceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  label: {
-    color: '#666',
-  },
-  originalPrice: {
-    textDecorationLine: 'line-through',
-    color: '#999',
-  },
-  discountPrice: {
-    color: '#E74C3C',
-    fontWeight: 'bold',
-  },
-  savings: {
-    color: '#00A86B',
-    fontWeight: '600',
-    textAlign: 'right',
-  },
-  validityContainer: {
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 16,
-    backgroundColor: '#fff3cd',
-    borderWidth: 1,
-    borderColor: '#ffc107',
-  },
-  validityLabel: {
-    color: '#856404',
-    marginBottom: 4,
-  },
-  validityText: {
-    color: '#856404',
-    fontWeight: '600',
-    marginBottom: 4,
-  },
-  validityStatus: {
-    color: '#856404',
-  },
-  categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginBottom: 24,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#FFF3E0',
+    borderWidth: 1,
+    borderColor: '#FFE0B2',
   },
-  storeButton: {
-    marginTop: 8,
+  cardNoticeText: {
+    color: '#E65100',
+    fontWeight: '600',
+    fontSize: 13,
+    flex: 1,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#212529',
+    marginBottom: 8,
+    letterSpacing: -0.3,
+    lineHeight: 28,
+  },
+  description: {
+    fontSize: 14,
+    marginBottom: 12,
+    color: '#616161',
+    lineHeight: 20,
+  },
+  unitInfo: {
+    fontSize: 13,
+    marginBottom: 16,
+    color: '#9E9E9E',
+  },
+  priceCard: {
+    borderRadius: 14,
+    marginBottom: 12,
+    backgroundColor: '#F8FFF8',
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+    overflow: 'hidden',
+  },
+  priceMain: {
+    padding: 16,
+    alignItems: 'center',
+  },
+  priceLabel: {
+    fontSize: 12,
+    color: '#757575',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  priceValue: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: '#1B5E20',
+  },
+  priceDivider: {
+    height: 1,
+    backgroundColor: '#C8E6C9',
+  },
+  priceSecondary: {
+    padding: 12,
+  },
+  priceSecondaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  priceSecondaryLabel: {
+    fontSize: 13,
+    color: '#757575',
+  },
+  originalPrice: {
+    textDecorationLine: 'line-through',
+    color: '#BDBDBD',
+    fontSize: 16,
+  },
+  savingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  savingsText: {
+    color: '#1B5E20',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  validityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 20,
+    backgroundColor: '#F8F9FA',
+    borderWidth: 1,
+    borderColor: '#E8E8E8',
+  },
+  validityCardUrgent: {
+    backgroundColor: '#FFF5F5',
+    borderColor: '#FFCDD2',
+  },
+  validityContent: {
+    flex: 1,
+  },
+  validityMain: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#424242',
+    marginBottom: 2,
+  },
+  validityMainUrgent: {
+    color: '#C62828',
+  },
+  validityDates: {
+    fontSize: 12,
+    color: '#9E9E9E',
+  },
+  ctaButton: {
+    borderRadius: 14,
+    elevation: 3,
+  },
+  ctaButtonContent: {
+    paddingVertical: 6,
+  },
+  ctaButtonLabel: {
+    fontSize: 15,
+    fontWeight: '700',
   },
 });

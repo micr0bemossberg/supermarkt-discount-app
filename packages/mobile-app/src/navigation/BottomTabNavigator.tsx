@@ -24,15 +24,24 @@ export const BottomTabNavigator: React.FC = () => {
     <Tab.Navigator
       screenOptions={{
         headerShown: false,
-        tabBarActiveTintColor: '#0066CC',
-        tabBarInactiveTintColor: '#666',
+        tabBarActiveTintColor: '#1B5E20',
+        tabBarInactiveTintColor: '#9E9E9E',
         tabBarStyle: {
-          paddingBottom: 4,
-          paddingTop: 4,
-          height: 60,
+          paddingBottom: 6,
+          paddingTop: 6,
+          height: 64,
+          borderTopWidth: 1,
+          borderTopColor: '#F0F0F0',
+          backgroundColor: '#FFFFFF',
+          elevation: 8,
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.06,
+          shadowRadius: 6,
         },
         tabBarLabelStyle: {
-          fontSize: 12,
+          fontSize: 11,
+          fontWeight: '600',
         },
       }}
     >
@@ -40,9 +49,9 @@ export const BottomTabNavigator: React.FC = () => {
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarLabel: 'Aanbiedingen',
+          tabBarLabel: 'Deals',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="home" color={color} size={size} />
+            <MaterialCommunityIcons name="tag-multiple" color={color} size={size} />
           ),
         }}
       />
@@ -66,7 +75,7 @@ export const BottomTabNavigator: React.FC = () => {
           tabBarLabel: 'Favorieten',
           tabBarBadge: favoriteCount > 0 ? favoriteCount : undefined,
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="heart" color={color} size={size} />
+            <MaterialCommunityIcons name="heart-outline" color={color} size={size} />
           ),
         }}
       />
@@ -75,9 +84,9 @@ export const BottomTabNavigator: React.FC = () => {
         name="Settings"
         component={SettingsScreen}
         options={{
-          tabBarLabel: 'Instellingen',
+          tabBarLabel: 'Meer',
           tabBarIcon: ({ color, size }) => (
-            <MaterialCommunityIcons name="cog" color={color} size={size} />
+            <MaterialCommunityIcons name="dots-horizontal" color={color} size={size} />
           ),
         }}
       />

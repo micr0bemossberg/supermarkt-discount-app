@@ -5,7 +5,8 @@
 
 import React, { useEffect } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
-import { Appbar, List, Divider, Switch, Text } from 'react-native-paper';
+import { List, Divider, Switch, Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSettingsStore } from '../stores/settingsStore';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -19,110 +20,78 @@ export const SettingsScreen: React.FC<Props> = () => {
     loadSettings();
   }, []);
 
-  const handleThemeChange = (mode: 'light' | 'dark' | 'auto') => {
-    setThemeMode(mode);
-  };
-
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="Instellingen" />
-      </Appbar.Header>
+      {/* Custom header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Instellingen</Text>
+      </View>
 
       <ScrollView>
         {/* Appearance Section */}
         <List.Section>
-          <List.Subheader>Weergave</List.Subheader>
+          <List.Subheader style={styles.subheader}>Weergave</List.Subheader>
 
           <List.Item
             title="Donker thema"
-            description="Automatisch volgen van systeeminstelling"
-            left={(props) => <List.Icon {...props} icon="brightness-6" />}
+            description="Schakelt tussen licht en donker thema"
+            titleStyle={styles.listTitle}
+            descriptionStyle={styles.listDescription}
+            left={(props) => (
+              <List.Icon {...props} icon="brightness-6" color="#1B5E20" />
+            )}
             right={() => (
               <Switch
                 value={settings.themeMode === 'dark'}
                 onValueChange={(value) =>
-                  handleThemeChange(value ? 'dark' : 'light')
+                  setThemeMode(value ? 'dark' : 'light')
                 }
+                color="#1B5E20"
               />
             )}
           />
 
-          <Divider />
+          <Divider style={styles.divider} />
         </List.Section>
 
         {/* About Section */}
         <List.Section>
-          <List.Subheader>Over</List.Subheader>
+          <List.Subheader style={styles.subheader}>Over</List.Subheader>
 
           <List.Item
             title="Versie"
             description="1.0.0"
-            left={(props) => <List.Icon {...props} icon="information-outline" />}
+            titleStyle={styles.listTitle}
+            descriptionStyle={styles.listDescription}
+            left={(props) => (
+              <List.Icon {...props} icon="information-outline" color="#0D47A1" />
+            )}
           />
 
-          <Divider />
+          <Divider style={styles.divider} />
 
           <List.Item
-            title="Over deze app"
-            description="SupermarktDeals verzamelt aanbiedingen van Nederlandse supermarkten"
-            left={(props) => <List.Icon {...props} icon="help-circle-outline" />}
+            title="Over SupermarktDeals"
+            description="Verzamelt aanbiedingen van Nederlandse supermarkten zodat je altijd de beste deals vindt."
+            titleStyle={styles.listTitle}
+            descriptionStyle={styles.listDescription}
+            descriptionNumberOfLines={3}
+            left={(props) => (
+              <List.Icon {...props} icon="help-circle-outline" color="#0D47A1" />
+            )}
           />
 
-          <Divider />
-        </List.Section>
-
-        {/* Legal Section */}
-        <List.Section>
-          <List.Subheader>Juridisch</List.Subheader>
-
-          <List.Item
-            title="Privacybeleid"
-            left={(props) => <List.Icon {...props} icon="shield-check-outline" />}
-            right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => {
-              // TODO: Open privacy policy
-            }}
-          />
-
-          <Divider />
-
-          <List.Item
-            title="Gebruiksvoorwaarden"
-            left={(props) => <List.Icon {...props} icon="file-document-outline" />}
-            right={(props) => <List.Icon {...props} icon="chevron-right" />}
-            onPress={() => {
-              // TODO: Open terms of service
-            }}
-          />
-
-          <Divider />
-        </List.Section>
-
-        {/* Data Management */}
-        <List.Section>
-          <List.Subheader>Gegevens</List.Subheader>
-
-          <List.Item
-            title="Cache wissen"
-            description="Verwijder lokale gegevens en afbeeldingen"
-            left={(props) => <List.Icon {...props} icon="delete-outline" />}
-            onPress={() => {
-              // TODO: Clear cache
-            }}
-          />
-
-          <Divider />
+          <Divider style={styles.divider} />
         </List.Section>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text variant="bodySmall" style={styles.footerText}>
-            SupermarktDeals v1.0.0
-          </Text>
-          <Text variant="bodySmall" style={styles.footerText}>
-            Gemaakt met Claude Code
-          </Text>
+          <View style={styles.logoCircle}>
+            <MaterialCommunityIcons name="tag-multiple" size={28} color="#1B5E20" />
+          </View>
+          <Text style={styles.footerTitle}>SupermarktDeals</Text>
+          <Text style={styles.footerVersion}>v1.0.0</Text>
+          <Text style={styles.footerCredits}>Gemaakt met Claude Code</Text>
         </View>
       </ScrollView>
     </View>
@@ -132,14 +101,67 @@ export const SettingsScreen: React.FC<Props> = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#212529',
+    letterSpacing: -0.5,
+  },
+  subheader: {
+    fontSize: 12,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    color: '#9E9E9E',
+  },
+  listTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#212529',
+  },
+  listDescription: {
+    fontSize: 13,
+    color: '#757575',
+  },
+  divider: {
+    marginLeft: 56,
   },
   footer: {
-    padding: 32,
+    padding: 40,
     alignItems: 'center',
   },
-  footerText: {
-    color: '#999',
-    textAlign: 'center',
+  logoCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  footerTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#424242',
+    marginBottom: 4,
+  },
+  footerVersion: {
+    fontSize: 13,
+    color: '#9E9E9E',
+    marginBottom: 4,
+  },
+  footerCredits: {
+    fontSize: 12,
+    color: '#BDBDBD',
   },
 });

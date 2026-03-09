@@ -25,20 +25,23 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
 }) => {
   return (
     <View style={styles.container}>
-      <MaterialCommunityIcons name={icon} size={64} color="#ccc" />
+      <View style={styles.iconCircle}>
+        <MaterialCommunityIcons name={icon} size={40} color="#9E9E9E" />
+      </View>
 
-      <Text variant="titleLarge" style={styles.title}>
-        {title}
-      </Text>
+      <Text style={styles.title}>{title}</Text>
 
       {message && (
-        <Text variant="bodyMedium" style={styles.message}>
-          {message}
-        </Text>
+        <Text style={styles.message}>{message}</Text>
       )}
 
       {actionLabel && onAction && (
-        <Button mode="contained" onPress={onAction} style={styles.button}>
+        <Button
+          mode="contained"
+          onPress={onAction}
+          style={styles.button}
+          buttonColor="#1B5E20"
+        >
           {actionLabel}
         </Button>
       )}
@@ -51,20 +54,33 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 32,
+    padding: 40,
+  },
+  iconCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   title: {
-    marginTop: 16,
-    marginBottom: 8,
+    fontSize: 18,
+    fontWeight: '700',
     textAlign: 'center',
-    color: '#666',
+    color: '#424242',
+    marginBottom: 8,
   },
   message: {
+    fontSize: 14,
     marginBottom: 24,
     textAlign: 'center',
-    color: '#999',
+    color: '#9E9E9E',
+    lineHeight: 20,
   },
   button: {
     marginTop: 8,
+    borderRadius: 24,
   },
 });

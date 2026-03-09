@@ -4,13 +4,11 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, SectionList, Alert } from 'react-native';
+import { View, StyleSheet, SectionList, Alert, Pressable } from 'react-native';
 import {
-  Appbar,
   Text,
   IconButton,
   FAB,
-  Chip,
   Menu,
   Dialog,
   Portal,
@@ -98,90 +96,101 @@ export const GroceryListScreen: React.FC = () => {
     setAddDialogVisible(true);
   }, []);
 
+  const uncheckedCount = items.filter((i) => !i.checked).length;
+  const checkedCount = items.filter((i) => i.checked).length;
+
   const renderSectionHeader = ({ section }: { section: Section }) => (
     <View style={styles.sectionHeader}>
       <View style={styles.sectionHeaderLeft}>
-        <MaterialCommunityIcons
-          name={section.icon as any}
-          size={20}
-          color="#0066CC"
-          style={styles.sectionIcon}
-        />
-        <Text variant="titleSmall" style={styles.sectionTitle}>
-          {section.title}
-        </Text>
-        <Text variant="bodySmall" style={styles.sectionCount}>
-          ({section.data.length})
-        </Text>
+        <View style={styles.sectionIconCircle}>
+          <MaterialCommunityIcons
+            name={section.icon as any}
+            size={16}
+            color="#1B5E20"
+          />
+        </View>
+        <Text style={styles.sectionTitle}>{section.title}</Text>
+        <Text style={styles.sectionCount}>({section.data.length})</Text>
       </View>
       <IconButton
-        icon="plus"
-        size={18}
+        icon="plus-circle-outline"
+        size={20}
+        iconColor="#1B5E20"
         onPress={() => openAddDialog(section.title)}
+        style={styles.addButton}
       />
     </View>
   );
 
   const renderItem = ({ item }: { item: GroceryItem }) => (
-    <View style={[styles.itemRow, item.checked && styles.itemRowChecked]}>
-      <IconButton
-        icon={item.checked ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
+    <Pressable
+      onPress={() => toggleChecked(item.id)}
+      style={[styles.itemRow, item.checked && styles.itemRowChecked]}
+    >
+      <MaterialCommunityIcons
+        name={item.checked ? 'checkbox-marked-circle' : 'checkbox-blank-circle-outline'}
         size={22}
-        iconColor={item.checked ? '#00A86B' : '#999'}
-        onPress={() => toggleChecked(item.id)}
+        color={item.checked ? '#1B5E20' : '#BDBDBD'}
         style={styles.checkbox}
       />
-      <View style={styles.itemInfo}>
-        <Text
-          variant="bodyMedium"
-          style={[styles.itemName, item.checked && styles.itemNameChecked]}
-        >
-          {item.name}
-        </Text>
-      </View>
+      <Text
+        style={[styles.itemName, item.checked && styles.itemNameChecked]}
+        numberOfLines={1}
+      >
+        {item.name}
+      </Text>
       <View style={styles.quantityControls}>
-        <IconButton
-          icon="minus"
-          size={16}
+        <Pressable
           onPress={() => {
             if (item.quantity > 1) {
               updateItem(item.id, { quantity: item.quantity - 1 });
             }
           }}
+          style={styles.quantityBtn}
           disabled={item.quantity <= 1}
-          style={styles.quantityButton}
-        />
-        <Chip compact style={styles.quantityChip} textStyle={styles.quantityText}>
-          {item.quantity}
-        </Chip>
-        <IconButton
-          icon="plus"
-          size={16}
+        >
+          <MaterialCommunityIcons
+            name="minus"
+            size={14}
+            color={item.quantity <= 1 ? '#E0E0E0' : '#616161'}
+          />
+        </Pressable>
+        <Text style={styles.quantityText}>{item.quantity}</Text>
+        <Pressable
           onPress={() => updateItem(item.id, { quantity: item.quantity + 1 })}
-          style={styles.quantityButton}
-        />
+          style={styles.quantityBtn}
+        >
+          <MaterialCommunityIcons name="plus" size={14} color="#616161" />
+        </Pressable>
       </View>
-      <IconButton
-        icon="delete-outline"
-        size={18}
-        iconColor="#E74C3C"
+      <Pressable
         onPress={() => handleRemoveItem(item)}
-        style={styles.deleteButton}
-      />
-    </View>
+        hitSlop={8}
+        style={styles.deleteBtn}
+      >
+        <MaterialCommunityIcons name="close" size={16} color="#BDBDBD" />
+      </Pressable>
+    </Pressable>
   );
-
-  const uncheckedCount = items.filter((i) => !i.checked).length;
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="Boodschappenlijst" />
+      {/* Custom header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={styles.headerTitle}>Boodschappen</Text>
+          <Text style={styles.headerSubtitle}>
+            {uncheckedCount} nodig{checkedCount > 0 ? ` · ${checkedCount} gedaan` : ''}
+          </Text>
+        </View>
         <Menu
           visible={menuVisible}
           onDismiss={() => setMenuVisible(false)}
           anchor={
-            <Appbar.Action icon="dots-vertical" onPress={() => setMenuVisible(true)} />
+            <IconButton
+              icon="dots-vertical"
+              onPress={() => setMenuVisible(true)}
+            />
           }
         >
           <Menu.Item
@@ -195,7 +204,7 @@ export const GroceryListScreen: React.FC = () => {
             leadingIcon="restore"
           />
         </Menu>
-      </Appbar.Header>
+      </View>
 
       {items.length === 0 ? (
         <EmptyState
@@ -219,9 +228,10 @@ export const GroceryListScreen: React.FC = () => {
       <FAB
         style={styles.fab}
         icon="cart-check"
-        label={`Maak winkelplan (${uncheckedCount})`}
+        label={`Winkelplan (${uncheckedCount})`}
         onPress={() => navigation.navigate('ShoppingPlan')}
         disabled={uncheckedCount === 0}
+        color="#FFFFFF"
       />
 
       {/* Add Item Dialog */}
@@ -229,7 +239,7 @@ export const GroceryListScreen: React.FC = () => {
         <Dialog visible={addDialogVisible} onDismiss={() => setAddDialogVisible(false)}>
           <Dialog.Title>Item toevoegen</Dialog.Title>
           <Dialog.Content>
-            <Text variant="bodySmall" style={styles.dialogCategory}>
+            <Text style={styles.dialogCategory}>
               Categorie: {addCategory}
             </Text>
             <TextInput
@@ -239,11 +249,13 @@ export const GroceryListScreen: React.FC = () => {
               mode="outlined"
               autoFocus
               onSubmitEditing={handleAddItem}
+              outlineColor="#E0E0E0"
+              activeOutlineColor="#1B5E20"
             />
           </Dialog.Content>
           <Dialog.Actions>
-            <Button onPress={() => setAddDialogVisible(false)}>Annuleren</Button>
-            <Button onPress={handleAddItem} disabled={!addName.trim()}>
+            <Button onPress={() => setAddDialogVisible(false)} textColor="#757575">Annuleren</Button>
+            <Button onPress={handleAddItem} disabled={!addName.trim()} textColor="#1B5E20">
               Toevoegen
             </Button>
           </Dialog.Actions>
@@ -256,86 +268,129 @@ export const GroceryListScreen: React.FC = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#212529',
+    letterSpacing: -0.5,
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#757575',
+    marginTop: 2,
   },
   listContent: {
     paddingBottom: 80,
   },
   sectionHeader: {
-    backgroundColor: '#fff',
-    paddingLeft: 12,
+    backgroundColor: '#FFFFFF',
+    paddingLeft: 16,
     paddingRight: 4,
-    paddingVertical: 4,
+    paddingVertical: 6,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F0F0F0',
+    marginTop: 8,
   },
   sectionHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  sectionIcon: {
+  sectionIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E8F5E9',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 8,
   },
   sectionTitle: {
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#212529',
   },
   sectionCount: {
-    color: '#666',
+    color: '#9E9E9E',
     marginLeft: 6,
+    fontSize: 12,
   },
-  itemRow: {
-    backgroundColor: '#fff',
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 2,
-    paddingRight: 4,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#eee',
-  },
-  itemRowChecked: {
-    backgroundColor: '#f9f9f9',
-  },
-  checkbox: {
+  addButton: {
     margin: 0,
   },
-  itemInfo: {
-    flex: 1,
+  itemRow: {
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
+  },
+  itemRowChecked: {
+    backgroundColor: '#FAFAFA',
+  },
+  checkbox: {
+    marginRight: 10,
   },
   itemName: {
+    flex: 1,
     fontSize: 15,
+    color: '#212529',
   },
   itemNameChecked: {
     textDecorationLine: 'line-through',
-    color: '#999',
+    color: '#BDBDBD',
   },
   quantityControls: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 2,
   },
-  quantityButton: {
-    margin: 0,
-  },
-  quantityChip: {
-    minWidth: 28,
-    height: 26,
+  quantityBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   quantityText: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#424242',
+    minWidth: 20,
+    textAlign: 'center',
   },
-  deleteButton: {
-    margin: 0,
+  deleteBtn: {
+    marginLeft: 8,
+    padding: 4,
   },
   fab: {
     position: 'absolute',
     right: 16,
     bottom: 16,
-    backgroundColor: '#0066CC',
+    backgroundColor: '#1B5E20',
+    borderRadius: 28,
   },
   dialogCategory: {
-    color: '#666',
+    color: '#757575',
     marginBottom: 12,
+    fontSize: 13,
   },
 });

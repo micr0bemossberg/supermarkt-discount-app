@@ -5,10 +5,12 @@
 
 import React, { useEffect } from 'react';
 import { View, StyleSheet, SectionList } from 'react-native';
-import { Appbar, Text, Divider } from 'react-native-paper';
+import { Text } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
+import { getSupermarketColor } from '../utils/formatters';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import type { ProductWithRelations } from '@supermarkt-deals/shared';
@@ -17,6 +19,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Favorites'>;
 
 interface Section {
   title: string;
+  slug: string;
   data: ProductWithRelations[];
 }
 
@@ -31,19 +34,21 @@ export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
   const sections: Section[] = React.useMemo(() => {
     const grouped = favorites.reduce((acc, product) => {
       const supermarketName = product.supermarket?.name || 'Onbekend';
+      const slug = product.supermarket?.slug || '';
 
       if (!acc[supermarketName]) {
-        acc[supermarketName] = [];
+        acc[supermarketName] = { slug, items: [] };
       }
 
-      acc[supermarketName].push(product);
+      acc[supermarketName].items.push(product);
 
       return acc;
-    }, {} as Record<string, ProductWithRelations[]>);
+    }, {} as Record<string, { slug: string; items: ProductWithRelations[] }>);
 
-    return Object.entries(grouped).map(([title, data]) => ({
+    return Object.entries(grouped).map(([title, { slug, items }]) => ({
       title,
-      data,
+      slug,
+      data: items,
     }));
   }, [favorites]);
 
@@ -51,16 +56,20 @@ export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
     navigation.navigate('ProductDetail', { productId });
   };
 
-  const renderSectionHeader = ({ section }: { section: Section }) => (
-    <View style={styles.sectionHeader}>
-      <Text variant="titleMedium" style={styles.sectionTitle}>
-        {section.title}
-      </Text>
-      <Text variant="bodySmall" style={styles.sectionCount}>
-        {section.data.length} {section.data.length === 1 ? 'product' : 'producten'}
-      </Text>
-    </View>
-  );
+  const renderSectionHeader = ({ section }: { section: Section }) => {
+    const brandColor = getSupermarketColor(section.slug);
+    return (
+      <View style={styles.sectionHeader}>
+        <View style={[styles.sectionAccent, { backgroundColor: brandColor }]} />
+        <View style={styles.sectionContent}>
+          <Text style={styles.sectionTitle}>{section.title}</Text>
+          <Text style={styles.sectionCount}>
+            {section.data.length} {section.data.length === 1 ? 'product' : 'producten'}
+          </Text>
+        </View>
+      </View>
+    );
+  };
 
   const renderItem = ({ item }: { item: ProductWithRelations }) => (
     <View style={styles.cardContainer}>
@@ -73,16 +82,20 @@ export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
       icon="heart-outline"
       title="Geen favorieten"
       message="Tik op het hartje bij een product om het toe te voegen aan je favorieten"
-      actionLabel="Naar aanbiedingen"
-      onAction={() => navigation.navigate('Home')}
+      actionLabel="Naar deals"
+      onAction={() => navigation.navigate('Home' as any)}
     />
   );
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="Favorieten" />
-      </Appbar.Header>
+      {/* Custom header */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Favorieten</Text>
+        {favorites.length > 0 && (
+          <Text style={styles.headerCount}>{favorites.length} opgeslagen</Text>
+        )}
+      </View>
 
       {favorites.length === 0 ? (
         renderEmpty()
@@ -94,7 +107,6 @@ export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           stickySectionHeadersEnabled
-          SectionSeparatorComponent={() => <Divider style={styles.divider} />}
         />
       )}
     </View>
@@ -104,30 +116,55 @@ export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FA',
+  },
+  header: {
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  headerTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#212529',
+    letterSpacing: -0.5,
+  },
+  headerCount: {
+    fontSize: 13,
+    color: '#757575',
+    marginTop: 2,
   },
   listContent: {
-    padding: 8,
+    paddingBottom: 16,
   },
   sectionHeader: {
-    backgroundColor: '#fff',
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    marginTop: 8,
+  },
+  sectionAccent: {
+    width: 4,
+  },
+  sectionContent: {
+    flex: 1,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    marginBottom: 8,
+    paddingVertical: 10,
   },
   sectionTitle: {
-    fontWeight: 'bold',
+    fontWeight: '700',
+    fontSize: 15,
+    color: '#212529',
   },
   sectionCount: {
-    color: '#666',
-    marginTop: 4,
+    color: '#9E9E9E',
+    marginTop: 2,
+    fontSize: 12,
   },
   cardContainer: {
-    marginBottom: 8,
-  },
-  divider: {
-    marginVertical: 16,
+    paddingHorizontal: 4,
+    marginBottom: 2,
   },
 });

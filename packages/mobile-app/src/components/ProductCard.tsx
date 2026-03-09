@@ -1,14 +1,15 @@
 /**
  * ProductCard Component
- * Displays a product with image, title, prices, and discount info
+ * Modern card with supermarket color accent, product image,
+ * discount badge, prices, and urgency indicator.
  */
 
 import React from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
-import { Card, Text, IconButton, Surface } from 'react-native-paper';
+import { Text, IconButton } from 'react-native-paper';
 import { Image } from 'expo-image';
 import { useFavoritesStore } from '../stores/favoritesStore';
-import { formatPrice, getValidityText } from '../utils/formatters';
+import { formatPrice, getValidityText, daysUntil, getSupermarketColor } from '../utils/formatters';
 import type { ProductWithRelations } from '@supermarkt-deals/shared';
 
 interface ProductCardProps {
@@ -39,113 +40,127 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
       : null);
 
   const validityText = getValidityText(product.valid_until);
+  const days = daysUntil(product.valid_until);
+  const isUrgent = days >= 0 && days <= 2;
+  const brandColor = getSupermarketColor(product.supermarket?.slug || '');
 
   return (
-    <Card style={styles.card} mode="elevated">
-      <Pressable onPress={onPress}>
-        <View style={styles.imageContainer}>
-          {product.image_url ? (
-            <Image
-              source={{ uri: product.image_url }}
-              style={styles.image}
-              contentFit="cover"
-              transition={200}
-            />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Text variant="bodySmall" style={styles.placeholderText}>
-                Geen afbeelding
-              </Text>
-            </View>
-          )}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        pressed && styles.cardPressed,
+      ]}
+    >
+      {/* Supermarket color accent bar */}
+      <View style={[styles.accentBar, { backgroundColor: brandColor }]} />
 
-          {/* Discount Badge */}
-          {discountPercentage && discountPercentage > 0 && (
-            <Surface style={styles.discountBadge} elevation={2}>
-              <Text variant="labelSmall" style={styles.discountText}>
-                -{discountPercentage}%
-              </Text>
-            </Surface>
-          )}
+      {/* Image area */}
+      <View style={styles.imageContainer}>
+        {product.image_url ? (
+          <Image
+            source={{ uri: product.image_url }}
+            style={styles.image}
+            contentFit="contain"
+            transition={200}
+          />
+        ) : (
+          <View style={styles.imagePlaceholder}>
+            <Text style={styles.placeholderText}>Geen afbeelding</Text>
+          </View>
+        )}
 
-          {/* Favorite Button */}
-          <Surface style={styles.favoriteButton} elevation={2}>
-            <IconButton
-              icon={favorite ? 'heart' : 'heart-outline'}
-              iconColor={favorite ? '#E74C3C' : '#666'}
-              size={16}
-              onPress={handleFavoriteToggle}
-              style={styles.favoriteIconButton}
-            />
-          </Surface>
+        {/* Discount Badge */}
+        {discountPercentage != null && discountPercentage > 0 && (
+          <View style={styles.discountBadge}>
+            <Text style={styles.discountText}>-{discountPercentage}%</Text>
+          </View>
+        )}
 
-          {/* Supermarket Badge */}
-          {product.supermarket && (
-            <Surface style={styles.supermarketBadge} elevation={1}>
-              <Text variant="labelSmall" style={styles.supermarketText}>
-                {product.supermarket.name}
-              </Text>
-            </Surface>
-          )}
+        {/* Favorite Button */}
+        <View style={styles.favoriteButton}>
+          <IconButton
+            icon={favorite ? 'heart' : 'heart-outline'}
+            iconColor={favorite ? '#E53935' : '#9E9E9E'}
+            size={18}
+            onPress={handleFavoriteToggle}
+            style={styles.favoriteIcon}
+          />
+        </View>
 
-          {/* Card Required Badge */}
-          {product.requires_card && (
-            <Surface style={styles.cardBadge} elevation={1}>
-              <Text variant="labelSmall" style={styles.cardBadgeText}>
-                Pas
-              </Text>
-            </Surface>
+        {/* Card Required Badge */}
+        {product.requires_card && (
+          <View style={styles.cardBadge}>
+            <Text style={styles.cardBadgeText}>Pas</Text>
+          </View>
+        )}
+      </View>
+
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Supermarket name */}
+        <View style={styles.supermarketRow}>
+          <View style={[styles.supermarketDot, { backgroundColor: brandColor }]} />
+          <Text style={styles.supermarketName} numberOfLines={1}>
+            {product.supermarket?.name || ''}
+          </Text>
+        </View>
+
+        {/* Product Title */}
+        <Text style={styles.title} numberOfLines={2}>
+          {product.title}
+        </Text>
+
+        {/* Prices */}
+        <View style={styles.priceRow}>
+          <Text style={styles.discountPrice}>
+            {formatPrice(product.discount_price)}
+          </Text>
+          {product.original_price && (
+            <Text style={styles.originalPrice}>
+              {formatPrice(product.original_price)}
+            </Text>
           )}
         </View>
 
-        <Card.Content style={styles.content}>
-          {/* Product Title */}
-          <Text variant="bodyMedium" numberOfLines={2} style={styles.title}>
-            {product.title}
-          </Text>
-
-          {/* Unit Info */}
-          {product.unit_info && (
-            <Text variant="bodySmall" style={styles.unitInfo}>
-              {product.unit_info}
-            </Text>
-          )}
-
-          {/* Prices */}
-          <View style={styles.priceRow}>
-            {product.original_price && (
-              <Text variant="bodySmall" style={styles.originalPrice}>
-                {formatPrice(product.original_price)}
-              </Text>
-            )}
-            <Text variant="titleMedium" style={styles.discountPrice}>
-              {formatPrice(product.discount_price)}
-            </Text>
-          </View>
-
-          {/* Validity */}
-          <Text variant="bodySmall" style={styles.validUntil}>
+        {/* Validity */}
+        <View style={[styles.validityRow, isUrgent && styles.validityUrgent]}>
+          <Text style={[styles.validUntil, isUrgent && styles.validUntilUrgent]}>
             {validityText}
           </Text>
-        </Card.Content>
-      </Pressable>
-    </Card>
+        </View>
+      </View>
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create({
   card: {
     marginHorizontal: 4,
-    marginVertical: 4,
+    marginVertical: 5,
     flex: 1,
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
     overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  cardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.98 }],
+  },
+  accentBar: {
+    height: 3,
+    width: '100%',
   },
   imageContainer: {
     position: 'relative',
     width: '100%',
-    height: 120,
-    backgroundColor: '#f5f5f5',
+    height: 130,
+    backgroundColor: '#FAFAFA',
   },
   image: {
     width: '100%',
@@ -156,101 +171,113 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#e0e0e0',
+    backgroundColor: '#F5F5F5',
   },
   placeholderText: {
-    color: '#999',
+    color: '#BDBDBD',
     fontSize: 11,
   },
   discountBadge: {
     position: 'absolute',
-    top: 6,
-    left: 6,
-    backgroundColor: '#E74C3C',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    top: 8,
+    left: 8,
+    backgroundColor: '#C62828',
+    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
   },
   discountText: {
     color: '#fff',
-    fontWeight: 'bold',
+    fontWeight: '800',
     fontSize: 11,
+    letterSpacing: 0.3,
   },
   favoriteButton: {
     position: 'absolute',
-    top: 2,
-    right: 2,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
+    top: 0,
+    right: 0,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+    borderBottomLeftRadius: 10,
   },
-  favoriteIconButton: {
+  favoriteIcon: {
     margin: 0,
-  },
-  supermarketBadge: {
-    position: 'absolute',
-    bottom: 6,
-    left: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  supermarketText: {
-    fontWeight: '600',
-    fontSize: 11,
   },
   cardBadge: {
     position: 'absolute',
-    bottom: 6,
-    right: 6,
-    backgroundColor: '#FF9800',
+    bottom: 8,
+    right: 8,
+    backgroundColor: '#FF8F00',
     borderRadius: 4,
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
   cardBadgeText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 9,
   },
   content: {
-    paddingTop: 8,
-    paddingBottom: 8,
     paddingHorizontal: 10,
+    paddingTop: 8,
+    paddingBottom: 10,
+  },
+  supermarketRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  supermarketDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    marginRight: 5,
+  },
+  supermarketName: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#757575',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   title: {
-    marginBottom: 2,
-    lineHeight: 18,
     fontSize: 13,
-  },
-  unitInfo: {
-    color: '#666',
-    marginBottom: 4,
-    fontSize: 11,
+    fontWeight: '600',
+    color: '#212529',
+    lineHeight: 17,
+    marginBottom: 6,
+    minHeight: 34,
   },
   priceRow: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'baseline',
     gap: 6,
-    marginTop: 4,
+    marginBottom: 4,
+  },
+  discountPrice: {
+    color: '#1B5E20',
+    fontWeight: '800',
+    fontSize: 16,
   },
   originalPrice: {
     textDecorationLine: 'line-through',
-    color: '#999',
+    color: '#BDBDBD',
     fontSize: 12,
   },
-  discountPrice: {
-    color: '#E74C3C',
-    fontWeight: 'bold',
-    fontSize: 15,
+  validityRow: {
+    paddingTop: 4,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: '#F0F0F0',
+  },
+  validityUrgent: {
+    borderTopColor: '#FFCDD2',
   },
   validUntil: {
-    color: '#888',
-    marginTop: 2,
+    color: '#9E9E9E',
     fontSize: 10,
+    fontWeight: '500',
+  },
+  validUntilUrgent: {
+    color: '#C62828',
+    fontWeight: '700',
   },
 });

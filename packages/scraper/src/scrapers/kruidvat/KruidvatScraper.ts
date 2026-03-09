@@ -343,7 +343,8 @@ export class KruidvatScraper extends BaseScraper {
 
   /**
    * Extract products from a deal page (like /a/{code}/{slug}).
-   * These pages have product cards with prices in the tile__product-slide-content structure.
+   * Kruidvat uses e2-impression-tracker custom elements with data attributes
+   * containing product name, price, URL, etc.
    * Also extracts the page-level deal type from the <h1> heading.
    */
   private async extractProductsFromDealPage(page: Page): Promise<{
@@ -398,141 +399,84 @@ export class KruidvatScraper extends BaseScraper {
       else if (h1Lower.includes('gratis')) pageDealType = 'gratis';
       else if (h1Lower.includes('actieprijs')) pageDealType = 'actieprijs';
 
-      // Find product tiles on the deal page
-      const tiles = document.querySelectorAll('.tile__product-slide-content, [class*="product-slide"], [class*="product-card"], [class*="product-tile"]');
-
-      for (const tile of Array.from(tiles)) {
+      // Strategy 1: e2-impression-tracker elements with data attributes (most reliable)
+      const trackers = document.querySelectorAll('e2-impression-tracker.tile__product-slide');
+      for (const tracker of Array.from(trackers)) {
         try {
-          // Title: try specific product name elements first
-          let title = '';
-
-          // Strategy 1: Product name from specific class
-          const nameEl = tile.querySelector(
-            '[class*="product-name"], [class*="product-title"], ' +
-            '[class*="slide-content-name"], [class*="tile-name"]'
-          );
-          if (nameEl) {
-            title = nameEl.textContent?.trim() || '';
-          }
-
-          // Strategy 2: Heading elements
-          if (!title || title.length < 3) {
-            const headingEl = tile.querySelector('h2, h3, h4');
-            if (headingEl) {
-              title = headingEl.textContent?.trim() || '';
-            }
-          }
-
-          // Strategy 3: Image alt text (often has the product name)
-          if (!title || title.length < 3) {
-            const img = tile.querySelector('img[alt]');
-            const alt = img?.getAttribute('alt')?.trim() || '';
-            if (alt && alt.length >= 3 && !alt.startsWith('product') && !/^\d/.test(alt)) {
-              title = alt;
-            }
-          }
-
-          // Strategy 4: product link text, cleaned of review counts
-          if (!title || title.length < 3) {
-            const linkEl = tile.querySelector('a[href*="/p/"]');
-            const linkText = linkEl?.textContent?.trim() || '';
-            // Remove review counts like "(204)", prices, and leading numbers
-            title = linkText
-              .replace(/\(\d+\)/g, '')  // Remove "(204)" review counts
-              .replace(/€\s*\d+[,.]\d{2}/g, '') // Remove prices
-              .replace(/\d+\.\s*\d{2}/g, '')  // Remove "14. 99" style prices
-              .replace(/^\d+\s*/, '')    // Remove leading numbers
-              .replace(/\s{2,}/g, ' ')   // Collapse whitespace
-              .trim();
-            // Take only the first meaningful line if multi-line
-            if (title.includes('\n')) {
-              const lines = title.split('\n').map(l => l.trim()).filter(l => l.length > 3);
-              title = lines[0] || title;
-            }
-          }
-
+          const title = tracker.getAttribute('data-item-name')?.trim() || '';
           if (!title || title.length < 3) continue;
-          // Skip if title is just a number, review count, or measurement
-          if (/^\d+$/.test(title) || /^\(\d+\)$/.test(title)) continue;
-          if (/^\d+\s*(ml|g|kg|l|cl|stuks?)\b/i.test(title)) continue;
 
-          // Current price from pricebadge
-          let price = 0;
-          const priceSection = tile.querySelector('.pricebadge');
-          if (priceSection) {
-            // The current (deal) price
-            const currentPriceEl = priceSection.querySelector('.pricebadge__new-price .pricetext, .pricebadge__price .pricetext');
-            if (currentPriceEl) {
-              const decimal = currentPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
-              const fractional = currentPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
-              price = parseFloat(`${decimal}.${fractional}`);
-            }
-
-            // If no specific new price, try to get any price
-            if (price <= 0) {
-              const anyPrice = priceSection.querySelector('.pricetext');
-              if (anyPrice) {
-                const decimal = anyPrice.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
-                const fractional = anyPrice.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
-                price = parseFloat(`${decimal}.${fractional}`);
-              }
-            }
-          }
-
-          // Fallback: try any price text
-          if (price <= 0) {
-            const text = tile.textContent || '';
-            const priceMatch = text.match(/(\d+)\s*\.\s*(\d{2})/);
-            if (priceMatch) price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
-          }
-
+          const priceStr = tracker.getAttribute('data-price');
+          const price = priceStr ? parseFloat(priceStr) : 0;
           if (price <= 0) continue;
 
-          // Original price
-          let originalPrice: number | null = null;
-          const oldPriceEl = tile.querySelector('.pricebadge__old-price .pricetext');
-          if (oldPriceEl) {
-            const decimal = oldPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
-            const fractional = oldPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
-            originalPrice = parseFloat(`${decimal}.${fractional}`);
-          }
+          const originalPriceStr = tracker.getAttribute('data-item-price-original');
+          const originalPrice = originalPriceStr ? parseFloat(originalPriceStr) : null;
 
-          // Image
-          const img = tile.querySelector('img[class*="product"], img[data-src*="medias"], img[src*="medias"], img[alt]');
+          const itemUrl = tracker.getAttribute('data-item-url') || '';
+          const url = itemUrl ? `https://www.kruidvat.nl${itemUrl}` : '';
+
+          const img = tracker.querySelector('img.tile__product-slide-image');
           const imageUrl = img?.getAttribute('src') || img?.getAttribute('data-src') || '';
 
-          // Product URL
-          const productLink = tile.querySelector('a[href*="/p/"]') as HTMLAnchorElement | null;
-          const url = productLink?.href || '';
-
-          results.push({ title, price, originalPrice, url, imageUrl });
+          results.push({ title, price, originalPrice: originalPrice || null, url, imageUrl });
         } catch {}
       }
 
-      // Fallback: product links with prices
+      // Strategy 2: Fallback to tile__product-slide-content with name link
       if (results.length === 0) {
-        const links = document.querySelectorAll('a[href*="/p/"]');
-        for (const link of Array.from(links)) {
-          const el = link as HTMLAnchorElement;
-          const text = el.textContent?.trim() || '';
-          if (!text || text.length < 3) continue;
+        const tiles = document.querySelectorAll('.tile__product-slide-content, [class*="product-slide"], [class*="product-card"], [class*="product-tile"]');
+        for (const tile of Array.from(tiles)) {
+          try {
+            let title = '';
 
-          // Skip non-product links (reviews, etc.)
-          if (el.href.includes('#')) continue;
+            // Try the specific name link class
+            const nameEl = tile.querySelector('a.tile__product-slide-product-name');
+            if (nameEl) {
+              title = nameEl.textContent?.trim() || '';
+            }
 
-          const title = text.split('\n').map(l => l.trim()).find(l => l.length > 5 && !l.match(/^\d/) && !l.match(/^van/)) || '';
-          if (!title || title.length < 3) continue;
+            // Fallback: data-item-name on parent
+            if (!title || title.length < 3) {
+              const parent = tile.closest('e2-impression-tracker');
+              title = parent?.getAttribute('data-item-name')?.trim() || '';
+            }
 
-          const priceMatch = text.match(/(\d+)\s*\.\s*(\d{2})/);
-          if (!priceMatch) continue;
+            // Fallback: image aria-label (strip size suffix after " - ")
+            if (!title || title.length < 3) {
+              const img = tile.querySelector('img.tile__product-slide-image[aria-label]');
+              const label = img?.getAttribute('aria-label') || '';
+              title = label.replace(/\s*-\s*\d+.*$/, '').trim();
+            }
 
-          results.push({
-            title,
-            price: parseFloat(`${priceMatch[1]}.${priceMatch[2]}`),
-            originalPrice: null,
-            url: el.href,
-            imageUrl: '',
-          });
+            if (!title || title.length < 3) continue;
+
+            // Price from pricebadge (updated class names)
+            let price = 0;
+            const decimalEl = tile.querySelector('.pricebadge__new-price-decimal');
+            const fractionalEl = tile.querySelector('.pricebadge__new-price-fractional');
+            if (decimalEl && fractionalEl) {
+              price = parseFloat(`${decimalEl.textContent?.trim()}.${fractionalEl.textContent?.trim()}`);
+            }
+
+            if (price <= 0) {
+              const text = tile.textContent || '';
+              const priceMatch = text.match(/(\d+)\s*\.\s*(\d{2})/);
+              if (priceMatch) price = parseFloat(`${priceMatch[1]}.${priceMatch[2]}`);
+            }
+
+            if (price <= 0) continue;
+
+            // Image
+            const img = tile.querySelector('img.tile__product-slide-image');
+            const imageUrl = img?.getAttribute('src') || '';
+
+            // URL
+            const nameLink = tile.querySelector('a.tile__product-slide-product-name') as HTMLAnchorElement | null;
+            const url = nameLink?.href || '';
+
+            results.push({ title, price, originalPrice: null, url, imageUrl });
+          } catch {}
         }
       }
 
@@ -551,25 +495,26 @@ export class KruidvatScraper extends BaseScraper {
   } | null> {
     return await page.evaluate(() => {
       // Title from product detail page
-      const titleEl = document.querySelector('h1.product-title, h1[class*="product"], .pdp-header__title');
+      const titleEl = document.querySelector('h1.product-title, h1[class*="product"], .pdp-header__title, h1');
       const title = titleEl?.textContent?.trim() || '';
       if (!title || title.length < 3) return null;
 
-      // Price from pricebadge on product page
+      // Price from pricebadge (updated selectors for current Kruidvat HTML)
       let price = 0;
       const priceBadge = document.querySelector('.pricebadge');
       if (priceBadge) {
-        const newPriceEl = priceBadge.querySelector('.pricebadge__new-price .pricetext, .pricebadge__price .pricetext');
-        if (newPriceEl) {
-          const decimal = newPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
-          const fractional = newPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
-          price = parseFloat(`${decimal}.${fractional}`);
+        // Try new-style decimal/fractional classes first
+        const decimalEl = priceBadge.querySelector('.pricebadge__new-price-decimal');
+        const fractionalEl = priceBadge.querySelector('.pricebadge__new-price-fractional');
+        if (decimalEl && fractionalEl) {
+          price = parseFloat(`${decimalEl.textContent?.trim()}.${fractionalEl.textContent?.trim()}`);
         }
+        // Fallback to old .pricetext structure
         if (price <= 0) {
-          const anyPrice = priceBadge.querySelector('.pricetext');
-          if (anyPrice) {
-            const decimal = anyPrice.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
-            const fractional = anyPrice.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
+          const newPriceEl = priceBadge.querySelector('.pricebadge__new-price .pricetext, .pricebadge__price .pricetext');
+          if (newPriceEl) {
+            const decimal = newPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
+            const fractional = newPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
             price = parseFloat(`${decimal}.${fractional}`);
           }
         }
@@ -577,15 +522,22 @@ export class KruidvatScraper extends BaseScraper {
 
       // Original price
       let originalPrice: number | null = null;
-      const oldPriceEl = document.querySelector('.pricebadge__old-price .pricetext');
-      if (oldPriceEl) {
-        const decimal = oldPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
-        const fractional = oldPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
-        originalPrice = parseFloat(`${decimal}.${fractional}`);
+      const oldDecimal = document.querySelector('.pricebadge__old-price-decimal');
+      const oldFractional = document.querySelector('.pricebadge__old-price-fractional');
+      if (oldDecimal && oldFractional) {
+        originalPrice = parseFloat(`${oldDecimal.textContent?.trim()}.${oldFractional.textContent?.trim()}`);
+      }
+      if (!originalPrice) {
+        const oldPriceEl = document.querySelector('.pricebadge__old-price .pricetext');
+        if (oldPriceEl) {
+          const decimal = oldPriceEl.querySelector('.pricetext__decimal')?.textContent?.trim() || '0';
+          const fractional = oldPriceEl.querySelector('.pricetext__fractional')?.textContent?.trim() || '00';
+          originalPrice = parseFloat(`${decimal}.${fractional}`);
+        }
       }
 
       // Image
-      const img = document.querySelector('.product-image img, img[class*="product-detail"]');
+      const img = document.querySelector('.product-image img, img[class*="product-detail"], img.tile__product-slide-image');
       const imageUrl = img?.getAttribute('src') || '';
 
       return { title, price, originalPrice, imageUrl };

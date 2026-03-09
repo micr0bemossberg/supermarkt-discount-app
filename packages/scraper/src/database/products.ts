@@ -41,6 +41,9 @@ const ALCOHOL_PATTERNS: RegExp[] = [
   // Wine brands
   /\bstoney creek\b/i, /\bi heart\b(?!\s+wijn)?\b.*\b(wijn|wine|pinot|grigio|shiraz)/i,
   /\bla finestra\b/i, /\b2 familias\b/i, /\bbarefoot\b/i,
+  /\bel maestro\b/i, /\byellow tail\b/i, /\bcampo viejo\b/i,
+  // Bottle indicators (strong wine/spirit signal)
+  /\b\d+\s*flessen?\b/i, // "6 flessen", "1 fles"
   // RTD / mixed
   /\bbreezer\b/i, /\bdesperados\b/i,
 ];
@@ -175,7 +178,7 @@ export async function insertProduct(
     }
 
     // Prepare product data
-    const productData = {
+    const productData: Record<string, any> = {
       supermarket_id: supermarketId,
       category_id: categoryId,
       title: scrapedProduct.title,
@@ -195,11 +198,23 @@ export async function insertProduct(
     };
 
     // Insert into database
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .insert(productData)
       .select()
       .single();
+
+    // If requires_card column doesn't exist yet, retry without it
+    if (error?.code === 'PGRST204' && error?.message?.includes('requires_card')) {
+      delete productData.requires_card;
+      const retry = await supabase
+        .from('products')
+        .insert(productData)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       logger.error(`Failed to insert product: ${scrapedProduct.title}`, error);
@@ -222,12 +237,25 @@ export async function updateProduct(
   updates: Partial<Product>
 ): Promise<Product | null> {
   try {
-    const { data, error } = await supabase
+    let { data, error } = await supabase
       .from('products')
       .update(updates)
       .eq('id', productId)
       .select()
       .single();
+
+    // If requires_card column doesn't exist yet, retry without it
+    if (error?.code === 'PGRST204' && error?.message?.includes('requires_card')) {
+      const { requires_card, ...updatesWithout } = updates as any;
+      const retry = await supabase
+        .from('products')
+        .update(updatesWithout)
+        .eq('id', productId)
+        .select()
+        .single();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       logger.error(`Failed to update product: ${productId}`, error);

@@ -4,8 +4,9 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, FlatList } from 'react-native';
-import { Searchbar, List, Text, Divider } from 'react-native-paper';
+import { View, StyleSheet, FlatList, Pressable } from 'react-native';
+import { Searchbar, Text, IconButton } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { searchProducts } from '../services/products';
 import { ProductCard } from '../components/ProductCard';
@@ -44,7 +45,6 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
     if (!query.trim()) return;
 
     try {
-      // Remove if already exists
       const newHistory = [
         query,
         ...searchHistory.filter((item) => item !== query),
@@ -108,7 +108,7 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
     if (loading) {
       return (
         <View style={styles.centerContainer}>
-          <Text>Zoeken...</Text>
+          <Text style={styles.loadingText}>Zoeken...</Text>
         </View>
       );
     }
@@ -157,27 +157,21 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
     return (
       <View>
         <View style={styles.historyHeader}>
-          <Text variant="titleSmall" style={styles.historyTitle}>
-            Recente zoekopdrachten
-          </Text>
-          <Text
-            variant="bodySmall"
-            style={styles.clearHistory}
-            onPress={clearHistory}
-          >
-            Wissen
-          </Text>
+          <Text style={styles.historyTitle}>Recente zoekopdrachten</Text>
+          <Pressable onPress={clearHistory}>
+            <Text style={styles.clearHistory}>Wissen</Text>
+          </Pressable>
         </View>
         {searchHistory.map((item, index) => (
-          <React.Fragment key={index}>
-            <List.Item
-              title={item}
-              left={(props) => <List.Icon {...props} icon="history" />}
-              right={(props) => <List.Icon {...props} icon="arrow-top-left" />}
-              onPress={() => handleHistoryItemPress(item)}
-            />
-            {index < searchHistory.length - 1 && <Divider />}
-          </React.Fragment>
+          <Pressable
+            key={index}
+            onPress={() => handleHistoryItemPress(item)}
+            style={styles.historyItem}
+          >
+            <MaterialCommunityIcons name="history" size={20} color="#9E9E9E" />
+            <Text style={styles.historyItemText}>{item}</Text>
+            <MaterialCommunityIcons name="arrow-top-left" size={18} color="#BDBDBD" />
+          </Pressable>
         ))}
       </View>
     );
@@ -185,13 +179,22 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Searchbar
-        placeholder="Zoek producten..."
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-        style={styles.searchBar}
-        autoFocus
-      />
+      <View style={styles.searchHeader}>
+        <IconButton
+          icon="arrow-left"
+          onPress={() => navigation.goBack()}
+          style={styles.backButton}
+        />
+        <Searchbar
+          placeholder="Zoek producten..."
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+          style={styles.searchBar}
+          inputStyle={styles.searchInput}
+          autoFocus
+          elevation={0}
+        />
+      </View>
 
       {!searchQuery && renderSearchHistory()}
       {searchQuery && renderSearchResults()}
@@ -202,19 +205,42 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8F9FA',
+  },
+  searchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 44,
+    paddingRight: 16,
+    paddingBottom: 8,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+  },
+  backButton: {
+    margin: 0,
   },
   searchBar: {
-    margin: 16,
-    elevation: 2,
+    flex: 1,
+    backgroundColor: '#F1F3F5',
+    borderRadius: 12,
+    height: 44,
+  },
+  searchInput: {
+    fontSize: 14,
+    minHeight: 44,
   },
   centerContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  loadingText: {
+    fontSize: 14,
+    color: '#757575',
+  },
   resultsContainer: {
-    padding: 8,
+    padding: 4,
   },
   cardContainer: {
     flex: 1 / 2,
@@ -223,13 +249,32 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   historyTitle: {
-    fontWeight: '600',
+    fontWeight: '700',
+    fontSize: 14,
+    color: '#424242',
   },
   clearHistory: {
-    color: '#0066CC',
+    color: '#1B5E20',
+    fontWeight: '600',
+    fontSize: 13,
+  },
+  historyItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#F0F0F0',
+    gap: 12,
+  },
+  historyItemText: {
+    flex: 1,
+    fontSize: 15,
+    color: '#424242',
   },
 });

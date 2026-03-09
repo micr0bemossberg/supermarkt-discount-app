@@ -1,11 +1,12 @@
 /**
  * HomeScreen
- * Main screen showing product grid with filters
+ * Clean, modern home with product grid, inline search, and compact filters
  */
 
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { View, StyleSheet, FlatList, RefreshControl } from 'react-native';
-import { Appbar, Chip, FAB, Searchbar } from 'react-native-paper';
+import { View, StyleSheet, FlatList, RefreshControl, Pressable } from 'react-native';
+import { Text, Searchbar, IconButton } from 'react-native-paper';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useProductsStore } from '../stores/productsStore';
 import { ProductCard } from '../components/ProductCard';
 import { SupermarketFilter } from '../components/SupermarketFilter';
@@ -32,10 +33,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   } = useProductsStore();
 
   const [searchText, setSearchText] = useState('');
+  const [showFilters, setShowFilters] = useState(true);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // Initial load
     fetchProducts();
   }, []);
 
@@ -65,6 +66,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const toggleCardFilter = () => {
+    if (filters.requires_card === undefined) {
+      setFilters({ requires_card: true });
+    } else if (filters.requires_card === true) {
+      setFilters({ requires_card: false });
+    } else {
+      setFilters({ requires_card: undefined });
+    }
+  };
+
   const renderItem = useCallback(
     ({ item }: any) => (
       <View style={styles.cardContainer}>
@@ -78,7 +89,26 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const renderHeader = () => (
-    <>
+    <View style={styles.headerSection}>
+      {/* App Title Bar */}
+      <View style={styles.titleBar}>
+        <View>
+          <Text style={styles.appTitle}>SupermarktDeals</Text>
+          <Text style={styles.appSubtitle}>
+            {products.length > 0
+              ? `${products.length} aanbiedingen gevonden`
+              : 'Bekijk de beste deals'}
+          </Text>
+        </View>
+        <IconButton
+          icon={showFilters ? 'filter-variant-minus' : 'filter-variant'}
+          size={22}
+          onPress={() => setShowFilters(!showFilters)}
+          style={styles.filterToggle}
+        />
+      </View>
+
+      {/* Search Bar */}
       <View style={styles.searchContainer}>
         <Searchbar
           placeholder="Zoek aanbiedingen..."
@@ -86,45 +116,60 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           onChangeText={handleSearchChange}
           style={styles.searchbar}
           inputStyle={styles.searchInput}
+          iconColor="#757575"
+          elevation={0}
         />
       </View>
-      <SupermarketFilter
-        selectedIds={filters.supermarket_ids || []}
-        onSelectionChange={handleSupermarketFilterChange}
-      />
-      <CategoryChips
-        selectedId={filters.category_id || null}
-        onSelectionChange={handleCategoryChange}
-      />
-      <View style={styles.cardFilterRow}>
-        <Chip
-          icon={
-            filters.requires_card === true
-              ? 'card-account-details'
-              : filters.requires_card === false
-                ? 'card-off-outline'
-                : 'card-account-details-outline'
-          }
-          selected={filters.requires_card !== undefined}
-          onPress={() => {
-            if (filters.requires_card === undefined) {
-              setFilters({ requires_card: true });
-            } else if (filters.requires_card === true) {
-              setFilters({ requires_card: false });
-            } else {
-              setFilters({ requires_card: undefined });
-            }
-          }}
-          style={styles.cardFilterChip}
-        >
-          {filters.requires_card === true
-            ? 'Alleen pas-deals'
-            : filters.requires_card === false
-              ? 'Zonder pas-deals'
-              : 'Pas filter'}
-        </Chip>
-      </View>
-    </>
+
+      {/* Filters - collapsible */}
+      {showFilters && (
+        <View style={styles.filtersSection}>
+          <SupermarketFilter
+            selectedIds={filters.supermarket_ids || []}
+            onSelectionChange={handleSupermarketFilterChange}
+          />
+          <CategoryChips
+            selectedId={filters.category_id || null}
+            onSelectionChange={handleCategoryChange}
+          />
+
+          {/* Quick filter chips row */}
+          <View style={styles.quickFilters}>
+            <Pressable
+              onPress={toggleCardFilter}
+              style={[
+                styles.quickChip,
+                filters.requires_card !== undefined && styles.quickChipActive,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={
+                  filters.requires_card === true
+                    ? 'card-account-details'
+                    : filters.requires_card === false
+                      ? 'card-off-outline'
+                      : 'card-account-details-outline'
+                }
+                size={14}
+                color={filters.requires_card !== undefined ? '#fff' : '#616161'}
+              />
+              <Text
+                style={[
+                  styles.quickChipText,
+                  filters.requires_card !== undefined && styles.quickChipTextActive,
+                ]}
+              >
+                {filters.requires_card === true
+                  ? 'Alleen pas-deals'
+                  : filters.requires_card === false
+                    ? 'Zonder pas'
+                    : 'Pas filter'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      )}
+    </View>
   );
 
   const renderEmpty = () => {
@@ -148,7 +193,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       <EmptyState
         icon="package-variant-closed"
         title="Geen aanbiedingen gevonden"
-        message="Probeer een ander filter te selecteren"
+        message="Probeer een ander filter of zoekterm"
       />
     );
   };
@@ -166,10 +211,6 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Appbar.Header>
-        <Appbar.Content title="SupermarktDeals" />
-      </Appbar.Header>
-
       <FlatList
         data={products}
         renderItem={renderItem}
@@ -181,21 +222,17 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={refresh} />
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={refresh}
+            colors={['#1B5E20']}
+            tintColor="#1B5E20"
+          />
         }
         contentContainerStyle={[
           styles.gridContent,
           products.length === 0 && styles.emptyContent,
         ]}
-      />
-
-      <FAB
-        icon="filter-variant"
-        style={styles.fab}
-        onPress={() => {
-          // TODO: Open filter modal
-        }}
-        label="Filters"
       />
     </View>
   );
@@ -204,28 +241,80 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FA',
+  },
+  headerSection: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E8E8',
+    marginBottom: 4,
+  },
+  titleBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 52,
+    paddingBottom: 4,
+  },
+  appTitle: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#1B5E20',
+    letterSpacing: -0.5,
+  },
+  appSubtitle: {
+    fontSize: 13,
+    color: '#757575',
+    marginTop: 2,
+  },
+  filterToggle: {
+    margin: 0,
   },
   searchContainer: {
     paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 4,
-    backgroundColor: '#fff',
+    paddingVertical: 8,
   },
   searchbar: {
-    elevation: 0,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
+    backgroundColor: '#F1F3F5',
+    borderRadius: 12,
+    height: 44,
   },
   searchInput: {
     fontSize: 14,
+    minHeight: 44,
   },
-  cardFilterRow: {
+  filtersSection: {
+    paddingBottom: 4,
+  },
+  quickFilters: {
+    flexDirection: 'row',
     paddingHorizontal: 16,
-    paddingVertical: 4,
+    paddingBottom: 8,
+    gap: 8,
   },
-  cardFilterChip: {
-    alignSelf: 'flex-start',
+  quickChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: '#F1F3F5',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  quickChipActive: {
+    backgroundColor: '#1B5E20',
+    borderColor: '#1B5E20',
+  },
+  quickChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#616161',
+  },
+  quickChipTextActive: {
+    color: '#FFFFFF',
   },
   gridContent: {
     paddingHorizontal: 4,
@@ -241,10 +330,5 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingVertical: 16,
-  },
-  fab: {
-    position: 'absolute',
-    right: 16,
-    bottom: 16,
   },
 });

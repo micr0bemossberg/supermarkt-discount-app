@@ -14,6 +14,7 @@ interface ProductsState {
   refreshing: boolean;
   error: string | null;
   hasMore: boolean;
+  dbOffset: number; // tracks actual DB rows consumed (not filtered count)
 
   // Current filters
   filters: ProductFilters;
@@ -42,6 +43,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
   refreshing: false,
   error: null,
   hasMore: true,
+  dbOffset: 0,
   filters: defaultFilters,
 
   // Fetch products with filters
@@ -49,15 +51,16 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     const currentFilters = get().filters;
     const mergedFilters = { ...currentFilters, ...newFilters, offset: 0 };
 
-    set({ loading: true, error: null, filters: mergedFilters });
+    set({ loading: true, error: null, filters: mergedFilters, dbOffset: 0 });
 
     try {
-      const products = await getProducts(mergedFilters);
+      const { products, rawCount } = await getProducts(mergedFilters);
 
       set({
         products,
         loading: false,
-        hasMore: products.length === (mergedFilters.limit || 20),
+        hasMore: rawCount >= (mergedFilters.limit || 20),
+        dbOffset: rawCount, // track actual DB rows consumed
       });
     } catch (error: any) {
       set({
@@ -69,24 +72,25 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
 
   // Load more products (pagination)
   loadMore: async () => {
-    const { loading, hasMore, products, filters } = get();
+    const { loading, hasMore, products, filters, dbOffset } = get();
 
     if (loading || !hasMore) {
       return;
     }
 
-    const newOffset = products.length;
-    const newFilters = { ...filters, offset: newOffset };
+    // Use actual DB offset (raw rows consumed) instead of filtered products count
+    const newFilters = { ...filters, offset: dbOffset };
 
     set({ loading: true });
 
     try {
-      const newProducts = await getProducts(newFilters);
+      const { products: newProducts, rawCount } = await getProducts(newFilters);
 
       set({
         products: [...products, ...newProducts],
         loading: false,
-        hasMore: newProducts.length === (filters.limit || 20),
+        hasMore: rawCount >= (filters.limit || 20),
+        dbOffset: dbOffset + rawCount, // advance by raw rows consumed
         filters: newFilters,
       });
     } catch (error: any) {
@@ -104,12 +108,13 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
     set({ refreshing: true, error: null });
 
     try {
-      const products = await getProducts({ ...filters, offset: 0 });
+      const { products, rawCount } = await getProducts({ ...filters, offset: 0 });
 
       set({
         products,
         refreshing: false,
-        hasMore: products.length === (filters.limit || 20),
+        hasMore: rawCount >= (filters.limit || 20),
+        dbOffset: rawCount,
         filters: { ...filters, offset: 0 },
       });
     } catch (error: any) {
@@ -144,6 +149,7 @@ export const useProductsStore = create<ProductsState>((set, get) => ({
       refreshing: false,
       error: null,
       hasMore: true,
+      dbOffset: 0,
       filters: defaultFilters,
     });
   },
