@@ -47,6 +47,7 @@ export const SUPERMARKET_URLS: Record<SupermarketSlug, string> = {
   joybuy: 'https://www.joybuy.nl',
   megafoodstunter: 'https://www.megafoodstunter.nl',
   butlon: 'https://www.butlon.nl',
+  dekamarkt: 'https://www.dekamarkt.nl/aanbiedingen',
 };
 
 // Image processing

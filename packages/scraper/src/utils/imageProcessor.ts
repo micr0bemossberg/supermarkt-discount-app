@@ -24,7 +24,9 @@ export interface ProcessedImage {
  */
 async function downloadImage(url: string): Promise<Buffer> {
   try {
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      signal: AbortSignal.timeout(15000), // 15s timeout
+    });
 
     if (!response.ok) {
       throw new Error(`Failed to download image: ${response.statusText}`);

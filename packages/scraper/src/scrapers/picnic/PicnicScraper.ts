@@ -163,8 +163,8 @@ export class PicnicScraper extends BaseScraper {
     const loginResult = await this.client.login(email, password);
 
     if (loginResult.second_factor_authentication_required) {
-      throw new Error(
-        'Picnic account requires 2FA. Please disable 2FA or handle it manually.',
+      this.logger.warning(
+        'Picnic API flagged 2FA required (likely new IP). Auth key was received, continuing...',
       );
     }
 

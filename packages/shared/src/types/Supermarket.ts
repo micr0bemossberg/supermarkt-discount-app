@@ -19,4 +19,4 @@ export interface Supermarket {
 export type SupermarketSlug =
   | 'ah' | 'jumbo' | 'aldi' | 'vomar' | 'dirk' | 'plus'
   | 'picnic' | 'joybuy' | 'megafoodstunter' | 'butlon'
-  | 'hoogvliet' | 'action' | 'flink' | 'kruidvat';
+  | 'hoogvliet' | 'action' | 'flink' | 'kruidvat' | 'dekamarkt';

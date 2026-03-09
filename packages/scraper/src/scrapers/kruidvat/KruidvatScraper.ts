@@ -14,6 +14,7 @@
 import { firefox, Page } from 'playwright';
 import { BaseScraper } from '../base/BaseScraper';
 import { SCRAPER_CONFIG, CATEGORY_KEYWORDS } from '../../config/constants';
+import { isNonGroceryProduct, isAlcoholProduct } from '../../database/products';
 import type { ScrapedProduct } from '@supermarkt-deals/shared';
 
 interface PromoTile {
@@ -214,9 +215,16 @@ export class KruidvatScraper extends BaseScraper {
         return await this.scrapeDomTiles(page, monday, sunday);
       }
 
-      // Visit ALL deal pages to extract individual products with prices
-      const tiles = Array.from(uniqueTiles.values()).filter(t => t.available !== false);
-      this.logger.info(`Processing ${tiles.length} available deal tiles...`);
+      // Filter out non-grocery tiles before visiting their pages (saves time)
+      const allTiles = Array.from(uniqueTiles.values()).filter(t => t.available !== false);
+      const tiles = allTiles.filter(t => {
+        if (isNonGroceryProduct(t.title) || isAlcoholProduct(t.title)) {
+          this.logger.debug(`Skipped non-grocery tile: ${t.title}`);
+          return false;
+        }
+        return true;
+      });
+      this.logger.info(`Processing ${tiles.length} grocery deal tiles (filtered ${allTiles.length - tiles.length} non-grocery)...`);
 
       // Group tiles: ones with individual product pages (/p/) vs deal pages (/a/)
       const productPageTiles = tiles.filter(t => t.localizedURLLink?.includes('/p/'));
@@ -265,6 +273,10 @@ export class KruidvatScraper extends BaseScraper {
             if (!dealType && !p.originalPrice) {
               continue;
             }
+            // Skip non-grocery products extracted from deal pages
+            if (isNonGroceryProduct(p.title) || isAlcoholProduct(p.title)) {
+              continue;
+            }
             products.push({
               title: dealType ? `${p.title} (${dealType})` : p.title,
               discount_price: p.price,
@@ -285,8 +297,11 @@ export class KruidvatScraper extends BaseScraper {
       }
 
       // Visit individual product pages (/p/ links) to get real product data
-      const maxProductPages = productPageTiles.length;
-      for (const tile of productPageTiles.slice(0, maxProductPages)) {
+      const groceryProductTiles = productPageTiles.filter(t =>
+        !isNonGroceryProduct(t.title) && !isAlcoholProduct(t.title)
+      );
+      this.logger.info(`Visiting ${groceryProductTiles.length} product pages (filtered ${productPageTiles.length - groceryProductTiles.length} non-grocery)...`);
+      for (const tile of groceryProductTiles) {
         const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
         try {
           await this.randomDelay();

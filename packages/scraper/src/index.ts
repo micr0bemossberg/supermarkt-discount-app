@@ -18,6 +18,7 @@ import { HoogvlietScraper } from './scrapers/hoogvliet/HoogvlietScraper';
 import { ActionScraper } from './scrapers/action/ActionScraper';
 import { FlinkScraper } from './scrapers/flink/FlinkScraper';
 import { KruidvatScraper } from './scrapers/kruidvat/KruidvatScraper';
+import { DekamarktScraper } from './scrapers/dekamarkt/DekamarktScraper';
 import { testConnection } from './config/supabase';
 import { deactivateExpiredProducts, getActiveProductCount } from './database/products';
 import { getScraperStats } from './database/scrapeLogs';
@@ -55,6 +56,8 @@ function getScraper(slug: SupermarketSlug) {
       return new FlinkScraper();
     case 'kruidvat':
       return new KruidvatScraper();
+    case 'dekamarkt':
+      return new DekamarktScraper();
     default:
       throw new Error(`Unknown supermarket: ${slug}`);
   }
@@ -93,7 +96,7 @@ async function runScraper(slug: SupermarketSlug) {
  * Run all scrapers
  */
 async function runAllScrapers() {
-  const supermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'kruidvat'];
+  const supermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'kruidvat'];
   const results: boolean[] = [];
 
   for (const slug of supermarkets) {
@@ -193,7 +196,7 @@ async function main() {
 
   // Default: run scraper for specified supermarket
   if (supermarket) {
-    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
+    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
 
     if (!validSupermarkets.includes(supermarket)) {
       logger.error(`Invalid supermarket: ${supermarket}`);
@@ -222,6 +225,7 @@ Supermarkets (Stores):
   aldi             Aldi
   dirk             Dirk
   vomar            Vomar
+  dekamarkt        Dekamarkt
   hoogvliet        Hoogvliet
 
 Stores (Non-food):

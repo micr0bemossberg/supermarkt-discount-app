@@ -10,6 +10,9 @@ import type { ScrapedProduct, Product, SupermarketSlug } from '@supermarkt-deals
 
 const logger = createLogger('ProductsDB');
 
+/** Once we detect the column is missing, skip it for the rest of the run */
+let requiresCardColumnExists = true;
+
 /** Regex patterns that identify alcohol products (including 0% variants) */
 const ALCOHOL_PATTERNS: RegExp[] = [
   // Generic terms (word-boundary to avoid matching "original", "palmolievrij", etc.)
@@ -53,6 +56,39 @@ const ALCOHOL_PATTERNS: RegExp[] = [
  */
 export function isAlcoholProduct(title: string): boolean {
   return ALCOHOL_PATTERNS.some(pattern => pattern.test(title));
+}
+
+/** Keywords for non-grocery products (makeup, perfume, skincare, beauty, etc.) */
+const NON_GROCERY_KEYWORDS: string[] = [
+  // Makeup
+  'mascara', 'lippenstift', 'lipstick', 'lipgloss', 'lip gloss',
+  'foundation', 'concealer', 'blush', 'rouge', 'oogschaduw', 'eyeshadow',
+  'eyeliner', 'wenkbrauw', 'make-up', 'make up', 'makeup',
+  'nagellak', 'nail polish', 'gelnagel', 'primer', 'bb cream', 'cc cream',
+  // Perfume
+  'parfum', 'perfume', 'eau de toilette', 'eau de parfum', 'body mist',
+  // Skincare (non-basic)
+  'gezichtscrème', 'gezichtscreme', 'dagcrème', 'dagcreme',
+  'nachtcrème', 'nachtcreme', 'gezichtsmasker', 'face mask', 'sheet mask',
+  'peel off', 'anti-rimpel', 'anti rimpel', 'retinol', 'hyaluron',
+  'serum', 'toner', 'micellair', 'micellar', 'reinigingsmelk',
+  // Hair styling (keep shampoo/conditioner)
+  'haarverf', 'hair color', 'hair dye', 'haarlak', 'hairspray',
+  'gel ', 'wax ',
+  // Hair removal
+  'wax strip', 'ontharings', 'epileer', 'epilator',
+  // Feminine hygiene
+  'tampon', 'maandverband', 'inlegkruisje',
+  // Lingerie
+  'lingerie', 'beha', 'bh ',
+];
+
+/**
+ * Check if a product title matches non-grocery patterns (makeup, perfume, skincare, etc.)
+ */
+export function isNonGroceryProduct(title: string): boolean {
+  const lower = title.toLowerCase();
+  return NON_GROCERY_KEYWORDS.some(kw => lower.includes(kw));
 }
 
 /**
@@ -120,6 +156,12 @@ export async function insertProduct(
     // Filter out alcohol products
     if (isAlcoholProduct(scrapedProduct.title)) {
       logger.debug(`Skipped alcohol product: ${scrapedProduct.title}`);
+      return null;
+    }
+
+    // Filter out non-grocery products (makeup, perfume, skincare, etc.)
+    if (isNonGroceryProduct(scrapedProduct.title)) {
+      logger.debug(`Skipped non-grocery product: ${scrapedProduct.title}`);
       return null;
     }
 
@@ -193,9 +235,13 @@ export async function insertProduct(
       valid_from: scrapedProduct.valid_from.toISOString().split('T')[0],
       valid_until: scrapedProduct.valid_until.toISOString().split('T')[0],
       is_active: true,
-      requires_card: scrapedProduct.requires_card || false,
       scrape_hash: hash,
     };
+
+    // Only include requires_card if the column exists in the DB
+    if (requiresCardColumnExists) {
+      productData.requires_card = scrapedProduct.requires_card || false;
+    }
 
     // Insert into database
     let { data, error } = await supabase
@@ -204,8 +250,10 @@ export async function insertProduct(
       .select()
       .single();
 
-    // If requires_card column doesn't exist yet, retry without it
-    if (error?.code === 'PGRST204' && error?.message?.includes('requires_card')) {
+    // If requires_card column doesn't exist, remember and retry without it
+    if (error && String(error.message || '').includes('requires_card')) {
+      requiresCardColumnExists = false;
+      logger.warning('requires_card column not found in DB, skipping for this run');
       delete productData.requires_card;
       const retry = await supabase
         .from('products')
@@ -237,6 +285,12 @@ export async function updateProduct(
   updates: Partial<Product>
 ): Promise<Product | null> {
   try {
+    // Remove requires_card if the column doesn't exist
+    if (!requiresCardColumnExists && (updates as any).requires_card !== undefined) {
+      const { requires_card, ...rest } = updates as any;
+      updates = rest;
+    }
+
     let { data, error } = await supabase
       .from('products')
       .update(updates)
@@ -244,8 +298,9 @@ export async function updateProduct(
       .select()
       .single();
 
-    // If requires_card column doesn't exist yet, retry without it
-    if (error?.code === 'PGRST204' && error?.message?.includes('requires_card')) {
+    // If requires_card column doesn't exist, remember and retry without it
+    if (error && String(error.message || '').includes('requires_card')) {
+      requiresCardColumnExists = false;
       const { requires_card, ...updatesWithout } = updates as any;
       const retry = await supabase
         .from('products')
