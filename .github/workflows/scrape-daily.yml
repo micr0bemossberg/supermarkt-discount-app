@@ -34,6 +34,8 @@ jobs:
             browser: chromium
           - supermarket: action
             browser: chromium
+          - supermarket: dekamarkt
+            browser: chromium
           # Firefox-based scrapers (TLS fingerprinting blocks Chromium)
           - supermarket: kruidvat
             browser: firefox
