@@ -18,7 +18,7 @@ const DEFAULT_SCROLL_CONFIG: ScrollConfig = {
   viewportHeight: 800,
   overlapPercent: 0.2,
   maxChunks: 25,
-  scrollDelayMs: [500, 1500],
+  scrollDelayMs: [200, 500],
 };
 
 export abstract class ScreenshotOCRScraper extends BaseScraper {
@@ -76,7 +76,7 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
         this.logger.warning(`beforeScreenshots() failed: ${error}`);
       }
 
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(500);
 
       // Capture only 1 screenshot
       const screenshot = await page.screenshot({
@@ -139,8 +139,8 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
       this.logger.warning(`beforeScreenshots() failed: ${error}`);
     }
 
-    // 4. Wait for content to settle
-    await page.waitForTimeout(2000);
+    // 4. Brief settle after interactions
+    await page.waitForTimeout(500);
 
     // 5. Capture scrolling screenshots with overlap
     const chunks = await this.captureScrollingScreenshots(page, config);

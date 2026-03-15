@@ -122,8 +122,8 @@ export abstract class BaseScraper {
     try {
       this.logger.info('Checking for cookie consent...');
 
-      // Wait a moment for consent dialogs to appear (they often load asynchronously)
-      await page.waitForTimeout(3000);
+      // Brief wait for consent dialogs to appear
+      await page.waitForTimeout(1000);
 
       // Common Dutch cookie consent button selectors
       const cookieSelectors = [
@@ -145,7 +145,7 @@ export abstract class BaseScraper {
           if (button && await button.isVisible()) {
             await button.click();
             this.logger.success('Cookie consent accepted');
-            await page.waitForTimeout(1000);
+            await page.waitForTimeout(500);
             return;
           }
         } catch (error) {
