@@ -3,7 +3,7 @@
  * Abstract class that all supermarket-specific scrapers extend
  */
 
-import { chromium, Browser, Page, BrowserContext } from 'playwright';
+import { chromium, firefox, Browser, Page, BrowserContext } from 'playwright';
 import { SCRAPER_CONFIG } from '../../config/constants';
 import { createLogger } from '../../utils/logger';
 import { processProductImage } from '../../utils/imageProcessor';
@@ -34,12 +34,21 @@ export abstract class BaseScraper {
   }
 
   /**
+   * Get browser type to use. Subclasses can override to use Firefox.
+   */
+  protected getBrowserType(): 'chromium' | 'firefox' {
+    return 'chromium';
+  }
+
+  /**
    * Initialize browser and page
    */
   protected async initBrowser(): Promise<Page> {
     this.logger.info('Initializing browser...');
 
-    this.browser = await chromium.launch({
+    const launcher = this.getBrowserType() === 'firefox' ? firefox : chromium;
+
+    this.browser = await launcher.launch({
       headless: SCRAPER_CONFIG.HEADLESS,
       args: [
         '--no-sandbox',
