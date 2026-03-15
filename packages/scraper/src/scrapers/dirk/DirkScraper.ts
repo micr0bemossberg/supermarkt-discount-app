@@ -11,46 +11,52 @@ export class DirkScraper extends ScreenshotOCRScraper {
   }
 
   protected async beforeScreenshots(page: Page): Promise<void> {
-    // Dirk has multi-product cards (e.g., "Gesneden fruit" → Meloenmix + Fruitsalade).
-    // Identified by `.middle-item.multi-product`. Clicking opens a modal overlay.
-    // Close button is `button.close[aria-label="Sluiten"]` inside `.overlay`.
+    // Dirk multi-product cards: click → modal overlay → screenshot → close.
+    // Uses direct DOM clicks via page.evaluate() to bypass Playwright's
+    // actionability checks (scrollIntoView, visibility, pointer intercept)
+    // which add ~2-3s of retries per card.
 
-    const multiProducts = page.locator('article .middle-item.multi-product');
-    const count = await multiProducts.count();
-
+    const count = await page.locator('article .middle-item.multi-product').count();
     if (count === 0) return;
 
-    this.logger.info(`Found ${count} multi-product cards to expand`);
+    this.logger.info(`Found ${count} multi-product cards — expanding all`);
 
-    for (let i = 0; i < count; i++) {
+    // Get all multi-product element handles for direct DOM manipulation
+    const elements = await page.$$('article .middle-item.multi-product');
+
+    for (let i = 0; i < elements.length; i++) {
       try {
-        // Scroll into view and click
-        await multiProducts.nth(i).scrollIntoViewIfNeeded({ timeout: 2000 });
-        await multiProducts.nth(i).click({ force: true, timeout: 2000 });
+        // Direct DOM click — no actionability checks, no retry loops
+        await elements[i].evaluate(el => {
+          el.scrollIntoView({ block: 'center' });
+          (el as HTMLElement).click();
+        });
 
-        // Wait for overlay to appear
-        await page.locator('.overlay').waitFor({ state: 'visible', timeout: 2000 });
-        await page.waitForTimeout(300);
+        // Brief wait for overlay animation
+        await page.waitForSelector('.overlay', { state: 'visible', timeout: 1000 }).catch(() => {});
+        await page.waitForTimeout(150);
 
-        // Screenshot the modal
-        const screenshot = await page.screenshot({ type: 'png' });
-        this.multiProductScreenshots.push(screenshot);
+        // Screenshot
+        this.multiProductScreenshots.push(await page.screenshot({ type: 'png' }));
 
-        // Close via the exact button: button.close[aria-label="Sluiten"]
-        await page.locator('button.close[aria-label="Sluiten"]').click({ force: true, timeout: 2000 });
+        // Direct DOM close
+        await page.evaluate(() => {
+          const btn = document.querySelector('button.close[aria-label="Sluiten"]') as HTMLElement;
+          btn?.click();
+        });
 
-        // Wait for overlay to disappear
-        await page.locator('.overlay').waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
-        await page.waitForTimeout(200);
+        // Brief wait for close animation
+        await page.waitForSelector('.overlay', { state: 'hidden', timeout: 800 }).catch(() => {});
       } catch {
-        // If anything fails, force-close any open overlay and continue
-        await page.locator('button.close[aria-label="Sluiten"]').click({ force: true }).catch(() => {});
-        await page.locator('.overlay').waitFor({ state: 'hidden', timeout: 1000 }).catch(() => {});
-        await page.waitForTimeout(200);
+        // Force-close any stuck overlay
+        await page.evaluate(() => {
+          (document.querySelector('button.close[aria-label="Sluiten"]') as HTMLElement)?.click();
+        }).catch(() => {});
+        await page.waitForTimeout(100);
       }
     }
 
-    this.logger.info(`Captured ${this.multiProductScreenshots.length} multi-product modal screenshots`);
+    this.logger.info(`Captured ${this.multiProductScreenshots.length}/${count} modal screenshots`);
   }
 
   private multiProductScreenshots: Buffer[] = [];
