@@ -15,9 +15,17 @@ Look carefully at the ENTIRE image for date information. Dutch supermarkets show
 - "Aanbiedingen tot en met dinsdag" with a date
 - Week indicators like "Week 12" or "ma 10 t/m zo 16 maart"
 
-The current year is 2026. Convert Dutch day abbreviations: ma=Monday, di=Tuesday, wo=Wednesday, do=Thursday, vr=Friday, za=Saturday, zo=Sunday.
+SPECIAL DEAL TYPES WITH SHORT VALIDITY:
+- "VR, ZA & ZO ACTIE" = deal only valid Friday, Saturday, Sunday of the current week. Set valid_from to the Friday and valid_until to the Sunday.
+- "Geldig van vrijdag 13 maart t/m zondag 15 maart" = valid_from=2026-03-13, valid_until=2026-03-15
+- "WEEKENDACTIE" = same as VR, ZA & ZO ACTIE
+- "DAGACTIE" = valid only on the day shown
+- Products may have DIFFERENT validity dates from the page header if they show their own date badge (like "VR, ZA & ZO ACTIE"). Per-product dates override page-level dates.
+
+The current year is 2026. Today is 2026-03-15 (Sunday).
+Convert Dutch day abbreviations: ma=Monday, di=Tuesday, wo=Wednesday, do=Thursday, vr=Friday, za=Saturday, zo=Sunday.
 Convert Dutch months: januari=01, februari=02, maart=03, april=04, mei=05, juni=06, juli=07, augustus=08, september=09, oktober=10, november=11, december=12.
-Format dates as YYYY-MM-DD. Apply the SAME dates to ALL products on the page.
+Format dates as YYYY-MM-DD. Products on the SAME page may have DIFFERENT dates — check each product's deal badge individually.
 
 For each product, extract ALL of these fields (use null when not determinable):
 - title: Product name in Dutch exactly as shown
