@@ -8,5 +8,7 @@ export type {
   ExtractionContext,
   ExtractionResult,
   KeyState,
+  ThinkingLevel,
+  MediaResolution,
 } from './types';
-export { GEMINI_DEFAULTS } from './types';
+export { GEMINI_DEFAULTS, PRODUCT_EXTRACTION_SCHEMA } from './types';

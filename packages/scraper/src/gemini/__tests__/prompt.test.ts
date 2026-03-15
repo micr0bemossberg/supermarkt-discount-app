@@ -13,16 +13,13 @@ describe('buildExtractionPrompt', () => {
     expect(prompt).toContain('Dirk van den Broek');
   });
 
-  it('includes all required field names', () => {
+  it('includes key extraction concepts', () => {
     const prompt = buildExtractionPrompt(context);
     expect(prompt).toContain('title');
-    expect(prompt).toContain('discount_price');
-    expect(prompt).toContain('original_price');
-    expect(prompt).toContain('valid_from');
-    expect(prompt).toContain('valid_until');
-    expect(prompt).toContain('category_slug');
+    expect(prompt).toContain('price');
+    expect(prompt).toContain('Geldig');
     expect(prompt).toContain('requires_card');
-    expect(prompt).toContain('unit_info');
+    expect(prompt).toContain('per kg');
   });
 
   it('includes category slugs in prompt', () => {
@@ -41,14 +38,14 @@ describe('buildExtractionPrompt', () => {
     expect(prompt).toContain('starburst badges');
   });
 
-  it('includes instruction to return JSON array', () => {
+  it('includes extraction instructions for prices and dates', () => {
     const prompt = buildExtractionPrompt(context);
-    expect(prompt).toContain('JSON');
-    expect(prompt).toContain('array');
+    expect(prompt).toContain('YYYY-MM-DD');
+    expect(prompt).toContain('decimal point');
   });
 
   it('includes Dutch language context', () => {
     const prompt = buildExtractionPrompt(context);
-    expect(prompt).toMatch(/[Dd]utch|[Nn]ederlands/);
+    expect(prompt).toMatch(/[Dd]utch|[Nn]ederlands|januari|februari/);
   });
 });

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { GeminiConfig, ImageChunk, ExtractionContext, ExtractionResult } from './types';
+import { PRODUCT_EXTRACTION_SCHEMA } from './types';
 import { KeyPool } from './keyPool';
 import { buildExtractionPrompt } from './prompt';
 import { parseGeminiResponse } from './responseParser';
@@ -69,9 +70,26 @@ export class GeminiExtractor {
 
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
+
+        // Build generation config with thinking, structured output, and media resolution
+        const generationConfig: Record<string, unknown> = {
+          temperature: this.config.temperature,
+          // Media resolution: HIGH = 1120 tokens/image for best OCR accuracy
+          mediaResolution: this.config.mediaResolution,
+        };
+
+        // Structured output: force Gemini to return valid JSON matching our schema
+        if (this.config.useStructuredOutput) {
+          generationConfig.responseMimeType = 'application/json';
+          generationConfig.responseSchema = PRODUCT_EXTRACTION_SCHEMA;
+        }
+
         const model = genAI.getGenerativeModel({
           model: this.config.modelId,
-          generationConfig: { temperature: this.config.temperature },
+          generationConfig,
+          // System instruction: moves the "you are a Dutch extractor" preamble
+          // out of the user prompt for cleaner separation
+          systemInstruction: 'You are a Dutch supermarket discount data extractor. Extract ALL discount/deal products visible in the provided image. Be thorough — do not skip any products.',
         });
 
         const imagePart = {
@@ -82,6 +100,14 @@ export class GeminiExtractor {
         };
 
         const contextLine = `[Image ${chunk.index + 1} of ${chunk.totalChunks}]`;
+
+        // Thinking: enable step-by-step reasoning for price/date extraction
+        if (this.config.thinkingLevel !== 'minimal') {
+          (generationConfig as any).thinkingConfig = {
+            thinkingLevel: this.config.thinkingLevel.toUpperCase(),
+          };
+        }
+
         const result = await model.generateContent([contextLine + '\n' + prompt, imagePart]);
         const text = result.response.text();
         const tokens = result.response.usageMetadata?.totalTokenCount ?? 0;
