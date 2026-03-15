@@ -21,31 +21,46 @@ export class GeminiExtractor {
     images: ImageChunk[],
     context: ExtractionContext,
   ): Promise<ExtractionResult> {
-    const pLimitModule = require('p-limit');
-    const pLimit = pLimitModule.default || pLimitModule;
-    const limit = pLimit(this.config.maxConcurrent);
-
     const prompt = buildExtractionPrompt(context);
     let totalTokens = 0;
     let chunksFailed = 0;
     const allProducts: import('@supermarkt-deals/shared').ScrapedProduct[] = [];
 
-    const tasks = images.map((chunk) =>
-      limit(async () => {
-        try {
-          const result = await this.extractFromChunk(chunk, prompt);
-          totalTokens += result.tokens;
-          allProducts.push(...result.products);
-        } catch (error) {
-          chunksFailed++;
-          logger.warning(
-            `Chunk ${chunk.index + 1}/${chunk.totalChunks} failed: ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
-      })
-    );
+    // Process in batches to respect rate limits.
+    // Free tier: 15 RPM per project (shared across all keys).
+    // Process up to maxConcurrent chunks per batch, then wait.
+    const batchSize = Math.min(this.config.maxConcurrent, images.length);
+    const totalBatches = Math.ceil(images.length / batchSize);
 
-    await Promise.allSettled(tasks);
+    logger.info(`Processing ${images.length} chunks in ${totalBatches} batches of ${batchSize}`);
+
+    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
+      const batchStart = batchIdx * batchSize;
+      const batch = images.slice(batchStart, batchStart + batchSize);
+
+      // Process batch concurrently
+      await Promise.allSettled(
+        batch.map(async (chunk) => {
+          try {
+            const result = await this.extractFromChunk(chunk, prompt);
+            totalTokens += result.tokens;
+            allProducts.push(...result.products);
+          } catch (error) {
+            chunksFailed++;
+            logger.warning(
+              `Chunk ${chunk.index + 1}/${chunk.totalChunks} failed: ${error instanceof Error ? error.message : String(error)}`
+            );
+          }
+        })
+      );
+
+      // Rate limit delay between batches (not after last batch)
+      if (batchIdx < totalBatches - 1) {
+        const delayMs = this.config.batchDelayMs;
+        logger.info(`Batch ${batchIdx + 1}/${totalBatches} done, waiting ${delayMs / 1000}s for rate limit...`);
+        await this.sleep(delayMs);
+      }
+    }
 
     return {
       products: allProducts,

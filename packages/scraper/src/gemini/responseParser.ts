@@ -118,6 +118,7 @@ export function parseGeminiResponse(
       valid_until: validUntil,
       category_slug: categorySlug ?? undefined,
       requires_card: typeof raw.requires_card === 'boolean' ? raw.requires_card : false,
+      deal_type: typeof raw.deal_type === 'string' ? raw.deal_type : undefined,
     });
   }
 

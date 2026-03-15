@@ -12,6 +12,7 @@ export interface GeminiConfig {
   thinkingLevel: ThinkingLevel;
   mediaResolution: MediaResolution;
   useStructuredOutput: boolean;
+  batchDelayMs: number;            // Delay between batches to respect rate limits
 }
 
 export interface ImageChunk {
@@ -42,12 +43,13 @@ export interface KeyState {
 export const GEMINI_DEFAULTS: GeminiConfig = {
   apiKeys: [],
   modelId: 'gemini-3.1-flash-lite-preview',
-  maxConcurrent: 10,
+  maxConcurrent: 14,                        // Just under 15 RPM free tier limit per project
   retryAttempts: 2,
   temperature: 0.0,               // Deterministic — no creativity needed for data extraction
   thinkingLevel: 'low',           // Balanced: adds reasoning without 60s+ latency per chunk
   mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 1120 tokens/image — needed to read small print prices
   useStructuredOutput: true,      // Force valid JSON via responseSchema
+  batchDelayMs: 65000,            // 65s between batches — free tier is 15 RPM per project
 };
 
 /**
@@ -77,6 +79,11 @@ export const PRODUCT_EXTRACTION_SCHEMA = {
       requires_card: { type: 'BOOLEAN', description: 'True if loyalty card badge visible (Bonuskaart, Extra\'s)' },
       image_url: { type: 'STRING', description: 'Product image URL, only if visible in the image', nullable: true },
       product_url: { type: 'STRING', description: 'Product page URL, only if visible in the image', nullable: true },
+      deal_type: {
+        type: 'STRING',
+        description: 'Type of deal/promotion. One of: korting, 1+1_gratis, 2+1_gratis, 2e_halve_prijs, x_voor_y, weekend_actie, dag_actie, bonus, extra, stunt, combinatie_korting, gratis_bijproduct, overig',
+        nullable: true,
+      },
     },
     required: ['title', 'discount_price', 'requires_card'],
   },

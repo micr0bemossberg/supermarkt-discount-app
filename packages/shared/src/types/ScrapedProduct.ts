@@ -30,6 +30,9 @@ export interface ScrapedProduct {
 
   // Loyalty card requirement
   requires_card?: boolean;
+
+  // Deal type classification (e.g., "korting", "1+1_gratis", "2e_halve_prijs")
+  deal_type?: string;
 }
 
 /**

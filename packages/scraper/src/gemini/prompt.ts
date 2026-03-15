@@ -38,6 +38,7 @@ For each product, extract ALL of these fields (use null when not determinable):
 - valid_until: End date YYYY-MM-DD from page header/banner, null if not visible
 - category_slug: Classify as one of: [${categoryList}]
 - requires_card: true if loyalty card badge visible (Bonuskaart, Extra's, Voordeelkaart), false otherwise
+- deal_type: Classify the promotion type as one of: "korting" (percentage/price discount), "1+1_gratis" (buy one get one free), "2+1_gratis" (buy two get one free), "2e_halve_prijs" (second half price), "x_voor_y" (X items for Y euros, e.g. "2 voor €3"), "weekend_actie" (VR,ZA&ZO or weekend deal), "dag_actie" (single day deal), "bonus" (AH Bonus), "extra" (Jumbo Extra's), "stunt" (stunt/kanskoopje), "combinatie_korting" (combo discount), "gratis_bijproduct" (free add-on), "overig" (other)
 - image_url: null (not extractable from screenshots)
 - product_url: null (not extractable from screenshots)
 
