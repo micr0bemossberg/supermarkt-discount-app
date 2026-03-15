@@ -102,6 +102,14 @@ export async function downloadImageAsBase64(imageUrl: string, maxRedirects = 5):
 }
 
 /**
+ * Download an image from a URL and return it as a Buffer.
+ */
+export async function downloadImageAsBuffer(url: string): Promise<Buffer> {
+  const base64 = await downloadImageAsBase64(url);
+  return Buffer.from(base64, 'base64');
+}
+
+/**
  * Download multiple page images as base64, with rate limiting.
  * @param pages Pages to download images for
  * @param delayMs Delay between downloads to avoid rate limiting (default: 500ms)

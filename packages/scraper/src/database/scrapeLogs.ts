@@ -21,9 +21,9 @@ export async function createScrapeLog(
 
     const logData = {
       supermarket_id: supermarketId,
-      status: result.success ? 'success' : 'failed',
+      status: result.status ?? (result.success ? 'success' : 'failed'),
       products_scraped: result.products_scraped,
-      error_message: result.error_message || null,
+      error_message: result.error_message || (result.metadata ? JSON.stringify(result.metadata) : null),
       duration_seconds: result.duration_seconds,
     };
 
