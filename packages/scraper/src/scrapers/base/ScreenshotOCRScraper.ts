@@ -54,6 +54,11 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
     // Default: no-op
   }
 
+  /** Override to provide additional image chunks (e.g., modal screenshots). */
+  protected getExtraChunks(): ImageChunk[] {
+    return [];
+  }
+
   /**
    * Test-OCR override: capture only 1 screenshot chunk, send to Gemini, return raw products.
    */
@@ -144,7 +149,15 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
 
     // 5. Capture scrolling screenshots with overlap
     const chunks = await this.captureScrollingScreenshots(page, config);
-    this.logger.info(`Captured ${chunks.length} screenshot chunks`);
+
+    // 5b. Merge any extra chunks (e.g., modal screenshots from Dirk)
+    const extraChunks = this.getExtraChunks();
+    if (extraChunks.length > 0) {
+      chunks.push(...extraChunks);
+      this.logger.info(`Captured ${chunks.length - extraChunks.length} scroll chunks + ${extraChunks.length} extra chunks`);
+    } else {
+      this.logger.info(`Captured ${chunks.length} screenshot chunks`);
+    }
 
     if (chunks.length === 0) {
       this.logger.error('No screenshots captured');
