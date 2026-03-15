@@ -24,9 +24,8 @@ BaseScraper (existing — minor modification: parameterize browser type)
 │  │  - Accepts image Buffer(s)                       │
 │  │  - Sends to gemini-3.1-flash-lite-preview        │
 │  │  - Structured JSON prompt → ScrapedProduct[]     │
-│  │  - Concurrent worker pool (p-limit, max 3)       │
-│  │  - Multi-key round-robin pool (ported from       │
-│  │    existing ocrClient.ts)                        │
+│  │  - Concurrent worker pool (p-limit, max 10)       │
+│  │  - 10-key round-robin pool (150 RPM total)       │
 │  └──────────┬──────────────┬──────────────┬─────────┘
 │             │              │              │
 │     ┌───────┴───┐   ┌─────┴─────┐   ┌────┴────┐
@@ -134,9 +133,9 @@ class GeminiExtractor {
 }
 
 interface GeminiConfig {
-  apiKeys: string[]             // Round-robin key pool (1 or more keys)
+  apiKeys: string[]             // Round-robin key pool (10 keys, 15 RPM each = 150 RPM)
   modelId: string               // Default: 'gemini-3.1-flash-lite-preview'
-  maxConcurrent: number         // Default: 3 (implemented via p-limit)
+  maxConcurrent: number         // Default: 10 (implemented via p-limit, 1 per key)
   retryAttempts: number         // Default: 2
   temperature: number           // Default: 0.1
 }
@@ -173,7 +172,7 @@ The existing `ocrClient.ts` implements a sophisticated multi-key pool with:
 
 This logic is **preserved and ported** into `GeminiExtractor`. The constructor accepts `apiKeys: string[]` — if only one key is provided, it works as a simple single-key client. With multiple keys, it rotates to maximize throughput.
 
-Environment variable: `GEMINI_API_KEYS` (comma-separated list, replaces single `GEMINI_API_KEY`).
+The current `.env` has 10 keys (`gemini_api_key1` through `gemini_api_key10`), each with 15 RPM = **150 RPM total**. The `keyPool.ts` module loads these from the env using the existing `gemini_api_key{N}` naming convention (already used by `ocrClient.ts`), so no env var renaming is needed.
 
 ### Concurrency
 
@@ -217,9 +216,9 @@ Parallel chunk processing uses `p-limit` (already in the npm ecosystem, zero-dep
 
 ```typescript
 const GEMINI_DEFAULTS: GeminiConfig = {
-  apiKeys: [],                              // From GEMINI_API_KEYS env var
+  apiKeys: [],                              // Loaded from gemini_api_key1..N env vars
   modelId: 'gemini-3.1-flash-lite-preview',
-  maxConcurrent: 3,
+  maxConcurrent: 10,                        // 10 keys × 15 RPM = 150 RPM headroom
   retryAttempts: 2,
   temperature: 0.1,
 }
@@ -482,20 +481,20 @@ Migration file: `supabase/migrations/20260315000001_add_missing_categories.sql`
 ### New Environment Variables
 
 ```env
-# Required — comma-separated for multi-key pool
-GEMINI_API_KEYS=key1,key2,key3
+# Already present in root .env (loaded by ocrClient.ts pattern)
+gemini_api_key1=...
+gemini_api_key2=...
+# ... through gemini_api_key10
 
-# Optional tuning
+# Optional tuning (new)
 GEMINI_MODEL=gemini-3.1-flash-lite-preview
-GEMINI_MAX_CONCURRENT=3
+GEMINI_MAX_CONCURRENT=10
 GEMINI_TEMPERATURE=0.1
 ```
 
-Added to:
-- Root `.env` and `.env.example`
-- `packages/scraper/.env` and `.env.example`
-- GitHub Actions secrets: `GEMINI_API_KEYS`
-- `.github/workflows/scrape-daily.yml` — add `GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}` to the scrape job env block
+The root `.env` already contains all 10 Gemini keys, Supabase credentials, Expo credentials, and Picnic credentials. No new `.env` files needed. The scraper's `dotenv.config()` has been updated on main to load from the monorepo root.
+
+For GitHub Actions, the `gemini_api_key1..10` vars need to be added as repository secrets (or loaded via a single `GEMINI_API_KEYS_JSON` secret that gets expanded).
 
 ### New Dependencies
 
@@ -512,12 +511,14 @@ Added to `packages/scraper/package.json`. Pin to specific minor versions, not `^
 
 `.github/workflows/scrape-daily.yml` requires:
 
-1. **New environment variable** in the scrape job:
+1. **New environment variables** in the scrape job (10 keys):
    ```yaml
-   GEMINI_API_KEYS: ${{ secrets.GEMINI_API_KEYS }}
+   gemini_api_key1: ${{ secrets.GEMINI_API_KEY1 }}
+   gemini_api_key2: ${{ secrets.GEMINI_API_KEY2 }}
+   # ... through gemini_api_key10
    ```
 
-2. **New GitHub Secret**: `GEMINI_API_KEYS` (comma-separated API keys)
+2. **New GitHub Secrets**: `GEMINI_API_KEY1` through `GEMINI_API_KEY10`
 
 3. **Firefox installation** — already handled by the existing matrix (Firefox jobs install Firefox). No changes needed.
 
