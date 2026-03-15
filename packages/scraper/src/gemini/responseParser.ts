@@ -103,18 +103,20 @@ export function parseGeminiResponse(
       categorySlug = 'overig';
     }
 
+    // Always output all 12 fields — undefined for missing optional fields
+    // (ScrapedProduct uses optional `?:` properties which map to undefined, not null)
     products.push({
       title,
       discount_price: discountPrice,
-      original_price: originalPrice,
-      discount_percentage: discountPercentage,
+      original_price: originalPrice ?? undefined,
+      discount_percentage: discountPercentage ?? undefined,
       description: typeof raw.description === 'string' ? raw.description : undefined,
       unit_info: typeof raw.unit_info === 'string' ? raw.unit_info : undefined,
       image_url: typeof raw.image_url === 'string' ? raw.image_url : undefined,
       product_url: typeof raw.product_url === 'string' ? raw.product_url : undefined,
       valid_from: validFrom,
       valid_until: validUntil,
-      category_slug: categorySlug,
+      category_slug: categorySlug ?? undefined,
       requires_card: typeof raw.requires_card === 'boolean' ? raw.requires_card : false,
     });
   }

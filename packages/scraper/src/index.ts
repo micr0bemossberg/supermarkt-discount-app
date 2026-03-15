@@ -105,7 +105,7 @@ async function runTestOcr(slug: SupermarketSlug) {
   const products = await scraper.runTestOcr();
 
   logger.info(`\n[TEST-OCR] Raw extracted products (${products.length}):\n`);
-  console.log(JSON.stringify(products, null, 2));
+  console.log(JSON.stringify(products, (_, v) => v === undefined ? null : v, 2));
 
   logger.info(`========================================`);
   logger.info(`[TEST-OCR] Done. ${products.length} products extracted. No DB writes.`);
@@ -125,7 +125,7 @@ async function runDryRun(slug: SupermarketSlug) {
   const products = await scraper.runDryRun();
 
   logger.info(`\n[DRY-RUN] Scraped products (${products.length}):\n`);
-  console.log(JSON.stringify(products, null, 2));
+  console.log(JSON.stringify(products, (_, v) => v === undefined ? null : v, 2));
 
   logger.info(`========================================`);
   logger.info(`[DRY-RUN] Done. ${products.length} products scraped. No DB writes.`);
