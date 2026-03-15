@@ -11,8 +11,8 @@ import * as https from 'https';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 
-// Load OCR-specific .env
-dotenv.config({ path: path.join(__dirname, '.env') });
+// Load from root .env (all keys consolidated there)
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
 
 export interface GeminiProduct {
   name: string;

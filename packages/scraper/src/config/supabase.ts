@@ -5,9 +5,11 @@
 
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
+import path from 'path';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from root .env (try monorepo root, then CWD fallback)
+dotenv.config({ path: path.resolve(__dirname, '../../../../.env') });
+dotenv.config(); // CWD fallback (for CI where env vars come from secrets)
 
 const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_KEY;
