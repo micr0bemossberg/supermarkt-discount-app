@@ -19,6 +19,7 @@ export type {
 // Scraped product types
 export type {
   ScrapedProduct,
+  ScrapeStatus,
   ScrapeResult,
   ScrapeLog,
 } from './types/ScrapedProduct';

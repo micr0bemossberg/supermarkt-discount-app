@@ -33,6 +33,11 @@ export interface ScrapedProduct {
 }
 
 /**
+ * Status of a scrape run
+ */
+export type ScrapeStatus = 'success' | 'partial' | 'failed';
+
+/**
  * Scrape result
  * Returned by each scraper after execution
  */
@@ -45,6 +50,13 @@ export interface ScrapeResult {
   duration_seconds: number;
   error_message?: string;
   error_screenshot_path?: string;
+  status?: ScrapeStatus;
+  metadata?: {
+    chunks_processed: number;
+    chunks_failed: number;
+    pipeline_type: 'publitas' | 'screenshot' | 'api';
+    gemini_tokens_used: number;
+  };
 }
 
 /**
