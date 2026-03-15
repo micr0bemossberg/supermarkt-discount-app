@@ -96,7 +96,7 @@ async function runScraper(slug: SupermarketSlug) {
  * Run scraper in test-ocr mode: capture 1 screenshot/page, send to Gemini, print raw output.
  * No DB insertion.
  */
-async function runTestOcr(slug: SupermarketSlug) {
+async function runTestOcr(slug: SupermarketSlug, outputPath?: string) {
   logger.info(`========================================`);
   logger.info(`[TEST-OCR] ${slug.toUpperCase()} — single chunk OCR test`);
   logger.info(`========================================`);
@@ -104,8 +104,16 @@ async function runTestOcr(slug: SupermarketSlug) {
   const scraper = getScraper(slug);
   const products = await scraper.runTestOcr();
 
-  logger.info(`\n[TEST-OCR] Raw extracted products (${products.length}):\n`);
-  console.log(JSON.stringify(products, (_, v) => v === undefined ? null : v, 2));
+  const json = JSON.stringify(products, (_, v) => v === undefined ? null : v, 2);
+
+  if (outputPath) {
+    const fs = await import('fs');
+    fs.writeFileSync(outputPath, json, 'utf-8');
+    logger.info(`[TEST-OCR] ${products.length} products written to ${outputPath}`);
+  } else {
+    logger.info(`\n[TEST-OCR] Raw extracted products (${products.length}):\n`);
+    console.log(json);
+  }
 
   logger.info(`========================================`);
   logger.info(`[TEST-OCR] Done. ${products.length} products extracted. No DB writes.`);
@@ -211,6 +219,8 @@ async function main() {
   const supermarket = supermarketFlag?.split('=')[1] as SupermarketSlug | undefined;
   const isTestOcr = flags.includes('--test-ocr');
   const isDryRun = flags.includes('--dry-run');
+  const outputFlag = flags.find((f) => f.startsWith('--output='));
+  const outputPath = outputFlag?.split('=')[1];
 
   const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
 
@@ -223,7 +233,7 @@ async function main() {
     }
 
     if (isTestOcr) {
-      await runTestOcr(supermarket);
+      await runTestOcr(supermarket, outputPath);
     } else {
       await runDryRun(supermarket);
     }
