@@ -1,0 +1,144 @@
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import type { GeminiConfig, ImageChunk, ExtractionContext, ExtractionResult } from './types';
+import { KeyPool } from './keyPool';
+import { buildExtractionPrompt } from './prompt';
+import { parseGeminiResponse } from './responseParser';
+import { createLogger } from '../utils/logger';
+
+const logger = createLogger('GeminiExtractor');
+
+export class GeminiExtractor {
+  private config: GeminiConfig;
+  private keyPool: KeyPool;
+
+  constructor(config: GeminiConfig) {
+    this.config = config;
+    this.keyPool = new KeyPool(config.apiKeys);
+  }
+
+  async extractProducts(
+    images: ImageChunk[],
+    context: ExtractionContext,
+  ): Promise<ExtractionResult> {
+    const pLimit = require('p-limit') as typeof import('p-limit')['default'];
+    const limit = pLimit(this.config.maxConcurrent);
+
+    const prompt = buildExtractionPrompt(context);
+    let totalTokens = 0;
+    let chunksFailed = 0;
+    const allProducts: import('@supermarkt-deals/shared').ScrapedProduct[] = [];
+
+    const tasks = images.map((chunk) =>
+      limit(async () => {
+        try {
+          const result = await this.extractFromChunk(chunk, prompt);
+          totalTokens += result.tokens;
+          allProducts.push(...result.products);
+        } catch (error) {
+          chunksFailed++;
+          logger.warning(
+            `Chunk ${chunk.index + 1}/${chunk.totalChunks} failed: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      })
+    );
+
+    await Promise.allSettled(tasks);
+
+    return {
+      products: allProducts,
+      chunksProcessed: images.length - chunksFailed,
+      chunksFailed,
+      tokensUsed: totalTokens,
+    };
+  }
+
+  private async extractFromChunk(
+    chunk: ImageChunk,
+    prompt: string,
+  ): Promise<{ products: import('@supermarkt-deals/shared').ScrapedProduct[]; tokens: number }> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= this.config.retryAttempts; attempt++) {
+      const apiKey = this.keyPool.getNextKey();
+      if (!apiKey) {
+        // All keys on cooldown — wait and retry
+        await this.sleep(2000 * (attempt + 1));
+        continue;
+      }
+
+      try {
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: this.config.modelId,
+          generationConfig: { temperature: this.config.temperature },
+        });
+
+        const imagePart = {
+          inlineData: {
+            data: chunk.buffer.toString('base64'),
+            mimeType: 'image/png' as const,
+          },
+        };
+
+        const contextLine = `[Image ${chunk.index + 1} of ${chunk.totalChunks}]`;
+        const result = await model.generateContent([contextLine + '\n' + prompt, imagePart]);
+        const text = result.response.text();
+        const tokens = result.response.usageMetadata?.totalTokenCount ?? 0;
+
+        const products = parseGeminiResponse(text);
+        return { products, tokens };
+      } catch (error: unknown) {
+        lastError = error instanceof Error ? error : new Error(String(error));
+
+        // Rate limit — cooldown this key
+        if (this.isRateLimitError(error)) {
+          const cooldownMs = this.parseCooldownMs(error) || 5000 * (attempt + 1);
+          this.keyPool.cooldownKey(apiKey, cooldownMs);
+          continue;
+        }
+
+        // Non-retryable errors
+        if (this.isAuthError(error)) {
+          throw lastError;
+        }
+
+        // Retryable — exponential backoff
+        await this.sleep(2000 * Math.pow(2, attempt));
+      }
+    }
+
+    throw lastError ?? new Error('Extraction failed after all retries');
+  }
+
+  private isRateLimitError(error: unknown): boolean {
+    if (error instanceof Error) {
+      return error.message.includes('429') || error.message.includes('RESOURCE_EXHAUSTED');
+    }
+    return false;
+  }
+
+  private isAuthError(error: unknown): boolean {
+    if (error instanceof Error) {
+      return error.message.includes('401') || error.message.includes('403') ||
+             error.message.includes('API_KEY_INVALID');
+    }
+    return false;
+  }
+
+  private parseCooldownMs(error: unknown): number | null {
+    if (error instanceof Error) {
+      // Parse "retry after X seconds" from error message
+      const secondsMatch = error.message.match(/(\d+)\s*seconds?/i);
+      if (secondsMatch) return parseInt(secondsMatch[1]) * 1000;
+
+      const msMatch = error.message.match(/(\d+)\s*ms/i);
+      if (msMatch) return parseInt(msMatch[1]);
+    }
+    return null;
+  }
+
+  private sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}
