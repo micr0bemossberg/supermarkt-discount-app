@@ -336,6 +336,51 @@ export abstract class BaseScraper {
   protected abstract scrapeProducts(): Promise<ScrapedProduct[]>;
 
   /**
+   * Dry-run: full scrape pipeline but skip DB insertion.
+   * Returns all extracted ScrapedProduct[] without persisting.
+   */
+  public async runDryRun(): Promise<ScrapedProduct[]> {
+    this.startTime = Date.now();
+    this.logger.info(`[DRY-RUN] Starting scraper for ${this.supermarketSlug.toUpperCase()}`);
+
+    try {
+      const scrapedProducts = await this.retryOperation(() =>
+        this.scrapeProducts()
+      );
+      this.logger.info(`[DRY-RUN] Scraped ${scrapedProducts.length} products (no DB writes)`);
+      return scrapedProducts;
+    } finally {
+      await this.cleanup();
+      const endTime = Date.now();
+      this.logger.info(`[DRY-RUN] Duration: ${Math.round((endTime - this.startTime) / 1000)}s`);
+    }
+  }
+
+  /**
+   * Test-OCR: capture just 1 screenshot/page, send to Gemini, print raw result.
+   * No DB insertion. Subclasses that use OCR can override for specialized behavior.
+   */
+  public async runTestOcr(): Promise<ScrapedProduct[]> {
+    this.startTime = Date.now();
+    this.logger.info(`[TEST-OCR] Starting scraper for ${this.supermarketSlug.toUpperCase()}`);
+    this.logger.info(`[TEST-OCR] Note: this runs the full scrapeProducts() for API-based scrapers`);
+
+    try {
+      const scrapedProducts = await this.retryOperation(() =>
+        this.scrapeProducts()
+      );
+      // For API-based scrapers, just return all products. OCR-based scrapers
+      // override this method to limit to 1 chunk/page.
+      this.logger.info(`[TEST-OCR] Extracted ${scrapedProducts.length} products (no DB writes)`);
+      return scrapedProducts;
+    } finally {
+      await this.cleanup();
+      const endTime = Date.now();
+      this.logger.info(`[TEST-OCR] Duration: ${Math.round((endTime - this.startTime) / 1000)}s`);
+    }
+  }
+
+  /**
    * Run the scraper
    */
   public async run(): Promise<ScrapeResult> {

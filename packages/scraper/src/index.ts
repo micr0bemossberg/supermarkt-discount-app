@@ -93,6 +93,46 @@ async function runScraper(slug: SupermarketSlug) {
 }
 
 /**
+ * Run scraper in test-ocr mode: capture 1 screenshot/page, send to Gemini, print raw output.
+ * No DB insertion.
+ */
+async function runTestOcr(slug: SupermarketSlug) {
+  logger.info(`========================================`);
+  logger.info(`[TEST-OCR] ${slug.toUpperCase()} — single chunk OCR test`);
+  logger.info(`========================================`);
+
+  const scraper = getScraper(slug);
+  const products = await scraper.runTestOcr();
+
+  logger.info(`\n[TEST-OCR] Raw extracted products (${products.length}):\n`);
+  console.log(JSON.stringify(products, null, 2));
+
+  logger.info(`========================================`);
+  logger.info(`[TEST-OCR] Done. ${products.length} products extracted. No DB writes.`);
+  logger.info(`========================================`);
+}
+
+/**
+ * Run scraper in dry-run mode: full pipeline but skip DB insertion.
+ * Prints all ScrapedProduct[] to console as JSON.
+ */
+async function runDryRun(slug: SupermarketSlug) {
+  logger.info(`========================================`);
+  logger.info(`[DRY-RUN] ${slug.toUpperCase()} — full scrape, no DB writes`);
+  logger.info(`========================================`);
+
+  const scraper = getScraper(slug);
+  const products = await scraper.runDryRun();
+
+  logger.info(`\n[DRY-RUN] Scraped products (${products.length}):\n`);
+  console.log(JSON.stringify(products, null, 2));
+
+  logger.info(`========================================`);
+  logger.info(`[DRY-RUN] Done. ${products.length} products scraped. No DB writes.`);
+  logger.info(`========================================`);
+}
+
+/**
  * Run all scrapers
  */
 async function runAllScrapers() {
@@ -162,20 +202,45 @@ async function cleanup() {
 async function main() {
   const args = process.argv.slice(2);
 
-  // Test Supabase connection first
+  // Parse command
+  const command = args.find((arg) => !arg.startsWith('--'));
+  const flags = args.filter((arg) => arg.startsWith('--'));
+
+  // Extract flags
+  const supermarketFlag = flags.find((f) => f.startsWith('--supermarket='));
+  const supermarket = supermarketFlag?.split('=')[1] as SupermarketSlug | undefined;
+  const isTestOcr = flags.includes('--test-ocr');
+  const isDryRun = flags.includes('--dry-run');
+
+  const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
+
+  // --test-ocr and --dry-run modes: no DB connection needed
+  if ((isTestOcr || isDryRun) && supermarket) {
+    if (!validSupermarkets.includes(supermarket)) {
+      logger.error(`Invalid supermarket: ${supermarket}`);
+      logger.info(`Valid options: ${validSupermarkets.join(', ')}`);
+      process.exit(1);
+    }
+
+    if (isTestOcr) {
+      await runTestOcr(supermarket);
+    } else {
+      await runDryRun(supermarket);
+    }
+    return;
+  }
+
+  if ((isTestOcr || isDryRun) && !supermarket) {
+    logger.error(`--test-ocr and --dry-run require --supermarket=<slug>`);
+    process.exit(1);
+  }
+
+  // All other commands require Supabase connection
   const connected = await testConnection();
   if (!connected) {
     logger.error('Failed to connect to Supabase. Check your .env configuration.');
     process.exit(1);
   }
-
-  // Parse command
-  const command = args.find((arg) => !arg.startsWith('--'));
-  const flags = args.filter((arg) => arg.startsWith('--'));
-
-  // Extract supermarket from --supermarket flag
-  const supermarketFlag = flags.find((f) => f.startsWith('--supermarket='));
-  const supermarket = supermarketFlag?.split('=')[1] as SupermarketSlug | undefined;
 
   // Commands
   if (command === 'stats' && supermarket) {
@@ -196,8 +261,6 @@ async function main() {
 
   // Default: run scraper for specified supermarket
   if (supermarket) {
-    const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
-
     if (!validSupermarkets.includes(supermarket)) {
       logger.error(`Invalid supermarket: ${supermarket}`);
       logger.info(`Valid options: ${validSupermarkets.join(', ')}`);
@@ -218,6 +281,10 @@ Usage:
   npm run scrape -- all                    Run all scrapers
   npm run scrape -- stats --supermarket=<slug>  Show statistics
   npm run scrape -- cleanup                Cleanup expired products
+
+OCR Development Flags:
+  npm run scrape -- --supermarket=<slug> --test-ocr   Capture 1 screenshot/page, OCR it, print raw output (no DB)
+  npm run scrape -- --supermarket=<slug> --dry-run    Full scrape pipeline, print all products as JSON (no DB)
 
 Supermarkets (Stores):
   ah               Albert Heijn
@@ -242,6 +309,8 @@ Supermarkets (Online):
 Examples:
   npm run scrape -- --supermarket=ah
   npm run scrape -- --supermarket=megafoodstunter
+  npm run scrape -- --supermarket=dirk --test-ocr
+  npm run scrape -- --supermarket=dirk --dry-run
   npm run scrape -- all
   npm run scrape -- stats --supermarket=ah
   npm run scrape -- cleanup

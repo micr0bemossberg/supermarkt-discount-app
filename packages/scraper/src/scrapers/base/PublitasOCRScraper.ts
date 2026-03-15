@@ -43,6 +43,61 @@ export abstract class PublitasOCRScraper extends BaseScraper {
     return '';
   }
 
+  /**
+   * Test-OCR override: download only 1 flyer page, send to Gemini, return raw products.
+   */
+  public async runTestOcr(): Promise<ScrapedProduct[]> {
+    this.startTime = Date.now();
+    this.logger.info(`[TEST-OCR] Starting Publitas OCR test`);
+
+    try {
+      if (this.needsBrowserForUrl()) {
+        await this.initBrowser();
+      }
+      const publitasUrl = await this.getPublitasUrl();
+      this.logger.info(`[TEST-OCR] Publitas URL: ${publitasUrl}`);
+
+      const spreads = await this.fetchSpreads(publitasUrl);
+      this.logger.info(`[TEST-OCR] Found ${spreads.length} pages, using first non-skipped page`);
+
+      const skipPages = new Set(this.getSkipPages());
+      const firstPage = spreads.find((s) => !skipPages.has(s.pageIndex));
+
+      if (!firstPage) {
+        this.logger.error('[TEST-OCR] No pages available after skipping');
+        return [];
+      }
+
+      const buffer = await downloadImageAsBuffer(firstPage.imageUrl);
+      const chunks: ImageChunk[] = [{
+        buffer,
+        index: firstPage.pageIndex,
+        totalChunks: 1,
+      }];
+
+      this.logger.info(`[TEST-OCR] Downloaded page ${firstPage.pageIndex}`);
+
+      const context: ExtractionContext = {
+        supermarketSlug: this.supermarketSlug,
+        supermarketName: this.getSupermarketName(),
+        categorySlugList: ALL_CATEGORY_SLUGS,
+        promptHints: this.getPromptHints(),
+      };
+
+      const result = await this.extractor.extractProducts(chunks, context);
+      this.logger.info(
+        `[TEST-OCR] Extracted ${result.products.length} products ` +
+        `(${result.tokensUsed} tokens)`
+      );
+
+      return result.products;
+    } finally {
+      await this.cleanup();
+      const endTime = Date.now();
+      this.logger.info(`[TEST-OCR] Duration: ${Math.round((endTime - this.startTime) / 1000)}s`);
+    }
+  }
+
   async scrapeProducts(): Promise<ScrapedProduct[]> {
     this.logger.info('Starting Publitas OCR scrape');
 

@@ -54,6 +54,70 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
     // Default: no-op
   }
 
+  /**
+   * Test-OCR override: capture only 1 screenshot chunk, send to Gemini, return raw products.
+   */
+  public async runTestOcr(): Promise<ScrapedProduct[]> {
+    this.startTime = Date.now();
+    const url = this.getTargetUrl();
+    const config = this.getScrollConfig();
+
+    this.logger.info(`[TEST-OCR] Starting Screenshot OCR test: ${url}`);
+
+    try {
+      const page = await this.initBrowser();
+      await page.setViewportSize({ width: config.viewportWidth, height: config.viewportHeight });
+      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      await this.handleCookieConsent(page);
+
+      try {
+        await this.beforeScreenshots(page);
+      } catch (error) {
+        this.logger.warning(`beforeScreenshots() failed: ${error}`);
+      }
+
+      await page.waitForTimeout(2000);
+
+      // Capture only 1 screenshot
+      const screenshot = await page.screenshot({
+        type: 'png',
+        clip: {
+          x: 0,
+          y: 0,
+          width: config.viewportWidth,
+          height: config.viewportHeight,
+        },
+      });
+
+      const chunks: ImageChunk[] = [{
+        buffer: screenshot,
+        index: 0,
+        totalChunks: 1,
+      }];
+
+      this.logger.info(`[TEST-OCR] Captured 1 screenshot chunk`);
+
+      const context: ExtractionContext = {
+        supermarketSlug: this.supermarketSlug,
+        supermarketName: this.getSupermarketName(),
+        categorySlugList: ALL_CATEGORY_SLUGS,
+        promptHints: this.getPromptHints(),
+      };
+
+      const result = await this.extractor.extractProducts(chunks, context);
+      this.logger.info(
+        `[TEST-OCR] Extracted ${result.products.length} products ` +
+        `(${result.tokensUsed} tokens)`
+      );
+
+      return result.products;
+    } finally {
+      await this.cleanup();
+      const endTime = Date.now();
+      this.logger.info(`[TEST-OCR] Duration: ${Math.round((endTime - this.startTime) / 1000)}s`);
+    }
+  }
+
   async scrapeProducts(): Promise<ScrapedProduct[]> {
     const url = this.getTargetUrl();
     const config = this.getScrollConfig();
