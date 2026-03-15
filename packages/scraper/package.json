@@ -25,10 +25,12 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
     "@supabase/supabase-js": "^2.39.3",
     "@supermarkt-deals/shared": "^1.0.0",
     "dotenv": "^16.3.1",
     "node-tesseract-ocr": "^2.2.1",
+    "p-limit": "^5.0.0",
     "picnic-api": "^3.2.0",
     "playwright": "^1.40.1",
     "playwright-extra": "^4.3.6",

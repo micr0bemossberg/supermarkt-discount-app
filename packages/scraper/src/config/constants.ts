@@ -335,3 +335,11 @@ export const CATEGORY_KEYWORDS: Record<string, string> = {
   'badjas': 'kleding-mode',
   'regenjas': 'kleding-mode',
 };
+
+// All valid category slugs (aligned with CategorySlug type in shared package)
+export const ALL_CATEGORY_SLUGS = [
+  'vers-gebak', 'vlees-vis-vega', 'zuivel-eieren', 'groente-fruit',
+  'diepvries', 'dranken', 'bewaren', 'ontbijt', 'snoep-chips',
+  'persoonlijke-verzorging', 'huishouden', 'baby-kind', 'elektronica',
+  'wonen-keuken', 'sport-vrije-tijd', 'kleding-mode', 'overig',
+];
