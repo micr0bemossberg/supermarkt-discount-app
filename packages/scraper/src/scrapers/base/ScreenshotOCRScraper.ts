@@ -100,7 +100,13 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
         totalChunks: 1,
       }];
 
-      this.logger.info(`[TEST-OCR] Captured 1 screenshot chunk`);
+      // Include extra chunks (e.g., Dirk modal screenshots)
+      const extraChunks = this.getExtraChunks();
+      if (extraChunks.length > 0) {
+        chunks.push(...extraChunks);
+      }
+
+      this.logger.info(`[TEST-OCR] Captured 1 screenshot chunk + ${extraChunks.length} extra chunks`);
 
       const context: ExtractionContext = {
         supermarketSlug: this.supermarketSlug,

@@ -11,69 +11,59 @@ export class DirkScraper extends ScreenshotOCRScraper {
   }
 
   protected async beforeScreenshots(page: Page): Promise<void> {
-    // Dirk has multi-product cards (e.g., "Gesneden fruit" with Meloenmix + Fruitsalade variants).
-    // These are identified by a `.middle-item.multi-product` element containing an expand SVG.
-    // Clicking opens a modal overlay showing the individual variants with prices and weights.
-    //
-    // Strategy: find all multi-product cards, click each one, screenshot the modal,
-    // close it, and continue. The modal screenshots get sent to Gemini as extra chunks.
+    // Dirk has multi-product cards (e.g., "Gesneden fruit" → Meloenmix + Fruitsalade).
+    // Identified by `.middle-item.multi-product`. Clicking opens a modal overlay.
+    // Close button is `button.close[aria-label="Sluiten"]` inside `.overlay`.
 
-    const multiProducts = page.locator('.middle-item.multi-product');
+    const multiProducts = page.locator('article .middle-item.multi-product');
     const count = await multiProducts.count();
 
-    if (count > 0) {
-      this.logger.info(`Found ${count} multi-product cards to expand`);
+    if (count === 0) return;
 
-      for (let i = 0; i < count; i++) {
-        try {
-          await multiProducts.nth(i).click({ timeout: 3000 });
-          await page.waitForTimeout(800); // Wait for modal animation
+    this.logger.info(`Found ${count} multi-product cards to expand`);
 
-          // Screenshot the modal overlay
-          const screenshot = await page.screenshot({ type: 'png' });
-          this.multiProductScreenshots.push(screenshot);
+    for (let i = 0; i < count; i++) {
+      try {
+        // Scroll into view and click
+        await multiProducts.nth(i).scrollIntoViewIfNeeded({ timeout: 2000 });
+        await multiProducts.nth(i).click({ force: true, timeout: 2000 });
 
-          // Close the modal (press Escape or click close button)
-          const closeButton = page.locator('button[aria-label="Sluiten"], button[aria-label="Close"], .close, [class*="close"]');
-          if (await closeButton.count() > 0) {
-            await closeButton.first().click({ timeout: 2000 });
-          } else {
-            await page.keyboard.press('Escape');
-          }
-          await page.waitForTimeout(300);
-        } catch (error) {
-          this.logger.warning(`Failed to expand multi-product card ${i}: ${error}`);
-          // Try to close any open modal before continuing
-          await page.keyboard.press('Escape').catch(() => {});
-          await page.waitForTimeout(300);
-        }
+        // Wait for overlay to appear
+        await page.locator('.overlay').waitFor({ state: 'visible', timeout: 2000 });
+        await page.waitForTimeout(300);
+
+        // Screenshot the modal
+        const screenshot = await page.screenshot({ type: 'png' });
+        this.multiProductScreenshots.push(screenshot);
+
+        // Close via the exact button: button.close[aria-label="Sluiten"]
+        await page.locator('button.close[aria-label="Sluiten"]').click({ force: true, timeout: 2000 });
+
+        // Wait for overlay to disappear
+        await page.locator('.overlay').waitFor({ state: 'hidden', timeout: 2000 }).catch(() => {});
+        await page.waitForTimeout(200);
+      } catch {
+        // If anything fails, force-close any open overlay and continue
+        await page.locator('button.close[aria-label="Sluiten"]').click({ force: true }).catch(() => {});
+        await page.locator('.overlay').waitFor({ state: 'hidden', timeout: 1000 }).catch(() => {});
+        await page.waitForTimeout(200);
       }
-
-      this.logger.info(`Captured ${this.multiProductScreenshots.length} multi-product modal screenshots`);
     }
+
+    this.logger.info(`Captured ${this.multiProductScreenshots.length} multi-product modal screenshots`);
   }
 
-  // Store modal screenshots to be merged with page screenshots
   private multiProductScreenshots: Buffer[] = [];
 
-  /**
-   * Override scrapeProducts to inject multi-product modal screenshots
-   * as additional chunks alongside the regular scrolling screenshots.
-   */
   async scrapeProducts() {
-    this.multiProductScreenshots = []; // Reset
-    const products = await super.scrapeProducts();
-    return products;
+    this.multiProductScreenshots = [];
+    return super.scrapeProducts();
   }
 
-  /**
-   * Override to include multi-product modal screenshots in the extraction.
-   * Called by ScreenshotOCRScraper after capturing scrolling screenshots.
-   */
   protected getExtraChunks(): ImageChunk[] {
     return this.multiProductScreenshots.map((buffer, i) => ({
       buffer,
-      index: 1000 + i, // High index to separate from regular chunks
+      index: 1000 + i,
       totalChunks: this.multiProductScreenshots.length,
     }));
   }
