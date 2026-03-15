@@ -7,6 +7,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, FlatList, Pressable } from 'react-native';
 import { Searchbar, Text, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { searchProducts } from '../services/products';
 import { ProductCard } from '../components/ProductCard';
@@ -21,6 +22,7 @@ const SEARCH_HISTORY_KEY = '@search_history';
 const MAX_HISTORY_ITEMS = 10;
 
 export const SearchScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ProductWithRelations[]>([]);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
@@ -179,7 +181,7 @@ export const SearchScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.searchHeader}>
+      <View style={[styles.searchHeader, { paddingTop: insets.top }]}>
         <IconButton
           icon="arrow-left"
           onPress={() => navigation.goBack()}
@@ -210,7 +212,6 @@ const styles = StyleSheet.create({
   searchHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 44,
     paddingRight: 16,
     paddingBottom: 8,
     backgroundColor: '#FFFFFF',

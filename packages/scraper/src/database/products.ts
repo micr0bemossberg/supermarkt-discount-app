@@ -45,6 +45,18 @@ const ALCOHOL_PATTERNS: RegExp[] = [
   /\bstoney creek\b/i, /\bi heart\b(?!\s+wijn)?\b.*\b(wijn|wine|pinot|grigio|shiraz)/i,
   /\bla finestra\b/i, /\b2 familias\b/i, /\bbarefoot\b/i,
   /\bel maestro\b/i, /\byellow tail\b/i, /\bcampo viejo\b/i,
+  /\banciano\b/i, /\bniel joubert\b/i, /\bwoodhaven\b/i,
+  /\bcodici\b/i, /\bmasserie\b/i, /\bi am\b$/i, // "I Am" wine (only at end of title)
+  /\bgallo family\b/i, /\bpark villa\b/i,
+  /\bspeciaalbier\b/i,
+  // Spirit brands (additional)
+  /\bsouthern comfort\b/i, /\bsalmari\b/i, /\bluxardo\b/i,
+  /\bviermaster\b/i, /\bbeerenburg\b/i, /\bvieux\b/i,
+  /\blimoncello\b/i, /\bamaretto\b/i, /\bsambuca\b/i,
+  /\baperol\b/i, /\bcampari\b/i,
+  // Beer brands (additional)
+  /\bbrand\s+(pils|bier|0[.,]0)\b/i, // "Brand Pilsener", "Brand 0.0" etc.
+  /^brand$/i, // standalone "Brand" = beer brand
   // Bottle indicators (strong wine/spirit signal)
   /\b\d+\s*flessen?\b/i, // "6 flessen", "1 fles"
   // RTD / mixed

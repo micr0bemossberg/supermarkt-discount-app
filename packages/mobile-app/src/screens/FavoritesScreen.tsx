@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import { View, StyleSheet, SectionList } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { ProductCard } from '../components/ProductCard';
 import { EmptyState } from '../components/EmptyState';
@@ -24,6 +25,7 @@ interface Section {
 }
 
 export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { favorites, loadFavorites } = useFavoritesStore();
 
   useEffect(() => {
@@ -90,7 +92,7 @@ export const FavoritesScreen: React.FC<Props> = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Custom header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Text style={styles.headerTitle}>Favorieten</Text>
         {favorites.length > 0 && (
           <Text style={styles.headerCount}>{favorites.length} opgeslagen</Text>
@@ -120,7 +122,6 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 52,
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,

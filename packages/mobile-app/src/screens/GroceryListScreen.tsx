@@ -4,7 +4,7 @@
  */
 
 import React, { useEffect, useState, useCallback } from 'react';
-import { View, StyleSheet, SectionList, Alert, Pressable } from 'react-native';
+import { View, StyleSheet, SectionList, Alert, Pressable, Platform } from 'react-native';
 import {
   Text,
   IconButton,
@@ -16,6 +16,8 @@ import {
   Button,
 } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as Haptics from 'expo-haptics';
 import { useGroceryListStore, GROCERY_CATEGORIES, type GroceryItem } from '../stores/groceryListStore';
 import { EmptyState } from '../components/EmptyState';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +31,7 @@ interface Section {
 }
 
 export const GroceryListScreen: React.FC = () => {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { items, loading, loadList, addItem, removeItem, updateItem, toggleChecked, resetToTemplate, uncheckAll } = useGroceryListStore();
 
@@ -124,7 +127,12 @@ export const GroceryListScreen: React.FC = () => {
 
   const renderItem = ({ item }: { item: GroceryItem }) => (
     <Pressable
-      onPress={() => toggleChecked(item.id)}
+      onPress={() => {
+        if (Platform.OS !== 'web') {
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+        toggleChecked(item.id);
+      }}
       style={[styles.itemRow, item.checked && styles.itemRowChecked]}
     >
       <MaterialCommunityIcons
@@ -176,7 +184,7 @@ export const GroceryListScreen: React.FC = () => {
   return (
     <View style={styles.container}>
       {/* Custom header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <View>
           <Text style={styles.headerTitle}>Boodschappen</Text>
           <Text style={styles.headerSubtitle}>
@@ -275,7 +283,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 52,
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,

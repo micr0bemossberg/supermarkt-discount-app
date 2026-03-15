@@ -1,0 +1,355 @@
+========================================================
+       VOMAR VALIDATION TOOL (Gemini Flash)             
+========================================================
+
+Using cached spreads data from C:\Users\husayna\Projects\Supermarkt_Discount_App\supermarkt-discount-app\packages\scraper\scripts\spreads_data.json
+
+Extracted 44 pages from spreads data
+
+--- GEMINI EXTRACTION ----------------------------------
+
+Sending 44 pages to Gemini Flash...
+
+  Page 1: Downloading image...
+  Page 1: Sending to Gemini (705KB image)...
+  Page 1: Found 3 products
+  Page 2: Downloading image...
+  Page 2: Sending to Gemini (792KB image)...
+  Page 2: Found 6 products
+  Page 3: Downloading image...
+  Page 3: Sending to Gemini (800KB image)...
+  Page 3: Found 4 products
+  Page 4: Downloading image...
+  Page 4: Sending to Gemini (667KB image)...
+  Page 4: Found 4 products
+  Page 5: Downloading image...
+  Page 5: Sending to Gemini (768KB image)...
+  Page 5: Found 4 products
+  Page 6: Downloading image...
+  Page 6: Sending to Gemini (578KB image)...
+  Page 6: Found 1 products
+  Page 7: Downloading image...
+  Page 7: Sending to Gemini (644KB image)...
+  Page 7: Found 5 products
+  Page 8: Downloading image...
+  Page 8: Sending to Gemini (561KB image)...
+  Page 8: Found 5 products
+  Page 9: Downloading image...
+  Page 9: Sending to Gemini (680KB image)...
+  Page 9: Found 0 products
+  Page 10: Downloading image...
+  Page 10: Sending to Gemini (674KB image)...
+  Page 10: Found 6 products
+  Page 11: Downloading image...
+  Page 11: Sending to Gemini (903KB image)...
+  Page 11: Found 1 products
+  Page 12: Downloading image...
+  Page 12: Sending to Gemini (577KB image)...
+  Page 12: Found 6 products
+  Page 13: Downloading image...
+  Page 13: Sending to Gemini (715KB image)...
+  Page 13: Found 2 products
+  Page 14: Downloading image...
+  Page 14: Sending to Gemini (599KB image)...
+  Page 14: Found 6 products
+  Page 15: Downloading image...
+  Page 15: Sending to Gemini (633KB image)...
+  Page 15: Found 1 products
+  Page 16: Downloading image...
+  Page 16: Sending to Gemini (804KB image)...
+  Page 16: Found 7 products
+  Page 17: Downloading image...
+  Page 17: Sending to Gemini (712KB image)...
+  Page 17: Found 0 products
+  Page 18: Downloading image...
+  Page 18: Sending to Gemini (781KB image)...
+  Page 18: Found 6 products
+  Page 19: Downloading image...
+  Page 19: Sending to Gemini (689KB image)...
+  Page 19: Found 5 products
+  Page 20: Downloading image...
+  Page 20: Sending to Gemini (710KB image)...
+  Page 20: Found 6 products
+  Page 21: Downloading image...
+  Page 21: Sending to Gemini (739KB image)...
+  Page 21: Found 9 products
+  Page 22: Downloading image...
+  Page 22: Sending to Gemini (655KB image)...
+  Page 22: Found 4 products
+  Page 23: Downloading image...
+  Page 23: Sending to Gemini (641KB image)...
+  Page 23: Found 4 products
+  Page 24: Downloading image...
+  Page 24: Sending to Gemini (805KB image)...
+  Page 24: Found 6 products
+  Page 25: Downloading image...
+  Page 25: Sending to Gemini (782KB image)...
+  Page 25: Found 6 products
+  Page 26: Downloading image...
+  Page 26: Sending to Gemini (661KB image)...
+  Page 26: Found 2 products
+  Page 27: Downloading image...
+  Page 27: Sending to Gemini (810KB image)...
+  Page 27: Found 6 products
+  Page 28: Downloading image...
+  Page 28: Sending to Gemini (732KB image)...
+  Page 28: Found 7 products
+  Page 29: Downloading image...
+  Page 29: Sending to Gemini (648KB image)...
+  Page 29: Found 6 products
+  Page 30: Downloading image...
+  Page 30: Sending to Gemini (709KB image)...
+  Page 30: Found 6 products
+  Page 31: Downloading image...
+  Page 31: Sending to Gemini (673KB image)...
+  Page 31: Found 6 products
+  Page 32: Downloading image...
+  Page 32: Sending to Gemini (709KB image)...
+  Page 32: Found 8 products
+  Page 33: Downloading image...
+  Page 33: Sending to Gemini (737KB image)...
+  Page 33: Found 6 products
+  Page 34: Downloading image...
+  Page 34: Sending to Gemini (716KB image)...
+  Page 34: Found 6 products
+  Page 35: Downloading image...
+  Page 35: Sending to Gemini (674KB image)...
+  Page 35: Found 6 products
+  Page 36: Downloading image...
+  Page 36: Sending to Gemini (616KB image)...
+  Page 36: Found 6 products
+  Page 37: Downloading image...
+  Page 37: Sending to Gemini (563KB image)...
+  Page 37: Found 7 products
+  Page 38: Downloading image...
+  Page 38: Sending to Gemini (649KB image)...
+  Page 38: Found 7 products
+  Page 39: Downloading image...
+  Page 39: Sending to Gemini (577KB image)...
+  Page 39: Found 5 products
+  Page 40: Downloading image...
+  Page 40: Sending to Gemini (648KB image)...
+  Page 40: Found 4 products
+  Page 41: Downloading image...
+  Page 41: Sending to Gemini (698KB image)...
+  Page 41: Found 4 products
+  Page 42: Downloading image...
+  Page 42: Sending to Gemini (738KB image)...
+  Page 42: Found 5 products
+  Page 43: Downloading image...
+  Page 43: Sending to Gemini (714KB image)...
+  Page 43: Found 5 products
+  Page 44: Downloading image...
+  Page 44: Sending to Gemini (466KB image)...
+  Page 44: Failed to parse JSON from response
+
+Gemini found 206 unique products (209 total):
+
+  [pg 1] "Page Toiletpapier" E2.99 [TOT 63% KORTING]
+  [pg 1] "Campina Yoghurt" E1.65 [1+1 GRATIS]
+  [pg 1] "Unox Soep in Zak" E2.85 [1+1 GRATIS]
+  [pg 2] "Oude Wijvenkoek of Ontbijtkoek" E1.49 [50% KORTING] (VOUCHER)
+  [pg 2] "Chocomel Protein" E0.89 [50% KORTING] (VOUCHER)
+  [pg 2] "First Choice Cola" E2.49 (VOUCHER)
+  [pg 2] "Maggi Oven, Airfryer of Hollands Pannetje" E0.75 [50% KORTING] (VOUCHER)
+  [pg 2] "Vici Surimi Sticks" E0.99 (VOUCHER)
+  [pg 2] "Hollandse Conference Peren" E0.99 (VOUCHER)
+  [pg 3] "Aardappelen" E0.69 [VOUCHER ACTIE] (VOUCHER)
+  [pg 3] "Lay's Hamka's, Ringlings, Wokkels, Bugles of Cheetos" E1.49 [VOUCHER ACTIE] (VOUCHER)
+  [pg 3] "Look-O-Look Snoep" E1.15 [50% KORTING] (VOUCHER)
+  [pg 3] "Page Vochtig Toiletpapier" E0.89 [TOT 56% KORTING] (VOUCHER)
+  [pg 4] "Robijn Wasmiddel" E7.99 [1+2 GRATIS]
+  [pg 4] "Jong Belegen Gesneden Kaas" E4.49 [OP=OP]
+  [pg 4] "Dreft Handafwas of Vaatwas" E2.69 [1+1 GRATIS]
+  [pg 5] "Royal Club of Sourcy Vitamin Water" E2.19 [1+1 GRATIS]
+  [pg 5] "Heineken en Warsteiner" E3.74 [25% KORTING]
+  [pg 5] "Bonduelle Groente" E0.99 [1+1 GRATIS]
+  [pg 6] "Van Dobben Kroketten" E4.79 [1+1 GRATIS]
+  [pg 7] "Stamppotgroenten" E1.89 [1+1 GRATIS]
+  [pg 7] "Minneola's" E0.99
+  [pg 7] "Hollandse Witlof" E0.99
+  [pg 7] "Verse Rauwkost" E1.79
+  [pg 7] "Lunch Salade" E2.79
+  [pg 8] "Nadorcott Mandarijnen" E4.00 [2 STUKS]
+  [pg 8] "Avocado Ready-to-eat" E4.00 [2 STUKS]
+  [pg 8] "Pitloze Rode Druiven" E4.00 [2 STUKS]
+  [pg 8] "Pitloze Witte Druiven" E4.00 [2 STUKS]
+  [pg 8] "Elstar Appels" E4.00 [2 STUKS]
+  [pg 10] "Weide Velden Magere Runderlappen" E8.99
+  [pg 10] "Vomar Runderhamburgers" E5.99
+  [pg 10] "Boer'n Land Ambachtelijke Verse Rookworst" E2.49
+  [pg 10] "Gulden Hoeve Scharrel Kipdijfilet" E6.99
+  [pg 10] "Goede Vangst Victoriabaars" E5.99
+  [pg 10] "Old Amsterdam Tasty Grill" E1.97 [50% KORTING]
+  [pg 11] "Boer'n Land Schouderkarbonade" E3.49
+  [pg 12] "Gesuikerde Berliner Bol of Chocoladebroodje" E1.00 [2 STUKS]
+  [pg 12] "Schnittebroodjes of Kaiserbroodjes" E1.69 [PER ZAK]
+  [pg 12] "Börek Sweet Chili of Frikandelbroodje XL" E1.50 [2 STUKS]
+  [pg 12] "Mini Rozijnenbollen" E1.89 [PER ZAK]
+  [pg 12] "Parisienne Prestige" E2.50 [2 STUKS]
+  [pg 12] "Gevouwen Flatbread" E1.49 [PER PAK]
+  [pg 13] "Molenaersbrood" E1.99
+  [pg 13] "Verse Zachte Bollen" E1.50 [2 ZAKKEN]
+  [pg 14] "Vomar Slagerij Yorkham of Versgesneden Kiprollade" E1.99
+  [pg 14] "Vomar Slagerij Slagersleverworst" E2.99
+  [pg 14] "Noordwoudse Romig Jong of Zacht Belegen" E5.99
+  [pg 14] "Paturain, Melkan Kruidendip of Tzatziki" E3.00 [2 STUKS]
+  [pg 14] "Parrano" E1.49
+  [pg 14] "Verse buitenlandse kaasjes" E6.00 [3 STUKS]
+  [pg 15] "Vomar Versgesneden Ketelworst" E0.99
+  [pg 16] "Verse Witte of Volkoren Hotelkadetten" E0.99 [OP=OP]
+  [pg 16] "Vergeer Kaas" E6.99 [OP=OP]
+  [pg 16] "Scharreleieren" E3.99 [OP=OP]
+  [pg 16] "Bananen" E0.99 [OP=OP]
+  [pg 16] "Echte Boter Roomboter" E3.49 [OP=OP]
+  [pg 16] "Melkan Yoghurt Griekse Stijl" E1.49 [OP=OP]
+  [pg 16] "Versgebakken Roomboter Croissants" E1.00 [OP=OP]
+  [pg 18] "Vomar Maaltijden" E9.99 [2 STUKS]
+  [pg 18] "Hertog IJs" E3.49 [PER STUK]
+  [pg 18] "Mediterraneo Focaccia" E1.79 [PER STUK]
+  [pg 18] "Jan Vers Pizzadeeg" E2.99 [1+1 GRATIS]
+  [pg 18] "CoolBest Fruitdrink of Fruitontbijt" E1.89 [1+1 GRATIS]
+  [pg 18] "Daily Chef Pita Shoarma" E2.99 [3 STUKS]
+  [pg 19] "Danone Skyr" E0.99 [TOT 50% KORTING]
+  [pg 19] "Lurpak Botermelange" E2.49 [PER STUK]
+  [pg 19] "G'woon Salades" E3.00 [2 STUKS]
+  [pg 19] "Almhof Hoekje of Choco Dessert" E0.79 [PER STUK]
+  [pg 19] "Vomar Borrelhapjes, Spreads of Tapenades" E5.00 [3 STUKS]
+  [pg 20] "Gerookte Spekreepjes" E1.00 [PER PAK]
+  [pg 20] "Vifit" E1.00 [PER STUK]
+  [pg 20] "Hollandia Matze Crackers" E1.00 [PER PAK]
+  [pg 20] "Cakeplakken" E1.00 [OP=OP]
+  [pg 20] "Smuldier" E1.00 [PER STUK]
+  [pg 20] "Rodi Hondenworst" E1.00 [PER STUK]
+  [pg 21] "Heinz Ketchup" E1.00 [PER STUK]
+  [pg 21] "Wijko Satésaus" E1.00 [PER STUK]
+  [pg 21] "Unox Cup-a-Soup" E1.00 [PER STUK]
+  [pg 21] "Knorr Cup-a-Soup" E1.00 [PER STUK]
+  [pg 21] "Croky Chips" E1.00 [OP=OP]
+  [pg 21] "Blue Bastard" E1.00 [2 BLIKKEN]
+  [pg 21] "Alfa Pils" E1.00 [PER STUK]
+  [pg 21] "Texels Noorderwiend" E1.00 [PER STUK]
+  [pg 21] "Sportlife Kauwgom" E1.00 [66% KORTING]
+  [pg 22] "G'woon Massieve Paaseitjes" E2.99 [PER ZAK]
+  [pg 22] "G'woon Hazenkopjes of Kuikentjes" E3.79 [PER ZAK]
+  [pg 22] "Paaseitjes of Kuikentjes in Netje" E1.29 [PER STUK]
+  [pg 22] "G'woon Paascrème Spritsen" E1.79 [PER PAK]
+  [pg 23] "G'woon Roomboter Kuikentjes" E1.79 [PER PAK]
+  [pg 23] "Hamlet Paasspek" E1.99 [PER ZAK]
+  [pg 23] "Merba Paasassorti" E1.99 [PER PAK]
+  [pg 23] "Paashaas" E0.99 [PER STUK]
+  [pg 24] "Nescafé Koffiespecialiteiten" E1.99
+  [pg 24] "Zonnatura Thee" E2.19 [1+1 GRATIS]
+  [pg 24] "Verkade koek" E3.00 [2 STUKS]
+  [pg 24] "Café Nova Koffiecapsules" E4.99 [1+1 GRATIS]
+  [pg 24] "Echte Enkhuizer Jodekoeken" E1.89
+  [pg 24] "Tony's Chocolonely Chocolade" E2.99
+  [pg 25] "Santa Maria Wraps" E1.69
+  [pg 25] "Verstegen Strooiers of Molens" E4.78 [2+2 GRATIS]
+  [pg 25] "Jack Link's Beef Jerky of Bifi" E1.99
+  [pg 25] "Grand'Italia Pastasaus" E1.99 [TOT 51% KORTING]
+  [pg 25] "Bolletje Oerknäck" E1.49
+  [pg 25] "Nature Valley Repen" E2.79
+  [pg 26] "Epixs Borrelnoten" E1.49
+  [pg 26] "Epixs Chips" E1.99 [2 STUKS]
+  [pg 27] "Pepsi Regular of Zero" E1.49 [OP=OP]
+  [pg 27] "Maaza of Dubbeldrank" E3.00 [2 STUKS]
+  [pg 27] "Karvan Cévitam Zero" E2.49 [PER STUK]
+  [pg 27] "Taksi, Dubbelfrisss, Maaza of Appelsientje" E1.50 [2 STUKS]
+  [pg 27] "Chio Popcorn" E1.69 [1+1 GRATIS]
+  [pg 27] "Breezer" E1.79 [PER STUK]
+  [pg 28] "Familias Wijn" E3.99
+  [pg 28] "Stoney Creek Wijn" E10.00 [3 FLESSEN]
+  [pg 28] "La Finestra Wijn" E4.99
+  [pg 28] "La Chouffe of Liefmans" E4.64 [25% KORTING]
+  [pg 28] "Amstel Pils" E12.74 [25% KORTING BIJ 2 KRATTEN]
+  [pg 28] "Hertog Jan Speciaalbieren of Tripel Karmeliet" E5.62 [25% KORTING]
+  [pg 28] "Grimbergen Blond of Dubbel" E9.99 [OP=OP]
+  [pg 29] "Boomsma Jenever of Juttertje Kruidenbitter" E11.99 [PER FLES]
+  [pg 29] "Old Captain Rum" E9.99
+  [pg 29] "Wyborowa Vodka" E14.99
+  [pg 29] "Johnnie Walker Red Label of Licor 43" E16.99
+  [pg 29] "Jack Daniel's Whisky" E21.99
+  [pg 29] "Luxe Whisky (Chivas Regal, Monkey Shoulder, The Glenlivet)" E25.99
+  [pg 30] "Firat Turkse Pizza" E2.99 [OP=OP]
+  [pg 30] "Franui Raspberries" E3.89
+  [pg 30] "Eden Tool Medjoul Dadels" E1.89
+  [pg 30] "Göreme Kaasplakken" E5.99
+  [pg 30] "Mekkafood Streetfood Kip Kebab" E3.49
+  [pg 31] "G'woon Siroop" E1.79
+  [pg 31] "Douwe Egberts Oploskoffie" E6.79
+  [pg 31] "Bloemen Honing" E3.99 [OP=OP]
+  [pg 31] "G'woon Walnoten" E2.95
+  [pg 31] "Geglazuurde Donuts" E1.99 [OP=OP]
+  [pg 31] "G'woon Pandan- of Basmatirijst" E1.99
+  [pg 32] "Van der Valk Hoofdkussen" E8.99 [82% KORTING]
+  [pg 32] "Van der Valk Kussensloop" E2.99 [77% KORTING]
+  [pg 32] "Van der Valk Kussenbeschermer" E2.99 [70% KORTING]
+  [pg 32] "Van der Valk Hoeslaken 90x200 cm" E6.99 [65% KORTING]
+  [pg 32] "Van der Valk Hoeslaken 180x200 cm" E9.99 [66% KORTING]
+  [pg 32] "Van der Valk Wasbaar Dekbed Jungle" E14.99 [75% KORTING]
+  [pg 32] "Van der Valk Wasbaar Dekbed 140x200 cm" E14.99 [75% KORTING]
+  [pg 32] "Van der Valk Wasbaar Dekbed 240x200 cm" E24.99 [72% KORTING]
+  [pg 33] "Colgate Tandpasta" E2.19 [1+1 GRATIS]
+  [pg 33] "Sanex Douche of Deodorant" E4.00 [2 STUKS]
+  [pg 33] "3G Reinigingsmiddel" E1.99 [TOT 55% KORTING]
+  [pg 33] "Loving Blends Shampoo of Conditioner" E4.19 [1+1 GRATIS]
+  [pg 33] "Catisfactions, Whiskas of Pedigree Snacks" E3.00 [2 STUKS]
+  [pg 33] "Always Inlegkruisjes of Maandverband" E4.99 [GIGA-PACK]
+  [pg 34] "Boeket Mila" E9.99 [PER BOS]
+  [pg 34] "Boeket Nova" E14.99 [PER BOS]
+  [pg 34] "Boeket Bella" E19.99 [PER BOS]
+  [pg 34] "Luxe Rode Rozen" E8.99 [PER BOS]
+  [pg 34] "Rozen" E6.00 [2 BOSSEN]
+  [pg 34] "Zinken Emmer met Bolletjes" E9.99 [OP=OP]
+  [pg 35] "Jan Hartjes Poffertjes of Witte Choc Framboos Pancakes" E1.99 [OP=OP]
+  [pg 35] "Hart Donut" E1.50 [OP=OP]
+  [pg 35] "Mini Red Velvet Drip Gebakjes" E2.99 [OP=OP]
+  [pg 35] "I Love Milka Chocolade" E1.99 [OP=OP]
+  [pg 35] "Toblerone" E3.49 [OP=OP]
+  [pg 35] "I Heart Wijn" E4.49
+  [pg 36] "3-Delige Scharenset" E1.99 [OP=OP]
+  [pg 36] "Bison Klusartikelen" E2.49 [OP=OP]
+  [pg 36] "Verdeelstekker" E6.99 [OP=OP]
+  [pg 36] "Nexxt Afwasborstels" E1.99 [OP=OP]
+  [pg 36] "Kledinghangers" E1.99 [OP=OP]
+  [pg 36] "Nexxt Gootsteen/Badkamer Organizer" E5.99 [OP=OP]
+  [pg 37] "Bakgerei" E1.99 [OP=OP]
+  [pg 37] "Snijplanken" E2.99 [OP=OP]
+  [pg 37] "Siliconen Opbergbakjes" E4.99 [OP=OP]
+  [pg 37] "Wandklok" E3.99 [OP=OP]
+  [pg 37] "Stoffer & Blik" E2.99 [OP=OP]
+  [pg 37] "Decoratieve Bonsai boom" E3.99 [OP=OP]
+  [pg 37] "Opbergpoef" E9.99 [OP=OP]
+  [pg 38] "Flanel Fleeceplaid" E6.99 [OP=OP]
+  [pg 38] "Luxe Dames Badjas" E12.99 [OP=OP]
+  [pg 38] "Sokken" E3.99 [OP=OP]
+  [pg 38] "Puzzel" E3.99 [OP=OP]
+  [pg 38] "Ledlamp met Kap" E4.99 [OP=OP]
+  [pg 38] "Speelgoed" E1.99 [OP=OP]
+  [pg 38] "Pluche Capybara" E3.99 [OP=OP]
+  [pg 39] "Penn Sportbroek" E6.99 [OP=OP]
+  [pg 39] "AZ Boxershorts" E6.99 [OP=OP]
+  [pg 39] "Gevoerde Tuinklompen" E5.99 [OP=OP]
+  [pg 39] "Inventum Bloeddrukmeter" E14.99 [OP=OP]
+  [pg 39] "Geluidenbox Oceaan & Regenwoud" E7.99 [OP=OP]
+  [pg 40] "Glen Talloch Whisky" E23.99
+  [pg 40] "Fanta of Sprite" E4.00 [3 FLESSEN]
+  [pg 40] "G'woon Keukenpapier" E2.99 [OP=OP]
+  [pg 40] "Hertog Jan Pils" E14.99 [PER KRAT]
+  [pg 41] "Grande Macarons Framboos Vanille" E3.99 [OP=OP]
+  [pg 41] "Café Nova Capsules" E6.00 [2 PAKKEN]
+  [pg 41] "Snacktomaten" E2.99
+  [pg 41] "Soeppakket" E3.49 [PER STUK]
+  [pg 42] "Versgesneden Ierse Biefstuk" E2.79
+  [pg 42] "Melkan Toetjes" E2.49 [4 STUKS]
+  [pg 42] "Olijven Knoflook of Kaas" E2.29
+  [pg 42] "Noordwoudse 1000 dagen Kaas" E5.99 [OP=OP]
+  [pg 42] "Vomar Ovenschotel" E6.99 [OP=OP]
+  [pg 43] "Gulden Hoeve Kipdij-shoarma" E3.99
+  [pg 43] "Vomar Varkenshaas" E5.99
+  [pg 43] "Zeeuwse Oesters" E4.99 [OP=OP]
+  [pg 43] "Picanha, Rib Eye, Entrecote of Côte de Boeuf" E19.99 [OP=OP]
+  [pg 43] "Ambachtelijke Kibbeling" E5.99
+
+Done (--gemini-only mode).

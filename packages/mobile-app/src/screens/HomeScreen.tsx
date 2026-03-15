@@ -7,6 +7,7 @@ import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { View, StyleSheet, FlatList, RefreshControl, Pressable } from 'react-native';
 import { Text, Searchbar, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useProductsStore } from '../stores/productsStore';
 import { ProductCard } from '../components/ProductCard';
 import { SupermarketFilter } from '../components/SupermarketFilter';
@@ -19,6 +20,7 @@ import type { RootStackParamList } from '../navigation/types';
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const {
     products,
     loading,
@@ -89,7 +91,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   );
 
   const renderHeader = () => (
-    <View style={styles.headerSection}>
+    <View style={[styles.headerSection, { paddingTop: insets.top }]}>
       {/* App Title Bar */}
       <View style={styles.titleBar}>
         <View>
@@ -254,7 +256,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 52,
+    paddingTop: 8,
     paddingBottom: 4,
   },
   appTitle: {

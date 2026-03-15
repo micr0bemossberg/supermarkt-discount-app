@@ -26,13 +26,24 @@ const VOMAR_IMAGE_CDN = 'https://d3vricquk1sjgf.cloudfront.net/articles';
  */
 const PRICE_CODE_MAP: Record<string, number> = {
   'a': 0,    // €X.- (whole euros)
+  'b': 9,    // €X.09
+  'c': 15,   // €X.15
   'd': 19,   // €X.19
+  'e': 25,   // €X.25
   'f': 29,   // €X.29
+  'g': 35,   // €X.35
+  'h': 39,   // €X.39
   'i': 40,   // €X.40
   'j': 49,   // €X.49
   'k': 50,   // €X.50
+  'l': 55,   // €X.55
+  'm': 59,   // €X.59
+  'n': 65,   // €X.65
+  'o': 69,   // €X.69
   'p': 79,   // €X.79
+  'q': 85,   // €X.85
   'r': 89,   // €X.89
+  's': 95,   // €X.95
   't': 99,   // €X.99
 };
 
@@ -42,6 +53,8 @@ interface FolderProduct {
   dealPercentage?: number; // extracted discount percentage
   folderPrice?: number;    // the deal price shown in the folder text
   isVoucherDeal?: boolean; // requires Vomar app voucher
+  comboCount?: number;     // for "3 VOOR 8" → comboCount = 3
+  comboPrice?: number;     // for "3 VOOR 8" → comboPrice = 8
 }
 
 interface VomarSearchResult {
@@ -181,6 +194,42 @@ export class VomarScraper extends BaseScraper {
         i += 2;
         continue;
       }
+      // Join "N" + "STUKS/ZAKKEN/PAKKEN" → "N STUKS" (often split across lines)
+      if (i + 1 < lines.length &&
+          /^\d{1,2}$/.test(lines[i]) &&
+          /^(STUKS|ZAKKEN|PAKKEN|BLIKKEN|FLESSEN|ROLLEN)$/i.test(lines[i + 1])) {
+        result.push(`${lines[i]} ${lines[i + 1]}`);
+        i += 2;
+        continue;
+      }
+      // Join garbled KORTING: "%" + "0" + "5" → "50%" (then next pass catches KORTING)
+      // Also: "%" + digit + digit → percentage
+      if (i + 2 < lines.length &&
+          lines[i] === '%' &&
+          /^\d$/.test(lines[i + 1]) &&
+          /^\d$/.test(lines[i + 2])) {
+        result.push(`${lines[i + 2]}${lines[i + 1]}%`);
+        i += 3;
+        continue;
+      }
+      // Normalize "X.-" prices to "X.00" (e.g. "8.-" → "8.00", "3.-" → "3.00")
+      if (/^\d{1,2}\.-$/.test(lines[i])) {
+        result.push(lines[i].replace('.-', '.00'));
+        i++;
+        continue;
+      }
+      // Normalize "X .-" prices (with space)
+      if (/^\d{1,2}\s+\.-$/.test(lines[i])) {
+        result.push(lines[i].replace(/\s+\.-$/, '.00'));
+        i++;
+        continue;
+      }
+      // Normalize "X .XX" prices (space before decimal, e.g. "2 .29" → "2.29")
+      if (/^\d{1,2}\s+\.\d{2}$/.test(lines[i])) {
+        result.push(lines[i].replace(/\s+\./, '.'));
+        i++;
+        continue;
+      }
       // Join "XX%" + "KORTING" or lines with partial KORTING
       if (i + 1 < lines.length &&
           /\d+%$/.test(lines[i]) &&
@@ -238,6 +287,20 @@ export class VomarScraper extends BaseScraper {
           const val = parseFloat(cleaned);
           if (val > 0 && val < 500) prices.push(val);
         }
+      }
+
+      // Match "X.-" format (whole euros, e.g. "8.-" = €8.00, "3.-" = €3.00)
+      const wholePriceMatch = line.match(/^[¤€]?\s*(\d{1,2})\s*\.-$/);
+      if (wholePriceMatch) {
+        const val = parseInt(wholePriceMatch[1]);
+        if (val > 0 && val < 500) prices.push(val);
+      }
+
+      // Match "¤X.XX ProductName" (price + product on same line)
+      const priceNameMatch = line.match(/^[¤€]\s*(\d+)[.,](\d{1,2})\s+\S/);
+      if (priceNameMatch) {
+        const val = parseFloat(`${priceNameMatch[1]}.${priceNameMatch[2].padEnd(2, '0')}`);
+        if (val > 0 && val < 500) prices.push(val);
       }
 
       // Match coded prices like "2t", "3j", "14t"
@@ -386,16 +449,29 @@ export class VomarScraper extends BaseScraper {
       seenNames.add(name.toLowerCase());
     };
 
-    // Only skip non-product pages (contest, bedding promo, newsletter)
-    const skipPages = new Set([14, 30, 39, 45]);
+    // Dynamically detect non-product pages (contest, newsletter, etc.) from content
+    const skipPages = new Set<number>();
+    for (const { pageNum, text } of pages) {
+      if (/spelvoorwaarden/i.test(text) && /win\s/i.test(text)) skipPages.add(pageNum);
+      if (/nieuwsbrief/i.test(text) && text.length < 500) skipPages.add(pageNum);
+      // Price comparison pages (Vomar vs Albert Heijn vs Jumbo etc.)
+      if (/Concurrentieprijzen/i.test(text) && /ALBERT\s+HEIJN/i.test(text)) skipPages.add(pageNum);
+      // Alternative price comparison format: "prijzen zijn ... geverifieerd" + multiple supermarket names
+      if (/prijzen\s+zijn.*geverifieerd/i.test(text) && /ALBERT\s+HEIJN/i.test(text) && /JUMBO/i.test(text)) skipPages.add(pageNum);
+      // Pages with VOMAR + multiple competitor names in close proximity (price comparison tables)
+      const supermarketMentions = (text.match(/\b(ALBERT HEIJN|JUMBO|PICNIC)\b/gi) || []).length;
+      if (supermarketMentions >= 4 && /VOMAR/i.test(text)) skipPages.add(pageNum);
+    }
+    this.logger.debug(`Skipping pages: ${[...skipPages].join(', ') || 'none'}`);
 
     // Detect voucher-only pages (contain "voucher in de Vomar-app" text)
     const voucherPages = new Set<number>();
     for (const { pageNum, text } of pages) {
-      if (/voucher in de Vomar/i.test(text) || /geactiveerde\s+voucher/i.test(text)) {
+      if (/voucher/i.test(text) && (/vomar/i.test(text) || /app/i.test(text) || /activeer/i.test(text))) {
         voucherPages.add(pageNum);
       }
     }
+    this.logger.debug(`Voucher pages: ${[...voucherPages].join(', ') || 'none'}`);
 
     for (const { pageNum, text } of pages) {
       if (skipPages.has(pageNum)) continue;
@@ -481,17 +557,54 @@ export class VomarScraper extends BaseScraper {
         }
       }
 
-      // Strategy 4: Find "X VOOR" combo deals
+      // Strategy 4: Find "X VOOR Y" combo deals (e.g. "3 VOOR 8", "2 VOOR 4,99")
       for (let i = 0; i < lines.length; i++) {
         const comboMatch = lines[i].match(/(\d)\s+VOOR/i);
         if (!comboMatch) continue;
 
+        const comboCount = parseInt(comboMatch[1]);
+
+        // Try to extract the combo price from the same line
+        let comboPrice: number | undefined;
+        const sameLinePrice = lines[i].match(/VOOR\s+[¤€]?\s*(\d+)[.,]?(\d{0,2})/i);
+        if (sameLinePrice) {
+          const euros = parseInt(sameLinePrice[1]);
+          const cents = sameLinePrice[2] ? parseInt(sameLinePrice[2].padEnd(2, '0')) : 0;
+          comboPrice = euros + cents / 100;
+        }
+
+        // If not on same line, look below for a price (coded or explicit)
+        if (!comboPrice) {
+          for (let j = i + 1; j < Math.min(lines.length, i + 5); j++) {
+            // Coded price like "8a" = €8.00
+            if (/^\d{1,2}[a-z]$/i.test(lines[j])) {
+              comboPrice = this.decodePriceCode(lines[j]);
+              if (comboPrice) break;
+            }
+            // Explicit price like "8.00" or "4,99"
+            const explMatch = lines[j].match(/^[¤€]?\s*(\d+)[.,](\d{1,2})$/);
+            if (explMatch) {
+              comboPrice = parseFloat(`${explMatch[1]}.${explMatch[2].padEnd(2, '0')}`);
+              break;
+            }
+            // Whole number price like "8" (for "3 VOOR 8")
+            if (/^\d{1,2}$/.test(lines[j]) && parseInt(lines[j]) > 0) {
+              comboPrice = parseInt(lines[j]);
+              break;
+            }
+          }
+        }
+
         const name = this.findProductNameNear(lines, i);
         if (name && !isDuplicate(name)) {
           markSeen(name);
+          const perItemPrice = comboPrice ? Math.round(comboPrice / comboCount * 100) / 100 : undefined;
           products.push({
             name,
-            dealType: lines[i].trim(),
+            dealType: comboPrice ? `${comboCount} VOOR €${comboPrice.toFixed(2)}` : `${comboCount} VOOR`,
+            folderPrice: perItemPrice,
+            comboCount,
+            comboPrice,
           });
         }
       }
@@ -649,6 +762,93 @@ export class VomarScraper extends BaseScraper {
         }
       }
 
+      // Strategy 10b: Find "¤X.XX ProductName" (price + product on same line)
+      // e.g. "¤3.00 Klene Drop" or "¤1.69 Spa Fruit"
+      for (let i = 0; i < lines.length; i++) {
+        const priceNameMatch = lines[i].match(/^[¤€]\s*(\d+)[.,](\d{1,2})\s+(.+)/);
+        if (!priceNameMatch) continue;
+
+        const price = parseFloat(`${priceNameMatch[1]}.${priceNameMatch[2].padEnd(2, '0')}`);
+        const candidateName = priceNameMatch[3].trim();
+        if (price <= 0 || price >= 50) continue;
+
+        if (candidateName.length >= 4 && this.isValidProductName(candidateName) && !isDuplicate(candidateName)) {
+          markSeen(candidateName);
+          products.push({
+            name: candidateName,
+            dealType: voucherPages.has(pageNum) ? 'ACTIE' : 'AANBIEDING',
+            folderPrice: price,
+            isVoucherDeal: voucherPages.has(pageNum),
+          });
+        }
+      }
+
+      // Strategy 11: Catch-all — find products near explicit prices (no deal keyword needed)
+      // In the Vomar folder, EVERY page contains deals. Products may just have
+      // a name and a price without "1+1 GRATIS" or "KORTING" keywords.
+      for (let i = 0; i < lines.length; i++) {
+        // Match explicit prices like "1.69", "2,49", "¤3.99"
+        const explPriceMatch = lines[i].match(/^[¤€]?\s*(\d+)[.,](\d{1,2})$/);
+        if (!explPriceMatch) continue;
+
+        const price = parseFloat(`${explPriceMatch[1]}.${explPriceMatch[2].padEnd(2, '0')}`);
+        if (price <= 0 || price >= 50) continue;
+
+        // Find product name above this price (in folders, names are typically above prices)
+        const name = this.findProductNameAbove(lines, i);
+        if (name && !isDuplicate(name)) {
+          markSeen(name);
+          products.push({
+            name,
+            dealType: voucherPages.has(pageNum) ? 'ACTIE' : 'AANBIEDING',
+            folderPrice: price,
+            isVoucherDeal: voucherPages.has(pageNum),
+          });
+        }
+      }
+
+      // Strategy 12: Voucher page sweep — on voucher pages, also look below prices
+      // to catch products that have price ABOVE the name (less common layout)
+      if (voucherPages.has(pageNum)) {
+        for (let i = 0; i < lines.length; i++) {
+          // Check for coded prices
+          if (/^\d{1,2}[a-z]$/i.test(lines[i])) {
+            const decoded = this.decodePriceCode(lines[i]);
+            if (!decoded || decoded <= 0) continue;
+
+            // Try below (already tried above in Strategy 10)
+            const nameBelow = this.findProductNameBelow(lines, i);
+            if (nameBelow && !isDuplicate(nameBelow)) {
+              markSeen(nameBelow);
+              products.push({
+                name: nameBelow,
+                dealType: 'ACTIE',
+                folderPrice: decoded,
+                isVoucherDeal: true,
+              });
+            }
+          }
+
+          // Check for explicit prices
+          const explMatch = lines[i].match(/^[¤€]?\s*(\d+)[.,](\d{1,2})$/);
+          if (explMatch) {
+            const price = parseFloat(`${explMatch[1]}.${explMatch[2].padEnd(2, '0')}`);
+            if (price <= 0 || price >= 50) continue;
+
+            const nameBelow = this.findProductNameBelow(lines, i);
+            if (nameBelow && !isDuplicate(nameBelow)) {
+              markSeen(nameBelow);
+              products.push({
+                name: nameBelow,
+                dealType: 'ACTIE',
+                folderPrice: price,
+                isVoucherDeal: true,
+              });
+            }
+          }
+        }
+      }
+
       // Mark all products from this page as voucher deals if it's a voucher page
       if (voucherPages.has(pageNum)) {
         const startIdx = productCountBefore;
@@ -656,6 +856,8 @@ export class VomarScraper extends BaseScraper {
           products[j].isVoucherDeal = true;
         }
       }
+
+      this.logger.debug(`Page ${pageNum}: found ${products.length - productCountBefore} products`);
     }
 
     return products.filter(p => this.isValidProductName(p.name));
@@ -715,7 +917,12 @@ export class VomarScraper extends BaseScraper {
     if (/knall\b/i.test(name) && !/knaller/i.test(name)) return false; // "MAANDeA knall r!", "WOENSeDrA!G ll knall"
     if (/^(MAAND|DINSD|WOENS|DONDER|VRIJDA|ZATERD|ZONDA)/i.test(name) && name.length < 25) return false;
     // Supermarket names as product names (from price comparison pages)
-    if (/^(JUMBO|ALBERT HEIJN|LIDL|PLUS|COOP|DEKAMARKT|BONI|POIESZ)\s*\d*[a-z]*\.?$/i.test(name)) return false;
+    // Catch single, repeated, or combined supermarket names like "ALBERT HEIJN ALBERT HEIJN", "HEIJN JUMBO ALBERT HEIJN JUMBO"
+    const supermarketNames = ['JUMBO', 'ALBERT HEIJN', 'ALBERT', 'HEIJN', 'LIDL', 'PLUS', 'COOP', 'DEKAMARKT', 'BONI', 'POIESZ', 'AH', 'DIRK', 'VOMAR', 'HOOGVLIET'];
+    const nameUpper = name.toUpperCase().trim();
+    const nameWordsOnly = nameUpper.replace(/[\d.,\s]+/g, ' ').trim();
+    if (nameWordsOnly.split(/\s+/).every(w => supermarketNames.some(s => s.includes(w) || w.includes(s)))) return false;
+    if (/^(JUMBO|ALBERT HEIJN|LIDL|PLUS|COOP|DEKAMARKT|BONI|POIESZ|AH|DIRK|VOMAR|HOOGVLIET)(\s+(JUMBO|ALBERT HEIJN|LIDL|PLUS|COOP|DEKAMARKT|BONI|POIESZ|AH|DIRK|VOMAR|HOOGVLIET|\d+))*\s*$/i.test(name)) return false;
     // Garbled text with too many consecutive consonants or mixed case chaos
     if (/[A-Z][a-z][A-Z][a-z][A-Z]/.test(name) && name.length < 20) return false; // "leAG kRnIaJlD"
     // Garbled promotional text
@@ -725,6 +932,70 @@ export class VomarScraper extends BaseScraper {
     if (/^van\s+\d/i.test(name)) return false;
     // "Alléén geldig" (promo text, not product)
     if (/^Alléén\s+geldig/i.test(name)) return false;
+    // Packaging/container terms as product names
+    if (/^(XL[-\s]?SCHAAL|SCHAAL|BAKJE|DOOSJE|FLESJE|ZAKJE|POTJE|CUPJE|BEKERTJE|KUIPJE|BAKJE)\b$/i.test(name)) return false;
+    // "NU NU" repetitions and garbled promotional text
+    if (/\bNU\s+NU\b/i.test(name)) return false;
+    // Names ending with repeated words or garbled suffixes
+    if (/\b(NU|JA|NEE|OK)\s*$/i.test(name) && name.split(/\s+/).length <= 2) return false;
+    // "Spritsen" type garbled text (but allow "Sprits" which is a real cookie)
+    if (/spritsen/i.test(name)) return false;
+    // Generic descriptors that aren't product names
+    if (/^(Diverse\s+soorten|Alle\s+soorten|Vers\s+gesneden|Huismerk|Alle\s+varianten)/i.test(name)) return false;
+    // Standalone packaging with size (e.g. "XL-SCHAAL 500g")
+    if (/^(XL|XXL|GIGA|MINI|MAXI)[-\s]*(SCHAAL|BAK|DOOS|BEKER|KUIP|POT|FLES)/i.test(name)) return false;
+    // "geldig" dates / promo periods
+    if (/geldig\s+(t\/m|van|tot)/i.test(name)) return false;
+    // "alleen" conditions
+    if (/^alleen\s/i.test(name)) return false;
+    // Standalone section headers
+    if (/^(DIEPVRIES|ZUIVEL|BROOD|DRANKEN|HUISHOUD|BAKKERIJ|AGF|VLEES|VIS|KAAS|SNOEP|KOEK|SAUZEN|CONSERVEN|PASTA|RIJST|ONTBIJT|CHIPS|NOTEN|KOFFIE|THEE)\s*$/i.test(name)) return false;
+    // Appliance descriptions / non-food product text
+    if (/machine\b/i.test(name) && /\b(dolce|gusto|nespresso|senseo|tassimo|philips|bosch|siemens|braun|krups)\b/i.test(name)) return false;
+    if (/^(Geschikt\s+voor|Compatibel\s+met|Werkt\s+met|Passend\s+voor)/i.test(name)) return false;
+    // Standalone packaging/unit words as entire name
+    if (/^(flessen|zakken|zakjes|pakken|blikken|rollen|dozen|bossen|kratten|potjes|bakjes|cupjes|kuipjes|tubes)\b(\s+\d+.*)?$/i.test(name)) return false;
+    // Standalone promo/label words
+    if (/^(NIEUW|ACTIE|GRATIS|BONUS|AANBIEDING|VOORDEEL|RECLAME|KORTING)\s*!?$/i.test(name)) return false;
+    // Description/flavor text (not a product name)
+    if (/^(neutrale\s+smaak|zoete\s+smaak|milde\s+smaak|frisse\s+smaak|romige\s+smaak)/i.test(name)) return false;
+    // Garbled text with "RTING" or "KO" fragments (corrupted "KORTING")
+    if (/\bRTING\b/i.test(name)) return false;
+    // Promotional slogans
+    if (/^(Vrolijk|Voordelig|Feestelijk|Gezellig)\s+(Voordelig|Pasen|Kerst|Feest)/i.test(name)) return false;
+    if (/Vieren!?\s*$/i.test(name) && !/\b(product|merk)\b/i.test(name)) return false;
+    // Garbled "TELER" fragments
+    if (/^TELER\b/i.test(name)) return false;
+    // Non-product descriptors: "Exclusief decoratie", "potmaat X cm", "Hoogte X cm"
+    if (/^(Exclusief|potmaat|Hoogte)\s/i.test(name)) return false;
+    if (/potmaat\s+\d/i.test(name) && name.split(/\s+/).length <= 4) return false;
+    // Non-grocery household items (work lamps, kitchen sets, etc.)
+    if (/\b(Werklamp|Zaklamp|Boormachine|Slijptol|Schroefmachine)\b/i.test(name)) return false;
+    if (/^(Kruidenpotjes|Voorraadpotten|Serviesset|Bestek)\b/i.test(name)) return false;
+    // Standalone "VOORDEELSTUK" (not a product)
+    if (/^VOORDEELSTUK\s*$/i.test(name)) return false;
+    // Heavily garbled text with alternating case chaos (e.g. "WVOaEsNtSeDrA!G leAG kRnIaJlD")
+    if ((/[A-Z][a-z][A-Z]/.test(name) || /[a-z][A-Z][a-z]/.test(name)) && /[!]/.test(name)) return false;
+    if (/\b[a-z][A-Z][a-z][A-Z]\b/.test(name)) return false;  // "kRnI"
+    // Words with 3+ consecutive identical vowels (garbled OCR text), except known brands
+    if (/([aeiou])\1{2}/i.test(name) && !/dubbelfrisss/i.test(name)) return false;
+    // Words starting with double same letter followed by 6+ chars (e.g. "Vvaosotreeednakg")
+    if (/\b([A-Za-z])\1[a-z]{6,}/i.test(name) && !/dubbelfrisss/i.test(name)) return false;
+    // "EUR" prefix from currency (e.g. "EUR HAK SPLITERWTEN")
+    if (/^EUR\s+/i.test(name)) return false;
+    // "VA VOMAR" prefix from garbled text
+    if (/^VA\s+VOMAR/i.test(name)) return false;
+    // "1AN" type garbled suffixes
+    if (/\s+\d+[A-Z]{1,2}$/i.test(name) && !/\s+\d+(ml|cl|gr|kg|cm|st)\b/i.test(name)) return false;
+    // Section headers like "Bloemen & Planten"
+    if (/^(Bloemen\s*[&+]\s*Planten|Non[-\s]?Food|Huishoudelijk|Drogisterij)\s*$/i.test(name)) return false;
+    // Non-grocery: tools, hats, decorations with measurements
+    if (/\bAfmeting:\s*\d/i.test(name)) return false;
+    if (/^(Paashaas|Magnetische)\s/i.test(name)) return false;
+    // "Vrolijk Voordelig Pasen Vieren" type promotional slogans
+    if (/Pasen\s+Vieren/i.test(name)) return false;
+    // Description text leaking into product names (sentence-like: "Een zuivere...", "Met echte...")
+    if (/\bEen\s+(zuivere|heerlijke|lekkere|echte|verfrissende)\b/i.test(name)) return false;
     return true;
   }
 
@@ -759,7 +1030,7 @@ export class VomarScraper extends BaseScraper {
         if (nameParts.length > 0) break;
         continue;
       }
-      if (/^(Dagelijks|Bovenop|Download|Prijsvoorbeeld|Alléén|Meer halen|Keuze uit|Kies|Diverse|Alle soorten|Per stuk|Per\s\d|Geschikt|Inclusief|Fles\s|Zak\s|Pak\s|Bak\s|Pot\s|Schaal\s|Net\s|Stuk\s|Heel\.|Om\sthuis|Maat\s|Maten\s|Doos\s)/i.test(line)) {
+      if (/^(Dagelijks|Bovenop|Download|Prijsvoorbeeld|Alléén|Meer halen|Keuze uit|Kies|Diverse|Alle soorten|Per stuk|Per\s\d|Geschikt|Inclusief|Fles\s|Zak\s|Pak\s|Bak\s|Pot\s|Schaal\s|Net\s|Stuk\s|Heel\.|Los\.|Om\sthuis|Maat\s|Maten\s|Doos\s)/i.test(line)) {
         if (nameParts.length > 0) break;
         continue;
       }
@@ -792,8 +1063,11 @@ export class VomarScraper extends BaseScraper {
 
       // Line looks like part of a product name
       if (/[A-Za-zÀ-ÿ]/.test(line) && line.length >= 2 && line.length <= 50) {
+        // Don't count short conjunctions ("of", "en") as a full name part
+        const isConjunction = /^(of|en|OF|EN)$/i.test(line);
         nameParts.unshift(line);
-        if (nameParts.length >= 3) break;
+        if (!isConjunction && nameParts.length >= 4) break;
+        if (nameParts.length >= 6) break; // absolute max
       } else {
         if (nameParts.length > 0) break;
       }
@@ -813,7 +1087,7 @@ export class VomarScraper extends BaseScraper {
       if (!line) continue;
 
       // Skip non-name lines (break if we already have name parts)
-      if (/^(PER\s|ALLE\s|TOT\s|MET\s|ZONDER|VOUCHER|ACTIE|GRATIS|OP=OP|\d+\+\d|KORTING|[¤€]|Max\.|Alleen|Geen|Adviesprijs)/i.test(line)) continue;
+      if (/^(PER\s|ALLE\s|TOT\s|MET\s|ZONDER|VOUCHER|ACTIE|DIEPVRIES|GRATIS|OP=OP|\d+\+\d|KORTING|[¤€]|Max\.|Alleen|Geen|Adviesprijs)/i.test(line)) continue;
       if (/^[\d.,\-\s]+$/.test(line) && line.length < 10) {
         if (nameParts.length > 0) break;
         continue;
@@ -859,14 +1133,27 @@ export class VomarScraper extends BaseScraper {
   private cleanProductName(nameParts: string[]): string | null {
     if (nameParts.length === 0) return null;
 
-    const name = nameParts.join(' ')
+    let name = nameParts.join(' ')
       .replace(/\s+/g, ' ')
       .replace(/^(OP=OP|NIEUW|DIEPVRIES|SET|KRAT|TRAY)\s+/i, '')
+      // Strip packaging prefixes: "ZAKKEN Appelflap" → "Appelflap", "flessen 1,25 liter Pickwick" → "Pickwick"
+      .replace(/^(ZAKKEN|PAKKEN|FLESSEN|BLIKKEN|ROLLEN|BOSSEN|KRATTEN|DOZEN|TUBES|POTTEN|KUIPJES|BAKJES)\s+/i, '')
+      .replace(/^(flessen|pakken|zakken|blikken|rollen|dozen)\s+\d+[.,]?\d*\s*(liter|ml|cl|gram|kilo|kg|g|l)\s+/i, '')
+      // Strip leading unit info: "6 x 330 ml Coca Cola" → "Coca Cola"
+      .replace(/^\d+\s*x\s*\d+\s*(ml|cl|liter|l|gram|g|kg|kilo)\s+/i, '')
+      // Strip TRAY/KRAT/SET in the middle of names
+      .replace(/\s+(TRAY|KRAT|SET|BOX)\s+/i, ' ')
       .replace(/\s+\d+[a-z]$/i, '')
-      .replace(/\s+(of|en|met)\s*$/i, '')  // trim trailing conjunctions
       .replace(/\s+O=P$/i, '')  // remove trailing garbled OP=OP
       .replace(/\s+OP$/i, '')   // remove trailing "OP"
+      .replace(/\s+(NU\s*)+$/i, '')  // remove trailing "NU NU" etc.
+      .replace(/\s+(en|met)\s*$/i, '')  // trim trailing conjunctions (but keep "of" for "ananas OF mango")
       .trim();
+
+    // Only trim trailing "of" if it's truly at the end (not "X of Y")
+    if (/\sof\s*$/i.test(name) && !/ of /i.test(name.slice(0, -3))) {
+      name = name.replace(/\s+of\s*$/i, '').trim();
+    }
 
     if (!this.isValidProductName(name)) return null;
     return name;
@@ -961,32 +1248,58 @@ export class VomarScraper extends BaseScraper {
           imageUrl = `${VOMAR_IMAGE_CDN}/${apiResult.images[0].imageUrl}`;
         }
 
-        if (p.dealPercentage && p.dealPercentage > 0) {
-          originalPrice = catalogPrice;
-          discountPrice = Math.round(catalogPrice * (1 - p.dealPercentage / 100) * 100) / 100;
-          discountPercentage = p.dealPercentage;
-        } else {
-          // OP=OP, AANBIEDING, ACTIE, dagknaller — just use catalog price.
-          // Don't trust folderPrice when we have an API match because
-          // findPriceNear() often grabs prices from nearby unrelated products.
-          discountPrice = catalogPrice;
-        }
-
         title = apiResult.brand
           ? `${apiResult.brand} ${apiResult.description}`
           : apiResult.description;
         productUrl = `https://www.vomar.nl/producten?articleNumber=${apiResult.articleNumber}`;
+
+        // === Price calculation based on deal type ===
+
+        if (p.comboCount && p.comboPrice) {
+          // Combo deal: "3 VOOR 8" → per-item discount price = 8/3
+          discountPrice = Math.round(p.comboPrice / p.comboCount * 100) / 100;
+          originalPrice = catalogPrice;
+          if (originalPrice > discountPrice) {
+            discountPercentage = Math.round((1 - discountPrice / originalPrice) * 100);
+          }
+        } else if (p.dealPercentage && p.dealPercentage > 0) {
+          // Percentage deal (1+1 GRATIS = 50%, 25% KORTING, 2e HALVE PRIJS = 25%)
+          originalPrice = catalogPrice;
+          discountPrice = Math.round(catalogPrice * (1 - p.dealPercentage / 100) * 100) / 100;
+          discountPercentage = p.dealPercentage;
+        } else if (p.folderPrice && p.folderPrice < catalogPrice * 0.95) {
+          // Folder has an explicit deal price that's lower than catalog price
+          // This catches AANBIEDING/ACTIE/OP=OP products with deal prices
+          discountPrice = p.folderPrice;
+          originalPrice = catalogPrice;
+          discountPercentage = Math.round((1 - discountPrice / originalPrice) * 100);
+        } else if (p.folderPrice) {
+          // Folder price exists but is close to or above catalog price
+          // The folder price might be for a different variant; use catalog price
+          discountPrice = p.folderPrice;
+        } else {
+          // No folder price, no percentage — use catalog price as-is
+          discountPrice = catalogPrice;
+        }
       } else {
         apiMisses++;
 
-        if (!p.folderPrice) {
+        if (p.comboCount && p.comboPrice) {
+          // Combo deal without API match: use combo math
+          discountPrice = Math.round(p.comboPrice / p.comboCount * 100) / 100;
+          title = p.name;
+        } else if (p.folderPrice) {
+          discountPrice = p.folderPrice;
+          title = p.name;
+          this.logger.debug(`  No API match, using folder price: ${p.name} → €${p.folderPrice}`);
+        } else if (p.dealPercentage) {
+          // Has percentage but no price — skip
+          this.logger.debug(`  No API match and no folder price for: ${p.name}`);
+          continue;
+        } else {
           this.logger.debug(`  No API match and no folder price for: ${p.name}`);
           continue;
         }
-
-        discountPrice = p.folderPrice;
-        title = p.name;
-        this.logger.debug(`  No API match, using folder price: ${p.name} → €${p.folderPrice}`);
       }
 
       products.push({

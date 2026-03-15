@@ -242,41 +242,51 @@ export class KruidvatScraper extends BaseScraper {
         this.logger.info(`  Deal category: "${cat}" (${count} tiles)`);
       }
 
-      // Visit deal pages (cap at 100 to keep runtime reasonable ~10min)
+      // Visit deal pages in parallel batches (3 tabs at a time)
+      const PARALLEL_TABS = 3;
       const maxDealPages = Math.min(dealPageTiles.length, 100);
-      for (const tile of dealPageTiles.slice(0, maxDealPages)) {
-        const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
-        try {
-          await this.randomDelay();
-          this.logger.info(`Visiting deal: ${tile.title}...`);
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          await page.waitForTimeout(3000);
+      const dealTilesToVisit = dealPageTiles.slice(0, maxDealPages);
 
-          const result = await this.extractProductsFromDealPage(page);
+      this.logger.info(`Visiting ${dealTilesToVisit.length} deal pages (${PARALLEL_TABS} parallel tabs)...`);
 
-          // Skip expired deals
+      for (let batchStart = 0; batchStart < dealTilesToVisit.length; batchStart += PARALLEL_TABS) {
+        const batch = dealTilesToVisit.slice(batchStart, batchStart + PARALLEL_TABS);
+        const batchResults = await Promise.allSettled(batch.map(async (tile) => {
+          const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
+          const tab = await this.context!.newPage();
+          try {
+            this.logger.info(`  Visiting: ${tile.title}...`);
+            await tab.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await tab.waitForTimeout(2000);
+
+            const result = await this.extractProductsFromDealPage(tab);
+            return { tile, result };
+          } catch (err) {
+            this.logger.warning(`  Failed to scrape deal page: ${tile.title}`);
+            return null;
+          } finally {
+            await tab.close();
+          }
+        }));
+
+        for (const settled of batchResults) {
+          if (settled.status !== 'fulfilled' || !settled.value) continue;
+          const { tile, result } = settled.value;
+
           if (result.expired) {
             this.logger.info(`  Skipping expired deal: ${tile.title}`);
             continue;
           }
 
-          // Deal type priority: page <h1> > URL slug > tile title
           const dealType = result.pageDealType
             || this.parseDealType(tile.localizedURLLink)
             || this.parseDealTypeFromTitle(tile.title);
 
-          // Card requirement: from page h1 or API deal category
           const isCardDeal = result.requiresCard || tile.dealCategory?.toLowerCase().includes('kaart') || false;
 
           for (const p of result.products) {
-            // Skip products with no deal indication: no deal type AND no original price
-            if (!dealType && !p.originalPrice) {
-              continue;
-            }
-            // Skip non-grocery products extracted from deal pages
-            if (isNonGroceryProduct(p.title) || isAlcoholProduct(p.title)) {
-              continue;
-            }
+            if (!dealType && !p.originalPrice) continue;
+            if (isNonGroceryProduct(p.title) || isAlcoholProduct(p.title)) continue;
             products.push({
               title: dealType ? `${p.title} (${dealType})` : p.title,
               discount_price: p.price,
@@ -291,50 +301,56 @@ export class KruidvatScraper extends BaseScraper {
           }
 
           this.logger.info(`  Got ${result.products.length} products from "${tile.title}"${dealType ? ` (${dealType})` : ' (no deal type found)'}`);
-        } catch (err) {
-          this.logger.warning(`  Failed to scrape deal page: ${tile.title}`);
         }
       }
 
-      // Visit individual product pages (/p/ links) to get real product data
+      // Visit individual product pages (/p/ links) in parallel batches
       const groceryProductTiles = productPageTiles.filter(t =>
         !isNonGroceryProduct(t.title) && !isAlcoholProduct(t.title)
       );
-      this.logger.info(`Visiting ${groceryProductTiles.length} product pages (filtered ${productPageTiles.length - groceryProductTiles.length} non-grocery)...`);
-      for (const tile of groceryProductTiles) {
-        const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
-        try {
-          await this.randomDelay();
-          this.logger.info(`Visiting product: ${tile.title}...`);
-          await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-          await page.waitForTimeout(2000);
+      this.logger.info(`Visiting ${groceryProductTiles.length} product pages (${PARALLEL_TABS} parallel, filtered ${productPageTiles.length - groceryProductTiles.length} non-grocery)...`);
 
-          const productData = await this.extractSingleProduct(page, url);
-          if (productData && productData.price > 0) {
-            const dealType = tile.dealCategory
-              || this.parseDealType(tile.localizedURLLink)
-              || this.parseDealTypeFromTitle(tile.title);
-            // Skip products with no deal indication
-            if (!dealType && !productData.originalPrice) {
-              this.logger.info(`  Skipping (no deal info): ${productData.title}`);
-              continue;
-            }
-            const isCardDeal = tile.dealCategory?.toLowerCase().includes('kaart') || false;
-            products.push({
-              title: dealType ? `${productData.title} (${dealType})` : productData.title,
-              discount_price: productData.price,
-              original_price: productData.originalPrice || undefined,
-              valid_from: monday,
-              valid_until: sunday,
-              category_slug: this.detectCategory(productData.title),
-              product_url: url,
-              image_url: this.normalizeImageUrl(productData.imageUrl),
-              requires_card: isCardDeal,
-            });
-            this.logger.info(`  Got product: ${productData.title}`);
+      for (let batchStart = 0; batchStart < groceryProductTiles.length; batchStart += PARALLEL_TABS) {
+        const batch = groceryProductTiles.slice(batchStart, batchStart + PARALLEL_TABS);
+        const batchResults = await Promise.allSettled(batch.map(async (tile) => {
+          const url = `https://www.kruidvat.nl${tile.localizedURLLink}`;
+          const tab = await this.context!.newPage();
+          try {
+            await tab.goto(url, { waitUntil: 'domcontentloaded', timeout: 30000 });
+            await tab.waitForTimeout(2000);
+            const productData = await this.extractSingleProduct(tab, url);
+            return { tile, url, productData };
+          } catch {
+            this.logger.warning(`  Failed to scrape product page: ${tile.title}`);
+            return null;
+          } finally {
+            await tab.close();
           }
-        } catch (err) {
-          this.logger.warning(`  Failed to scrape product page: ${tile.title}`);
+        }));
+
+        for (const settled of batchResults) {
+          if (settled.status !== 'fulfilled' || !settled.value) continue;
+          const { tile, url, productData } = settled.value;
+          if (!productData || productData.price <= 0) continue;
+
+          const dealType = tile.dealCategory
+            || this.parseDealType(tile.localizedURLLink)
+            || this.parseDealTypeFromTitle(tile.title);
+          if (!dealType && !productData.originalPrice) continue;
+
+          const isCardDeal = tile.dealCategory?.toLowerCase().includes('kaart') || false;
+          products.push({
+            title: dealType ? `${productData.title} (${dealType})` : productData.title,
+            discount_price: productData.price,
+            original_price: productData.originalPrice || undefined,
+            valid_from: monday,
+            valid_until: sunday,
+            category_slug: this.detectCategory(productData.title),
+            product_url: url,
+            image_url: this.normalizeImageUrl(productData.imageUrl),
+            requires_card: isCardDeal,
+          });
+          this.logger.info(`  Got product: ${productData.title}`);
         }
       }
 

@@ -7,6 +7,7 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { View, StyleSheet, SectionList, Linking, ActivityIndicator, Pressable } from 'react-native';
 import { Text, Button, IconButton } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useGroceryListStore } from '../stores/groceryListStore';
 import { matchGroceryListToDeals } from '../services/groceryMatcher';
 import { generateShoppingPlan, type ShoppingPlan } from '../services/shoppingPlanOptimizer';
@@ -56,6 +57,7 @@ function getDiscountLabel(title: string, discountPercentage: number | null, orig
 }
 
 export const ShoppingPlanScreen: React.FC<Props> = ({ navigation }) => {
+  const insets = useSafeAreaInsets();
   const { items } = useGroceryListStore();
   const [plan, setPlan] = useState<ShoppingPlan | null>(null);
   const [route, setRoute] = useState<Route | null>(null);
@@ -376,7 +378,7 @@ export const ShoppingPlanScreen: React.FC<Props> = ({ navigation }) => {
   if (loading) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />
           <Text style={styles.headerTitle}>Winkelplan</Text>
         </View>
@@ -394,7 +396,7 @@ export const ShoppingPlanScreen: React.FC<Props> = ({ navigation }) => {
   if (error) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />
           <Text style={styles.headerTitle}>Winkelplan</Text>
         </View>
@@ -412,7 +414,7 @@ export const ShoppingPlanScreen: React.FC<Props> = ({ navigation }) => {
   if (!plan) {
     return (
       <View style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: insets.top }]}>
           <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />
           <Text style={styles.headerTitle}>Winkelplan</Text>
         </View>
@@ -427,7 +429,7 @@ export const ShoppingPlanScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <IconButton icon="arrow-left" onPress={() => navigation.goBack()} />
         <Text style={styles.headerTitle}>Winkelplan</Text>
       </View>
@@ -452,7 +454,6 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingTop: 44,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E8E8E8',

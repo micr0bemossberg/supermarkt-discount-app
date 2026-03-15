@@ -1,0 +1,2584 @@
+=== VOMAR FOLDER DEBUG — 2026-03-12T13:10:49.249Z ===
+
+Total pages with text: 43
+
+
+============================================================
+PAGE 1 (47 lines)
+============================================================
+[VOUCHER PAGE]
+    0| VOUCHER ← VOUCHER
+    1| ACTIE ← ACTIE
+    2| Acties zijn geldig t/m 14 maart 2026 ← ACTIE
+    3| GULDEN HOEVE
+    4| Scharrelkipfilet
+    5| 800
+    6| G R AM
+    7| ¤7.99 ← EXPLICIT PRICE
+    8| Zonder
+    9| voucher ← VOUCHER
+   10| Met
+   11| voucher ← VOUCHER
+   12| 9l ← CODED PRICE: €9.55
+   13| 7t ← CODED PRICE: €7.99
+   14| Per 800 gram ← UNIT INFO
+   15| DE BESTE ACTIES ← ACTIE
+   16| VAN NEDERLAND!
+   17| Taksi, Appelsientje of
+   18| Dubbelfrisss
+   19| Alle soorten ← UNIT INFO
+   20| 6- of 10-packs.
+   21| Per stuk van ← UNIT INFO
+   22| 2.49 tot 3.35
+   23| Prijsvoorbeeld:
+   24| Dubbelfrisss Boost
+   25| Appel/Perzik
+   26| 1
+   27| +
+   28| 1
+   29| GRATIS ← GRATIS
+   30| 4.98 ← EXPLICIT PRICE
+   31| 2.49 ← EXPLICIT PRICE
+   32| Starbucks
+   33| Ice Coffee
+   34| Alle soorten bekers ← UNIT INFO
+   35| 220-330ml.
+   36| Per stuk van ← UNIT INFO
+   37| 1.89 tot 2.89
+   38| Prijsvoorbeeld:
+   39| Cappuccino 220 ml
+   40| 1
+   41| +
+   42| 1
+   43| GRATIS ← GRATIS
+   44| 3.78 ← EXPLICIT PRICE
+   45| 1.89 ← EXPLICIT PRICE
+   46| 11
+
+============================================================
+PAGE 2 (47 lines)
+============================================================
+    0| 750 ML ← UNIT INFO
+    1| 4 STUKS ← UNIT INFO
+    2| 2.52 - 3.28 ← PRICE RANGE
+    3| 6.65 ← EXPLICIT PRICE
+    4| Barefoot
+    5| Wijn
+    6| Alle soorten ← UNIT INFO
+    7| 12 mrt
+    8| 13 mrt
+    9| 4.99 ← EXPLICIT PRICE
+   10| Coca-Cola,
+   11| Fanta of
+   12| Sprite
+   13| Alle soorten ← UNIT INFO
+   14| blikken 250 ml
+   15| 2.Max. 24 blikken per klant
+   16| 14 mrt
+   17| Alléén op donderdag, vrijdag & zaterdag!
+   18| PER STUK ← UNIT INFO
+   19| 3.89 - 4.79 ← PRICE RANGE
+   20| Sensodyne
+   21| of Parodontax
+   22| Tandpasta
+   23| Alle soorten ← UNIT INFO
+   24| 2.89 ← EXPLICIT PRICE
+   25| Max. 6 stuks per klant
+   26| Hertog Jan
+   27| Speciaalbieren of
+   28| Tripel
+   29| Karmeliet
+   30| 4-pack of
+   31| 6-pack fles
+   32| à 30-33 cl.
+   33| • Weizener
+   34| • Karakter
+   35| • Grand
+   36| Prestige
+   37| • Tripel
+   38| Karmeliet
+   39| Per stuk van ← UNIT INFO
+   40| 7.19 tot 9.89
+   41| Prijsvoorbeeld:
+   42| Hertog Jan Weizener
+   43| 25% ← percentage
+   44| KORTING ← KORTING
+   45| 7.19 ← EXPLICIT PRICE
+   46| 5.39 ← EXPLICIT PRICE
+
+============================================================
+PAGE 3 (40 lines)
+============================================================
+    0| 3 STUKS ← UNIT INFO
+    1| G'woon
+    2| Koffiecapsules
+    3| Alle soorten ← UNIT INFO
+    4| pakken 16 stuks.
+    5| Geschikt voor
+    6| Dolce Gustomachine
+    7| 12 mrt
+    8| 13 mrt
+    9| 10.77 - 11.85 ← PRICE RANGE
+   10| 8.-
+   11| PER PAK ← UNIT INFO
+   12| Mini Gebak
+   13| In de smaken:
+   14| • Framboos
+   15| Pistache
+   16| • Bosvruchten
+   17| • Red Velvet
+   18| • Hazelnoot
+   19| Pak 4 stuks
+   20| 4.39 ← EXPLICIT PRICE
+   21| 2.99 ← EXPLICIT PRICE
+   22| 14 mrt
+   23| Alléén op donderdag, vrijdag & zaterdag!
+   24| PER STUK ← UNIT INFO
+   25| XL-SCHAAL
+   26| 1.99 - 2.29 ← PRICE RANGE
+   27| Ananas
+   28| of Grote
+   29| Eetrijpe
+   30| Mango
+   31| 1.69 ← EXPLICIT PRICE
+   32| 3.99 ← EXPLICIT PRICE
+   33| Fruitbowl
+   34| Keuze uit:
+   35| • Mango
+   36| • Fruitpunch
+   37| Schaal
+   38| 500 gram ← UNIT INFO
+   39| 2.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 4 (52 lines)
+============================================================
+    0| R
+    1| ALITEIT
+    2| LU
+    3| A
+    4| TO
+    5| P
+    6| EX
+    7| C
+    8| W
+    9| K
+   10| SIEF
+   11| BIJ V
+   12| OM
+   13| OP=OP ← OP=OP
+   14| Vleeswaren voor
+   15| Broodje
+   16| Beenham of
+   17| Bal Gehakt
+   18| • Beenham +
+   19| honing-mosterd saus
+   20| • Gehakt +
+   21| mosterd
+   22| Schaal 125160 gram
+   23| 12 mrt
+   24| 13 mrt
+   25| PER PAK ← UNIT INFO
+   26| PER STUK ← UNIT INFO
+   27| 3.49 ← EXPLICIT PRICE
+   28| 4.89 - 4.99 ← PRICE RANGE
+   29| 2.99 ← EXPLICIT PRICE
+   30| Verse Pizza
+   31| Alle soorten ← UNIT INFO
+   32| 3.99 ← EXPLICIT PRICE
+   33| 14 mrt
+   34| Alléén op donderdag, vrijdag & zaterdag!
+   35| 4 STUKS ← UNIT INFO
+   36| 3.16 - 3.56 ← PRICE RANGE
+   37| Melkan
+   38| Toetjes
+   39| Alle soorten ← UNIT INFO
+   40| 80-150 gram
+   41| 2.49 ← EXPLICIT PRICE
+   42| PER STUK ← UNIT INFO
+   43| OP=OP ← OP=OP
+   44| Verse
+   45| Ovenschotel
+   46| Witlof of
+   47| Rendang. Voor
+   48| 2 personen.
+   49| 800 gram ← UNIT INFO
+   50| 7.99 ← EXPLICIT PRICE
+   51| 6.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 5 (37 lines)
+============================================================
+    0| 375 GRAM ← UNIT INFO
+    1| 540 GRAM ← UNIT INFO
+    2| 5.35 ← EXPLICIT PRICE
+    3| 3.99 ← EXPLICIT PRICE
+    4| GULDEN
+    5| HOEVE
+    6| Kipdijshoarma
+    7| Per 375 gram ← UNIT INFO
+    8| 12 mrt
+    9| 6.99 ← EXPLICIT PRICE
+   10| 13 mrt
+   11| Runderhamburgers
+   12| Pak 6 stuks.
+   13| Per 540 gram ← UNIT INFO
+   14| 5.99 ← EXPLICIT PRICE
+   15| 14 mrt
+   16| Alléén op donderdag, vrijdag & zaterdag!
+   17| N EIGEN
+   18| VA
+   19| VOMAR
+   20| VISBOER
+   21| GOEDE
+   22| VANGST
+   23| Ambachtelijke
+   24| Kibbeling
+   25| Met ravigottesaus. Bak 500
+   26| gram
+   27| 500 GRAM ← UNIT INFO
+   28| 500 GRAM ← UNIT INFO
+   29| 7.19 ← EXPLICIT PRICE
+   30| 5.99 ← EXPLICIT PRICE
+   31| 7.99 ← EXPLICIT PRICE
+   32| OP=OP ← OP=OP
+   33| Varkenshaas
+   34| Culinair
+   35| Per 500 gram ← UNIT INFO
+   36| 5.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 6 (108 lines)
+============================================================
+[VOUCHER PAGE]
+    0| Met de voordeel
+    1| vouchers ← VOUCHER
+    2| VOUCHER ← VOUCHER
+    3| ACTIE ← ACTIE
+    4| Alléén geldig met een geactiveerde
+    5| voucher in de Vomar-app ← VOUCHER
+    6| Spa Fruit
+    7| NU
+    8| Zonder
+    9| voucher ← VOUCHER
+   10| Met
+   11| voucher ← VOUCHER
+   12| 2 .29
+   13| 2 .39
+   14| 1.69 ← EXPLICIT PRICE
+   15| ACTIE ← ACTIE
+   16| ¤1.69 ← EXPLICIT PRICE
+   17| VOUCHER ← VOUCHER
+   18| VOUCHER ← VOUCHER
+   19| ACTIE ← ACTIE
+   20| Alle soorten ← UNIT INFO
+   21| flessen
+   22| 1,25 liter
+   23| Pickwick Thee
+   24| TOT
+   25| 52% ← percentage
+   26| KORTING ← KORTING
+   27| Zonder
+   28| voucher ← VOUCHER
+   29| Met
+   30| voucher ← VOUCHER
+   31| 1.25 ← EXPLICIT PRICE
+   32| 2 .09
+   33| 0.99 ← EXPLICIT PRICE
+   34| Alle éénkopsvarianten. ← UNIT INFO
+   35| Pak 20 stuks
+   36| VAN
+   37| Zonder
+   38| voucher ← VOUCHER
+   39| Met
+   40| voucher ← VOUCHER
+   41| 4k ← CODED PRICE: €4.50
+   42| 3.-
+   43| VOUCHER ← VOUCHER
+   44| ACTIE ← ACTIE
+   45| Zak 1,5 kilo
+   46| Runderchipolata
+   47| Pak 5 stuks.
+   48| Per 200 gram ← UNIT INFO
+   49| Alle soorten zakken ← UNIT INFO
+   50| 110-270 gram.
+   51| Per zak van ← UNIT INFO
+   52| 2.09 tot 2.85
+   53| Prijsvoorbeeld:
+   54| Honingbijtjes Suikervrij
+   55| NU
+   56| ¤2.49 ← EXPLICIT PRICE
+   57| Zonder
+   58| voucher ← VOUCHER
+   59| Met
+   60| voucher ← VOUCHER
+   61| 3.19 ← EXPLICIT PRICE
+   62| 2 .49
+   63| Download de
+   64| Vomar-app!
+   65| ACTIE ← ACTIE
+   66| ¤3.00 Klene Drop
+   67| VOUCHER ← VOUCHER
+   68| ZAKKEN
+   69| Appelflap
+   70| Dagelijks vers
+   71| gebakken in de
+   72| winkel
+   73| %
+   74| 0
+   75| 5
+   76| NG
+   77| TI
+   78| R
+   79| KO
+   80| Zonder
+   81| voucher ← VOUCHER
+   82| Met
+   83| voucher ← VOUCHER
+   84| 2 .09
+   85| 1.04 ← EXPLICIT PRICE
+   86| ACTIE ← ACTIE
+   87| Hollandse
+   88| Elstar Appels
+   89| 2
+   90| VOUCHER ← VOUCHER
+   91| VOUCHER ← VOUCHER
+   92| ACTIE ← ACTIE
+   93| N DS E
+   94| HOLLA
+   95| N
+   96| BO E R E
+   97| 4
+   98| STUKS
+   99| ¤2.00 ← EXPLICIT PRICE
+  100| Zonder
+  101| voucher ← VOUCHER
+  102| Met
+  103| voucher ← VOUCHER
+  104| 3.40 ← EXPLICIT PRICE
+  105| 2 .-
+  106| PROFITEER VAN NÓG MEER
+  107| VOORDEEL IN DE VOMAR-APP
+
+============================================================
+PAGE 7 (97 lines)
+============================================================
+[VOUCHER PAGE]
+    0| Met de voordeel
+    1| vouchers ← VOUCHER
+    2| Zoete
+    3| Puntpaprika
+    4| Met
+    5| voucher ← VOUCHER
+    6| 2 .99
+    7| 1.89 ← EXPLICIT PRICE
+    8| VOUCHER ← VOUCHER
+    9| Alle soorten pakken ← UNIT INFO
+   10| 4-6 stuks
+   11| G'woon
+   12| Keukenpapier
+   13| Decor of Eco
+   14| Pak 2 rollen. 3-laags
+   15| Per stuk van 1.92 tot ← UNIT INFO
+   16| 3.29 ← EXPLICIT PRICE
+   17| Prijsvoorbeeld: Decor
+   18| ACTIE ← ACTIE
+   19| VOUCHER ← VOUCHER
+   20| ¤1. 29
+   21| Zonder
+   22| voucher ← VOUCHER
+   23| Met
+   24| voucher ← VOUCHER
+   25| 1t ← CODED PRICE: €1.99
+   26| 1f ← CODED PRICE: €1.29
+   27| Pak 175 gram
+   28| ¤2.49 ← EXPLICIT PRICE
+   29| Met
+   30| voucher ← VOUCHER
+   31| 3.49 ← EXPLICIT PRICE
+   32| 3.99 ← EXPLICIT PRICE
+   33| 2 .49
+   34| ACTIE ← ACTIE
+   35| Sou Sou IJs
+   36| Merba Paas
+   37| Assortiment
+   38| Crème
+   39| Spritsen
+   40| NU
+   41| NU
+   42| Zonder
+   43| voucher ← VOUCHER
+   44| VOUCHER ← VOUCHER
+   45| DIEPVRIES
+   46| ¤1.89 ← EXPLICIT PRICE
+   47| Zonder
+   48| voucher ← VOUCHER
+   49| ACTIE ← ACTIE
+   50| Zak 500 gram
+   51| 500 GRAM ← UNIT INFO
+   52| %
+   53| 0
+   54| 5
+   55| NG
+   56| TI
+   57| R
+   58| KO
+   59| Zonder
+   60| voucher ← VOUCHER
+   61| Met
+   62| voucher ← VOUCHER
+   63| 3.29 ← EXPLICIT PRICE
+   64| 1.64 ← EXPLICIT PRICE
+   65| Download de
+   66| Vomar-app!
+   67| Friesche
+   68| Vlag
+   69| Koffiemelk
+   70| ACTIE ← ACTIE
+   71| VOUCHER ← VOUCHER
+   72| ACTIE ← ACTIE
+   73| ACTIE ← ACTIE
+   74| VOUCHER ← VOUCHER
+   75| VOUCHER ← VOUCHER
+   76| Alléén geldig met een geactiveerde
+   77| voucher in de Vomar-app ← VOUCHER
+   78| Alle soorten ← UNIT INFO
+   79| pakken
+   80| 455-466 ml.
+   81| Per pak van ← UNIT INFO
+   82| 1.58 tot 2.19
+   83| Prijsvoorbeeld:
+   84| Halvamel
+   85| %
+   86| 0
+   87| 5
+   88| KORTING ← KORTING
+   89| Zonder
+   90| voucher ← VOUCHER
+   91| Met
+   92| voucher ← VOUCHER
+   93| 1.58 ← EXPLICIT PRICE
+   94| 0.79 ← EXPLICIT PRICE
+   95| PROFITEER VAN NÓG MEER
+   96| VOORDEEL IN DE VOMAR-APP
+
+============================================================
+PAGE 8 (67 lines)
+============================================================
+    0| DE BESTE ACTIES ← ACTIE
+    1| VAN NEDERLAND!
+    2| en
+    3| Bovenop onze extréém lage prijz
+    4| Ariel
+    5| Wasmiddel
+    6| 1
+    7| +
+    8| 1
+    9| GRATIS ← GRATIS
+   10| Alle soorten ← UNIT INFO
+   11| poeder
+   12| 13 wasbeurten,
+   13| vloeibaar 1820 wasbeurten
+   14| of pods 15 stuks.
+   15| Per stuk van ← UNIT INFO
+   16| 7.99 tot 17.98
+   17| Prijsvoorbeeld:
+   18| Waspoeder
+   19| Original
+   20| Ambi Pur
+   21| 3Volution of
+   22| textielverfrisser
+   23| 500 ml ← UNIT INFO
+   24| of Antikal
+   25| Kalkspray
+   26| 800 ml. ← UNIT INFO
+   27| Per stuk van ← UNIT INFO
+   28| 5.29 tot 7.79
+   29| Prijsvoorbeeld:
+   30| Ambi Pur
+   31| Textielverfrisser
+   32| 15.98 ← EXPLICIT PRICE
+   33| 7.99 ← EXPLICIT PRICE
+   34| Starbucks
+   35| Ice Coffee
+   36| 1
+   37| +
+   38| 1
+   39| GRATIS ← GRATIS
+   40| Alle soorten ← UNIT INFO
+   41| bekers
+   42| 220-330 ml.
+   43| Per stuk van ← UNIT INFO
+   44| 1.89 tot 2.89
+   45| Prijsvoorbeeld:
+   46| Cappuccino
+   47| 220 ml ← UNIT INFO
+   48| 1
+   49| +
+   50| 1
+   51| GRATIS ← GRATIS
+   52| 3.78 ← EXPLICIT PRICE
+   53| 1.89 ← EXPLICIT PRICE
+   54| XL-BAK
+   55| 4.99 ← EXPLICIT PRICE
+   56| 10.70 ← EXPLICIT PRICE
+   57| 5.35 ← EXPLICIT PRICE
+   58| !
+   59| OP=OP ← OP=OP
+   60| Johma
+   61| Kip-Samba,
+   62| Tonijn of
+   63| Gevuld Eitje
+   64| Bak 300 gram
+   65| 99
+   66| 2.
+
+============================================================
+PAGE 9 (66 lines)
+============================================================
+    0| DE BESTE ACTIES ← ACTIE
+    1| VAN NEDERLAND!
+    2| en
+    3| Bovenop onze extréém lage prijz
+    4| Verstegen
+    5| Kruiden
+    6| Alle soorten ← UNIT INFO
+    7| potten
+    8| 170-225 gram.
+    9| Per stuk van ← UNIT INFO
+   10| 4.49 tot 4.95
+   11| Prijsvoorbeeld:
+   12| Mix voor
+   13| Varkensvlees
+   14| 1
+   15| +
+   16| 1
+   17| GRATIS ← GRATIS
+   18| 8.98 ← EXPLICIT PRICE
+   19| 4j ← CODED PRICE: €4.49
+   20| 2 ZAKKEN
+   21| 6.50 - 8.98 ← PRICE RANGE
+   22| G'woon
+   23| Koffiepads
+   24| Alle soorten ← UNIT INFO
+   25| zakken
+   26| 36 stuks ← UNIT INFO
+   27| 6.-
+   28| !
+   29| Prijsvoorbeeld:
+   30| Haring in
+   31| Tomatensaus
+   32| Princes
+   33| Tonijn
+   34| In Water, Olijfolie, Zonnebloemolie of
+   35| met Groente
+   36| 145-160 gram
+   37| 1
+   38| +
+   39| 1
+   40| GRATIS ← GRATIS
+   41| 3.78 ← EXPLICIT PRICE
+   42| 170 gram. ← UNIT INFO
+   43| Per stuk van ← UNIT INFO
+   44| 1.89 tot 2.95
+   45| 1.89 ← EXPLICIT PRICE
+   46| Taksi,
+   47| Appelsientje of
+   48| Dubbelfrisss
+   49| 1
+   50| +
+   51| 1
+   52| GRATIS ← GRATIS
+   53| of Haring
+   54| in Tomatensaus
+   55| Alle soorten ← UNIT INFO
+   56| 6- of 10-packs.
+   57| Per stuk van ← UNIT INFO
+   58| 2.49 tot 3.35
+   59| Prijsvoorbeeld:
+   60| Dubbelfrisss
+   61| Boost Appel/
+   62| Perzik
+   63| 4.98 ← EXPLICIT PRICE
+   64| 49
+   65| 2.
+
+============================================================
+PAGE 10 (54 lines)
+============================================================
+    0| Dagelijks vers én supervoordelig!
+    1| 500 GRAM ← UNIT INFO
+    2| 500 GRAM ← UNIT INFO
+    3| 1.15 ← EXPLICIT PRICE
+    4| Hollandse
+    5| Witlof
+    6| Los. Per 500 gram
+    7| 0r ← CODED PRICE: €0.89
+    8| 1.89 ← EXPLICIT PRICE
+    9| Pruimen
+   10| Los. Per 500 gram
+   11| Luxe
+   12| Slasoorten
+   13| 1p ← CODED PRICE: €1.79
+   14| Keuze uit:
+   15| • Jonge Bladsla met
+   16| Rucola 100 gram
+   17| • Jonge Bladsla met
+   18| Veldsla 100 gram
+   19| • Kropslamelange
+   20| 100 gram ← UNIT INFO
+   21| • Rucolamelange
+   22| 75 gram ← UNIT INFO
+   23| • Gemengde Sla
+   24| 125 gram ← UNIT INFO
+   25| PER STUK ← UNIT INFO
+   26| Lunchsalade
+   27| PER SCHAAL ← UNIT INFO
+   28| 1.99 ← EXPLICIT PRICE
+   29| Verse
+   30| Rauwkost
+   31| Schaal 200 gram
+   32| 5.49 ← EXPLICIT PRICE
+   33| Verspakketten
+   34| Keuze uit:
+   35| • Kip Rendang
+   36| • Teriyaki Japans
+   37| • Bami Ketjap
+   38| • Curry Madras
+   39| 4j ← CODED PRICE: €4.49
+   40| Keuze uit:
+   41| • Kip Sweet Chili
+   42| • Kip Caesar
+   43| • Tomaat Balsamico
+   44| • Kip Honing
+   45| Mosterd
+   46| Schaal 300350 gram
+   47| 0t ← CODED PRICE: €0.99
+   48| 2 ZAKKEN
+   49| 2.38 - 3.98 ← PRICE RANGE
+   50| 1t ← CODED PRICE: €1.99
+   51| PER STUK ← UNIT INFO
+   52| 3.49 ← EXPLICIT PRICE
+   53| 2p ← CODED PRICE: €2.79
+
+============================================================
+PAGE 11 (11 lines)
+============================================================
+    0| Dagelijks vers én supervoordelig!
+    1| 2 STUKS ← UNIT INFO
+    2| 4.78 - 6.58 ← PRICE RANGE
+    3| Kies & Mix
+    4| Keuze uit:
+    5| • Nadorcott Mandarijnen net 750 gram
+    6| • Avocado Ready-to-eat schaal 2 stuks
+    7| • Pitloze Witte Druiven schaal 500 gram
+    8| • Pitloze Rode Druiven schaal 500 gram
+    9| • Pink Lady Appels schaal 4 stuks
+   10| 4.-
+
+============================================================
+PAGE 12 (70 lines)
+============================================================
+    0| Voor de beste kwaliteit groente en fruit!
+    1| AR
+    2| VOMT WEL
+    3| O
+    4| IS T
+    5| 34% ← percentage
+    6| PER
+    7| DKO
+    8| E
+    9| O
+   10| G
+   11| VOMAR
+   12| Geschrapte
+   13| Worteltjes
+   14| Zak 500 gram
+   15| 1d ← CODED PRICE: €1.19
+   16| VOMAR
+   17| Kruimige
+   18| Aardappelen
+   19| Zak 3 kilo
+   20| ALBERT
+   21| HEIJN
+   22| JUMBO
+   23| ALBERT HEIJN
+   24| JUMBO
+   25| 1.79 ← EXPLICIT PRICE
+   26| ALBERT HEIJN
+   27| 49
+   28| 3
+   29| .
+   30| 2r ← CODED PRICE: €2.89
+   31| VOMAR
+   32| ALBERT HEIJN
+   33| 1p 2.
+   34| 19
+   35| Snacktomaten
+   36| Schaal 250 gram
+   37| VOMAR
+   38| Conference
+   39| Peren
+   40| Schaal 1 kilo
+   41| 09
+   42| 2
+   43| .
+   44| 1p ← CODED PRICE: €1.79
+   45| VOMAR
+   46| Ananas
+   47| Per stuk ← UNIT INFO
+   48| ALBERT HEIJN
+   49| ALBERT HEIJN
+   50| 19
+   51| 2
+   52| .
+   53| 1t ← CODED PRICE: €1.99
+   54| 1
+   55| 49
+   56| JUMBO
+   57| 3
+   58| 49
+   59| JUMBO
+   60| 2
+   61| 19
+   62| JUMBO
+   63| 2
+   64| 09
+   65| JUMBO
+   66| 2
+   67| 19
+   68| De prijzen zijn vers van de pers. Deze zijn online geverifieerd op
+   69| woensdag 25 februari bij Vomar, Albert Heijn en Jumbo.
+
+============================================================
+PAGE 13 (11 lines)
+============================================================
+    0| TOT
+    1| 5
+    2| KOR2% ← percentage
+    3| T
+    4| I NG
+    5| 3 STUKS ← UNIT INFO
+    6| 7.35 - 10.47 ← PRICE RANGE
+    7| Beemster
+    8| Gesneden Kaas
+    9| Alle soorten 125-150 gram ← UNIT INFO
+   10| 5.-
+
+============================================================
+PAGE 14 (46 lines)
+============================================================
+    0| Vers van onze eigen slagers
+    1| 500 GRAM ← UNIT INFO
+    2| 500 GRAM ← UNIT INFO
+    3| 4.75 ← EXPLICIT PRICE
+    4| Half-om-Half
+    5| Gehakt
+    6| Per 500 gram ← UNIT INFO
+    7| 99
+    8| 3.
+    9| 9.25 ← EXPLICIT PRICE
+   10| WEIDE VELDEN
+   11| Ierse Riblap
+   12| Per 500 gram ← UNIT INFO
+   13| 400 GRAM ← UNIT INFO
+   14| 200 GRAM ← UNIT INFO
+   15| 4.55 ← EXPLICIT PRICE
+   16| GULDEN HOEVE
+   17| Krokante
+   18| Kipschnitzels
+   19| Pak 4 stuks.
+   20| Per 400 gram ← UNIT INFO
+   21| 99
+   22| 3.
+   23| 99
+   24| 7.
+   25| 3.80 ← EXPLICIT PRICE
+   26| Biefstuk
+   27| Tartaar
+   28| Per 200 gram ← UNIT INFO
+   29| 49
+   30| 3.
+   31| N EIGEN
+   32| VA
+   33| VOMAR
+   34| VISBOER
+   35| De Vegetarische Slager
+   36| Alle soorten ← UNIT INFO
+   37| PER PAK ← UNIT INFO
+   38| 250 GRAM ← UNIT INFO
+   39| 3.39 - 4.09 ← PRICE RANGE
+   40| 3.18 - 3.25 ← PRICE RANGE
+   41| 2.49 ← EXPLICIT PRICE
+   42| Pangasiusfilet
+   43| Naturel of French.
+   44| Per 250 gram ← UNIT INFO
+   45| 2.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 15 (13 lines)
+============================================================
+    0| Vers van onze eigen slagers
+    1| Ambachtelijk bereid door
+    2| onze slagers uit Alkmaar.
+    3| Unieke recepturen voor
+    4| een altijd lage prijs.
+    5| 500 GRAM ← UNIT INFO
+    6| 3.98 - 4.13 ← PRICE RANGE
+    7| BOER'N LAND
+    8| Schouderkarbonade
+    9| Per 500 gram. ← UNIT INFO
+   10| Alle soorten ← UNIT INFO
+   11| 49
+   12| 3.
+
+============================================================
+PAGE 16 (46 lines)
+============================================================
+    0| Vers van de warme bakker
+    1| PER ZAK ← UNIT INFO
+    2| PER STUK ← UNIT INFO
+    3| 1.99 ← EXPLICIT PRICE
+    4| Reuze
+    5| Rozijnenbollen
+    6| Zak 4 stuks
+    7| 79
+    8| 1.
+    9| 4.99 ← EXPLICIT PRICE
+   10| OP=OP ← OP=OP
+   11| Kersen
+   12| Kruimelslof
+   13| Voor 5-6 personen
+   14| PER STUK ← UNIT INFO
+   15| PER PAK ← UNIT INFO
+   16| 1.19 ← EXPLICIT PRICE
+   17| Dubai of
+   18| Speculoos
+   19| Donut
+   20| 99
+   21| 0.
+   22| 1.49 ← EXPLICIT PRICE
+   23| OP=OP ← OP=OP
+   24| Cakeplakken
+   25| Red Velvet of
+   26| Kaneel
+   27| Pak 3 plakken
+   28| 2 STUKS ← UNIT INFO
+   29| Alle soorten ← UNIT INFO
+   30| 5.50 ← EXPLICIT PRICE
+   31| 99
+   32| 0.
+   33| 2 STUKS ← UNIT INFO
+   34| 5.70 - 6.38 ← PRICE RANGE
+   35| Verse Koeken
+   36| 99
+   37| 3.
+   38| 1.98 ← EXPLICIT PRICE
+   39| Börek Sticks
+   40| Kip Sweet Chili of
+   41| Spinazie Feta.
+   42| Dagelijks vers
+   43| gebakken in de
+   44| winkel
+   45| 1.50 ← EXPLICIT PRICE
+
+============================================================
+PAGE 17 (28 lines)
+============================================================
+    0| Vers van de warme bakker
+    1| Door onze eigen bakkers
+    2| zeer heet gebakken,
+    3| wat zorgt voor een
+    4| knapperige korst.
+    5| PER STUK ← UNIT INFO
+    6| 2.19 ← EXPLICIT PRICE
+    7| Molenaersbrood
+    8| Heel. Kies uit de volgende soorten:
+    9| • Tarwe Maïs
+   10| • Drents Bruin
+   11| • Pompoen
+   12| • Donker Meergranen
+   13| 99
+   14| 1.
+   15| Meer halen minder betalen
+   16| 2 ZAKKEN
+   17| 1.98 - 2.78 ← PRICE RANGE
+   18| Verse Zachte Bollen
+   19| • Hotelkadetten Bruin
+   20| • Hotelkadetten Wit
+   21| • Hotelkadetten Fijn Volkoren
+   22| • Volkoren Meergranenbollen
+   23| • Sesambollen Wit
+   24| • Witte puntjes
+   25| Zak 6 stuks
+   26| 50
+   27| 1.
+
+============================================================
+PAGE 18 (57 lines)
+============================================================
+    0| Verse kazen & vleeswaren
+    1| 100 GRAM ← UNIT INFO
+    2| Versgesneden
+    3| Gegrilde
+    4| Yorkham of
+    5| Kipfilet
+    6| Gerookt
+    7| Per 100 gram ← UNIT INFO
+    8| 100 GRAM ← UNIT INFO
+    9| 2.69 - 2.79 ← PRICE RANGE
+   10| 99
+   11| 1.
+   12| 2.25 ← EXPLICIT PRICE
+   13| 49
+   14| 1.
+   15| Gesneden
+   16| Wijncervelaat
+   17| Per 100 gram ← UNIT INFO
+   18| %NG
+   19| 56
+   20| T
+   21| R I
+   22| KO
+   23| 450 GRAM ← UNIT INFO
+   24| PER ZAK ← UNIT INFO
+   25| OP=OP ← OP=OP
+   26| Melkan
+   27| Parmigiano
+   28| Reggiano
+   29| Flakes
+   30| Zak 125 gram
+   31| 10.34 - 10.70 ← PRICE RANGE
+   32| 3.39 ← EXPLICIT PRICE
+   33| 49
+   34| 1.
+   35| Noordwoudse
+   36| Kaas Stuk 48+
+   37| Oud of Oud Klassiek.
+   38| Per 450 gram ← UNIT INFO
+   39| PER STUK ← UNIT INFO
+   40| PER PAK ← UNIT INFO
+   41| 2.75 - 2.99 ← PRICE RANGE
+   42| Vergeer
+   43| Geraspte
+   44| Kaas
+   45| Alle soorten ← UNIT INFO
+   46| 150-200 gram
+   47| 1.69 ← EXPLICIT PRICE
+   48| 99
+   49| 5.
+   50| 2.39 - 2.79 ← PRICE RANGE
+   51| Arla Danablu
+   52| Pak 125 gram
+   53| of Castello
+   54| Blue
+   55| Pak 150 gram
+   56| 1.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 19 (26 lines)
+============================================================
+    0| Verse vleeswaren
+    1| ALITEIT
+    2| R
+    3| EX
+    4| C
+    5| W
+    6| K
+    7| LU
+    8| A
+    9| TO
+   10| P
+   11| Ambachtelijk bereid door
+   12| onze slagers uit Alkmaar.
+   13| Unieke recepturen voor
+   14| een altijd lage prijs.
+   15| SIEF
+   16| BIJ V
+   17| OM
+   18| 100 GRAM ← UNIT INFO
+   19| 1.69 - 1.79 ← PRICE RANGE
+   20| Grillworst
+   21| Naturel, Kip of met
+   22| Noordwoudse Kaas
+   23| Stuk circa 200 gram
+   24| 39
+   25| 1.
+
+============================================================
+PAGE 20 (188 lines)
+============================================================
+    0| G
+    1| A
+    2| DDaAlleGrs!
+    3| n
+    4| !
+    5| s
+    6| r
+    7| e
+    8| l
+    9| l
+   10| k kna
+   11| aste
+   12| V
+   13| NDkAnGalprijs!
+   14| A
+   15| A
+   16| Vaste dagacties ← ACTIE
+   17| M
+   18| n
+   19| ZAK 12 STUKS
+   20| js!s voorkenealler!
+   21| ctriie
+   22| alp
+   23| na
+   24| Vvaosotreeednakg
+   25| 1.49 ← EXPLICIT PRICE
+   26| Alle scherpe dagacties komen ← ACTIE
+   27| elke week op dezelfde dag weer terug.
+   28| Dat is nog eens voordeel pakken!
+   29| Alle scherpe dagacties ← ACTIE
+   30| komen elke week op
+   31| Vaste dag weer Vergeer
+   32| dezelfde
+   33| terug.
+   34| Kaas
+   35| G
+   36| A
+   37| D
+   38| S
+   39| N
+   40| I
+   41| Dat
+   42| voordeel
+   43| D is nogreens
+   44| !
+   45| l
+   46| e
+   47| l
+   48| a
+   49| VOORDEELSTUK
+   50| n
+   51| k
+   52| pakken!
+   53| OP=OP ← OP=OP
+   54| Jong, Jong Belegen,
+   55| Belegen of Extra Belegen.
+   56| Stuk 670-900 gram
+   57| 8.69 - 9.99 ← PRICE RANGE
+   58| Vaste
+   59| G
+   60| INaSsD
+   61| DV
+   62| teAr!
+   63| l le
+   64| DkOnNaDERDrA!G
+   65| k n a l le
+   66| Vassttee
+   67| DZOVANaTDEERRDDArA!GG
+   68| k n a l le
+   69| er!
+   70| k n a l le
+   71| Ni
+   72| eu
+   73| w!
+   74| Vaste
+   75| G
+   76| ZATERDA
+   77| k n a l le r !
+   78| OP=OP ← OP=OP
+   79| Verse Witte
+   80| of Volkoren
+   81| Hotelkadetten
+   82| Vaste
+   83| G
+   84| MAANDeA
+   85| kansatlel r!
+   86| V
+   87| WOENSeDrA!G
+   88| ll
+   89| knall
+   90| 6t ← CODED PRICE: €6.99
+   91| Vaste
+   92| WVOaEsNtSeDrA!G
+   93| leAG
+   94| kRnIaJlD
+   95| VOORDEELSTUK
+   96| V
+   97| PER KILO knaller! ← UNIT INFO
+   98| 0t ← CODED PRICE: €0.99
+   99| OP=OP ← OP=OP
+  100| Verse Witte
+  101| of Volkoren
+  102| Hotelkadetten
+  103| ZAK 12 STUKS
+  104| OP=OP ← OP=OP
+  105| 1.49 ← EXPLICIT PRICE
+  106| Scharreleieren
+  107| 0t ← CODED PRICE: €0.99
+  108| 3t ← CODED PRICE: €3.99
+  109| Maat S/M
+  110| TRAY 20 STUKS
+  111| 4.99 ← EXPLICIT PRICE
+  112| Max. 4 trays per klant
+  113| OP=OP ← OP=OP
+  114| Vergeer Kaas
+  115| Jong, Jong Belegen,
+  116| Belegen of Extra Belegen.
+  117| Stuk 670-900 gram
+  118| OP=OP ← OP=OP
+  119| Bananen
+  120| 8.69 - 9.99 ← PRICE RANGE
+  121| 6t ← CODED PRICE: €6.99
+  122| 0t ← CODED PRICE: €0.99
+  123| Ni
+  124| eu
+  125| w!
+  126| Vassttee
+  127| DAGG
+  128| IJD
+  129| RaN
+  130| VVO
+  131| A
+  132| PER KILO Zknallerr!! ← UNIT INFO
+  133| 1 KILO ← UNIT INFO
+  134| k n a l le
+  135| OP=OP ← OP=OP
+  136| OP=OP ← OP=OP
+  137| Bananen
+  138| Melkan Yoghurt
+  139| Griekse Stijl 10% ← percentage
+  140| Emmer 1 kilo
+  141| 0t ← CODED PRICE: €0.99
+  142| 1j ← CODED PRICE: €1.49
+  143| 2.29 ← EXPLICIT PRICE
+  144| OP=OP ← OP=OP
+  145| Melkan Yoghurt
+  146| Griekse Stijl 10% ← percentage
+  147| Emmer 1 kilo
+  148| 1 KILO ← UNIT INFO
+  149| 1j ← CODED PRICE: €1.49
+  150| OP=OP ← OP=OP
+  151| Scharreleieren
+  152| Maat S/M
+  153| OP=OP ← OP=OP
+  154| 20
+  155| Echte Boter
+  156| TRAY
+  157| STUKS
+  158| Roomboter
+  159| Ongezouten. Rol 500 gram
+  160| 500 GRAM ← UNIT INFO
+  161| 3t ← CODED PRICE: €3.99
+  162| 3j ← CODED PRICE: €3.49
+  163| 5.99 ← EXPLICIT PRICE
+  164| Max. 4 trays per klant
+  165| Max. 6 stuks per klant
+  166| OP=OP ← OP=OP
+  167| Echte Boter
+  168| Roomboter
+  169| Ongezouten. Rol 500 gram
+  170| Versgebakken
+  171| Roomboter
+  172| Croissants
+  173| OP=OP ← OP=OP
+  174| 500 GRAM ← UNIT INFO
+  175| 4 STUKS ← UNIT INFO
+  176| 3j ← CODED PRICE: €3.49
+  177| 1a ← CODED PRICE: €1.00
+  178| Max. 6 stuks per klant
+  179| Vaste
+  180| ZONDArG
+  181| k n a l le !
+  182| OP=OP ← OP=OP
+  183| Versgebakken
+  184| Roomboter
+  185| Croissants
+  186| 4 STUKS ← UNIT INFO
+  187| 1a ← CODED PRICE: €1.00
+
+============================================================
+PAGE 21 (341 lines)
+============================================================
+    0| Vomar
+    1| is tot we
+    2| l
+    3| Bij Vomar...
+    4| 21% ← percentage
+    5| ... krijg je voor
+    6| hetzelfde geld
+    7| een vollere
+    8| boodschappentas
+    9| goedkop
+   10| er
+   11| ALBERT
+   12| HEIJN
+   13| JUMBO
+   14| 23-2-2026
+   15| EUR
+   16| 23-2-2026
+   17| EUR
+   18| 23-2-2026
+   19| EUR
+   20| 23-2-2026
+   21| LU TUC MINIBITES 100 GRAM
+   22| 1,59 ← EXPLICIT PRICE
+   23| LU TUC MINIBITES 100 GRAM
+   24| 1,75 ← EXPLICIT PRICE
+   25| LU TUC MINIBITES 100 GRAM
+   26| 1,75 ← EXPLICIT PRICE
+   27| LU TUC MINIBITES 100 GRAM
+   28| 1,75 ← EXPLICIT PRICE
+   29| DR. OETKER RISTORANTE PIZZA POLLO 355 GRAM
+   30| 2,85 ← EXPLICIT PRICE
+   31| DR. OETKER RISTORANTE PIZZA POLLO 355 GRAM
+   32| 3,59 ← EXPLICIT PRICE
+   33| DR. OETKER RISTORANTE PIZZA POLLO 355 GRAM
+   34| 3,59 ← EXPLICIT PRICE
+   35| DR. OETKER RISTORANTE PIZZA POLLO 355 GRAM
+   36| 3,59 ← EXPLICIT PRICE
+   37| EUR
+   38| HAK SPLITERWTEN GEDROOGD 500 GRAM
+   39| 1,99 ← EXPLICIT PRICE
+   40| HAK SPLITERWTEN GEDROOGD 500 GRAM
+   41| 2,39 ← EXPLICIT PRICE
+   42| HAK SPLITERWTEN GEDROOGD 500 GRAM
+   43| 2,39 ← EXPLICIT PRICE
+   44| HAK SPLITERWTEN GEDROOGD 500 GRAM
+   45| 2,39 ← EXPLICIT PRICE
+   46| PAGE VOCHTIG NAVUL SENSITIVE 36 STUKS
+   47| 1,99 ← EXPLICIT PRICE
+   48| PAGE VOCHTIG NAVUL SENSITIVE 36 STUKS
+   49| 2,19 ← EXPLICIT PRICE
+   50| PAGE VOCHTIG NAVUL SENSITIVE 36 STUKS
+   51| 2,19 ← EXPLICIT PRICE
+   52| PAGE VOCHTIG NAVUL SENSITIVE 36 STUKS
+   53| 2,19 ← EXPLICIT PRICE
+   54| LAY'S PAPRIKA CHIPS 300 GRAM
+   55| 2,29 ← EXPLICIT PRICE
+   56| LAY'S PAPRIKA CHIPS 300 GRAM
+   57| 2,55 ← EXPLICIT PRICE
+   58| LAY'S PAPRIKA CHIPS 300 GRAM
+   59| 2,55 ← EXPLICIT PRICE
+   60| LAY'S PAPRIKA CHIPS 300 GRAM
+   61| 2,55 ← EXPLICIT PRICE
+   62| CALVÉ MAYONAISE VOLVET 430 ML
+   63| 2,99 ← EXPLICIT PRICE
+   64| CALVÉ MAYONAISE VOLVET 430 ML
+   65| 3,29 ← EXPLICIT PRICE
+   66| CALVÉ MAYONAISE VOLVET 430 ML
+   67| 3,29 ← EXPLICIT PRICE
+   68| CALVÉ MAYONAISE VOLVET 430 ML
+   69| 3,29 ← EXPLICIT PRICE
+   70| CIF CREAM CITRUS 750 ML
+   71| 2,49 ← EXPLICIT PRICE
+   72| CIF CREAM CITRUS 750 ML
+   73| 2,89 ← EXPLICIT PRICE
+   74| CIF CREAM CITRUS 750 ML
+   75| 2,89 ← EXPLICIT PRICE
+   76| CIF CREAM CITRUS 750 ML
+   77| 2,89 ← EXPLICIT PRICE
+   78| LU BASTOGNEKOEK 260 GRAM
+   79| 1,95 ← EXPLICIT PRICE
+   80| LU BASTOGNEKOEK 260 GRAM
+   81| 2,19 ← EXPLICIT PRICE
+   82| LU BASTOGNEKOEK 260 GRAM
+   83| 2,19 ← EXPLICIT PRICE
+   84| LU BASTOGNEKOEK 260 GRAM
+   85| 2,29 ← EXPLICIT PRICE
+   86| HARIBO HAPPY PEACHES 250 GRAM
+   87| 1,68 ← EXPLICIT PRICE
+   88| HARIBO HAPPY PEACHES 250 GRAM
+   89| 1,95 ← EXPLICIT PRICE
+   90| HARIBO HAPPY PEACHES 250 GRAM
+   91| GESCHRAPTE WORTELTJES 500 GRAM
+   92| 1,95 ← EXPLICIT PRICE
+   93| HARIBO HAPPY PEACHES 250 GRAM
+   94| 1,79 ← EXPLICIT PRICE
+   95| GESCHRAPTE WORTELTJES 500 GRAM
+   96| 1,49 ← EXPLICIT PRICE
+   97| 3,29 ← EXPLICIT PRICE
+   98| RAAK VRUCHTENSIROOP AARDBEI 750 ML
+   99| 3,39 ← EXPLICIT PRICE
+  100| GESCHRAPTE WORTELTJES 500 GRAM
+  101| 1,19 ← EXPLICIT PRICE
+  102| GESCHRAPTE WORTELTJES 500 GRAM
+  103| 1,79 ← EXPLICIT PRICE
+  104| RAAK VRUCHTENSIROOP AARDBEI 750 ML
+  105| 2,75 ← EXPLICIT PRICE
+  106| RAAK VRUCHTENSIROOP AARDBEI 750 ML
+  107| 3,39 ← EXPLICIT PRICE
+  108| RAAK VRUCHTENSIROOP AARDBEI 750 ML
+  109| 2,89 ← EXPLICIT PRICE
+  110| SNELLE JELLE ROZIJNKOEK 325 GRAM
+  111| 2,89 ← EXPLICIT PRICE
+  112| SNELLE JELLE ROZIJNKOEK 325 GRAM
+  113| BIO+ BIOLOGISCHE EIEREN S-M-L 6 STUKS
+  114| 2,59 ← EXPLICIT PRICE
+  115| 2,15 ← EXPLICIT PRICE
+  116| SNELLE JELLE ROZIJNKOEK 325 GRAM
+  117| BIO EIEREN S-M-L 6 STUKS
+  118| 2,79 ← EXPLICIT PRICE
+  119| AH BIOLOGISCHE EIEREN S-M-L 6 STUKS
+  120| 2,79 ← EXPLICIT PRICE
+  121| SNELLE JELLE ROZIJNKOEK 325 GRAM
+  122| JUMBO BIOLOGISCHE EIEREN S-M-L 6 STUKS
+  123| 1,95 ← EXPLICIT PRICE
+  124| 2,89 ← EXPLICIT PRICE
+  125| 2,79 ← EXPLICIT PRICE
+  126| MELKAN JONG BELEGEN KAAS 48+ PLAKKEN 400 GRAM
+  127| 3,79 ← EXPLICIT PRICE
+  128| PICNIC JONG BELEGEN KAAS 48+ PLAKKEN 400 GRAM
+  129| 5,89 ← EXPLICIT PRICE
+  130| AH JONG BELEGEN KAAS 48+ PLAKKEN 400 GRAM
+  131| 5,89 ← EXPLICIT PRICE
+  132| JUMBO JONG BELEGEN KAAS 48+ PLAKKEN 400 GRAM
+  133| 5,79 ← EXPLICIT PRICE
+  134| MELKAN GERASPTE OUDE KAAS 48+ 175 GRAM
+  135| 2,49 ← EXPLICIT PRICE
+  136| PICNIC GERASPTE OUDE KAAS 48+ 175 GRAM
+  137| 4,29 ← EXPLICIT PRICE
+  138| AH GERASPTE OUDE KAAS 48+ 175 GRAM
+  139| 4,29 ← EXPLICIT PRICE
+  140| JUMBO GERASPTE OUDE KAAS 48+ 175 GRAM
+  141| 4,29 ← EXPLICIT PRICE
+  142| DUYVIS BORRELNOOTJES PROVENÇALE 275 GRAM
+  143| 2,19 ← EXPLICIT PRICE
+  144| DUYVIS BORRELNOOTJES PROVENÇALE 275 GRAM
+  145| 2,99 ← EXPLICIT PRICE
+  146| DUYVIS BORRELNOOTJES PROVENÇALE 275 GRAM
+  147| 2,99 ← EXPLICIT PRICE
+  148| DUYVIS BORRELNOOTJES PROVENÇALE 275 GRAM
+  149| 2,99 ← EXPLICIT PRICE
+  150| SORE BABY MAISFINGERS NATUREL 35 GRAM
+  151| 1,45 ← EXPLICIT PRICE
+  152| SORE BABY MAISFINGERS NATUREL 35 GRAM
+  153| 1,89 ← EXPLICIT PRICE
+  154| SORE BABY MAISFINGERS NATUREL 35 GRAM
+  155| 1,89 ← EXPLICIT PRICE
+  156| SORE BABY MAISFINGERS NATUREL 35 GRAM
+  157| 1,89 ← EXPLICIT PRICE
+  158| IGLO SPINAZIE À LA CREME 500 GRAM
+  159| 1,33 ← EXPLICIT PRICE
+  160| IGLO SPINAZIE À LA CREME 500 GRAM
+  161| 1,79 ← EXPLICIT PRICE
+  162| IGLO SPINAZIE À LA CREME 500 GRAM
+  163| 1,79 ← EXPLICIT PRICE
+  164| IGLO SPINAZIE À LA CREME 500 GRAM
+  165| 1,89 ← EXPLICIT PRICE
+  166| SMARTIES MINI'S UITDEELZAK 259 GRAM
+  167| 2,49 ← EXPLICIT PRICE
+  168| SMARTIES MINI'S UITDEELZAK 259 GRAM
+  169| 3,39 ← EXPLICIT PRICE
+  170| SMARTIES MINI'S UITDEELZAK 259 GRAM
+  171| 3,39 ← EXPLICIT PRICE
+  172| SMARTIES MINI'S UITDEELZAK 259 GRAM
+  173| 3,39 ← EXPLICIT PRICE
+  174| NIVEA DOUCHECRÈME SOFT 250 ML
+  175| 4,69 ← EXPLICIT PRICE
+  176| JOHMA SURIMI-KRABSALADE 175 GRAM
+  177| NIVEA DOUCHECRÈME SOFT 250 ML
+  178| 4,99 ← EXPLICIT PRICE
+  179| NIVEA DOUCHECRÈME SOFT 250 ML
+  180| 4,99 ← EXPLICIT PRICE
+  181| 3,35 ← EXPLICIT PRICE
+  182| JOHMA SURIMI-KRABSALADE 175 GRAM
+  183| 3,29 ← EXPLICIT PRICE
+  184| JOHMA SURIMI-KRABSALADE 175 GRAM
+  185| 3,35 ← EXPLICIT PRICE
+  186| DANONE HÜTTENKASE 200 GRAM
+  187| 1,79 ← EXPLICIT PRICE
+  188| DANONE HÜTTENKASE 200 GRAM
+  189| 1,99 ← EXPLICIT PRICE
+  190| DANONE HÜTTENKASE 200 GRAM
+  191| 1,99 ← EXPLICIT PRICE
+  192| DANONE HÜTTENKASE 200 GRAM
+  193| 1,99 ← EXPLICIT PRICE
+  194| UNOX CUP-A-SOUP CHINESE TOMAAT 3 X 17 GRAM
+  195| 1,49 ← EXPLICIT PRICE
+  196| UNOX CUP-A-SOUP CHINESE TOMAAT 3 X 17 GRAM
+  197| 1,99 ← EXPLICIT PRICE
+  198| UNOX CUP-A-SOUP CHINESE TOMAAT 3 X 17 GRAM
+  199| 1,99 ← EXPLICIT PRICE
+  200| UNOX CUP-A-SOUP CHINESE TOMAAT 3 X 17 GRAM
+  201| FRIESCHE VLAG COMPLETA POT 200 GRAM
+  202| 1,68 ← EXPLICIT PRICE
+  203| FRIESCHE VLAG COMPLETA POT 200 GRAM
+  204| 1,85 ← EXPLICIT PRICE
+  205| FRIESCHE VLAG COMPLETA POT 200 GRAM
+  206| 1,85 ← EXPLICIT PRICE
+  207| FRIESCHE VLAG COMPLETA POT 200 GRAM
+  208| 1,85 ← EXPLICIT PRICE
+  209| VERKADE NIZZA KOKOS 240 GRAM
+  210| 1,73 ← EXPLICIT PRICE
+  211| VERKADE NIZZA KOKOS 240 GRAM
+  212| 1,99 ← EXPLICIT PRICE
+  213| VERKADE NIZZA KOKOS 240 GRAM
+  214| 1,99 ← EXPLICIT PRICE
+  215| VERKADE NIZZA KOKOS 240 GRAM
+  216| 1,99 ← EXPLICIT PRICE
+  217| NIVEA DOUCHECRÈME SOFT 250 ML
+  218| 2,95 ← EXPLICIT PRICE
+  219| JOHMA SURIMI-KRABSALADE 175 GRAM
+  220| 2,99 ← EXPLICIT PRICE
+  221| FRIESCHE VLAG HALVAMEL PAK 455 ML
+  222| 1,58 ← EXPLICIT PRICE
+  223| FRIESCHE VLAG HALVAMEL PAK 455 ML
+  224| 1,85 ← EXPLICIT PRICE
+  225| FRIESCHE VLAG HALVAMEL PAK 455 ML
+  226| 1,85 ← EXPLICIT PRICE
+  227| 2,15 ← EXPLICIT PRICE
+  228| FRIESCHE VLAG HALVAMEL PAK 455 ML
+  229| 1,85 ← EXPLICIT PRICE
+  230| CHOCOMEL VOL PAK 1 LITER
+  231| 2,69 ← EXPLICIT PRICE
+  232| CHOCOMEL VOL PAK 1 LITER
+  233| 2,69 ← EXPLICIT PRICE
+  234| CHOCOMEL VOL PAK 1 LITER
+  235| 2,69 ← EXPLICIT PRICE
+  236| G'WOON PADS DARK ROAST 36 STUKS
+  237| 3,25 ← EXPLICIT PRICE
+  238| PICNIC PADS DARK ROAST 36 STUKS
+  239| 4,99 ← EXPLICIT PRICE
+  240| PERLA KOFFIEPADS DARK ROAST 36 STUKS
+  241| 5,99 ← EXPLICIT PRICE
+  242| JUMBO'S KOFFIEPADS DARK ROAST 36 STUKS
+  243| 5,79 ← EXPLICIT PRICE
+  244| O.B. PROCOMFORT TAMPONS NORMAAL 16 STUKS
+  245| 2,49 ← EXPLICIT PRICE
+  246| O.B. PROCOMFORT TAMPONS NORMAAL 16 STUKS
+  247| 2,79 ← EXPLICIT PRICE
+  248| O.B. PROCOMFORT TAMPONS NORMAAL 16 STUKS
+  249| 2,79 ← EXPLICIT PRICE
+  250| O.B. PROCOMFORT TAMPONS NORMAAL 16 STUKS
+  251| 2,79 ← EXPLICIT PRICE
+  252| CHOCOMEL VOL PAK 1 LITER
+  253| 2,45 ← EXPLICIT PRICE
+  254| CASTELLO DANABLU 125 GRAM
+  255| 2,39 ← EXPLICIT PRICE
+  256| UNOX HELDERE GROENTESOEP IN ZAK 570 ML
+  257| 3,29 ← EXPLICIT PRICE
+  258| UNOX HELDERE GROENTESOEP IN ZAK 570 ML
+  259| 4,19 ← EXPLICIT PRICE
+  260| UNOX HELDERE GROENTESOEP IN ZAK 570 ML
+  261| 4,19 ← EXPLICIT PRICE
+  262| UNOX HELDERE GROENTESOEP IN ZAK 570 ML
+  263| 4,19 ← EXPLICIT PRICE
+  264| ALPRO VARIATIE OP YOGHURT NATUREL 500 GRAM
+  265| 2,15 ← EXPLICIT PRICE
+  266| ALPRO VARIATIE OP YOGHURT NATUREL 500 GRAM
+  267| 2,39 ← EXPLICIT PRICE
+  268| ALPRO VARIATIE OP YOGHURT NATUREL 500 GRAM
+  269| 2,39 ← EXPLICIT PRICE
+  270| ALPRO VARIATIE OP YOGHURT NATUREL 500 GRAM
+  271| 2,49 ← EXPLICIT PRICE
+  272| PAPRIKA ROOD
+  273| 0,99 ← EXPLICIT PRICE
+  274| PAPRIKA ROOD
+  275| 1,19 ← EXPLICIT PRICE
+  276| AH PAPRIKA ROOD
+  277| 1,09 ← EXPLICIT PRICE
+  278| JUMBO PAPRIKA ROOD
+  279| 1,19 ← EXPLICIT PRICE
+  280| MELKAN ONGEZOUTEN ROOMBOTER 250 GRAM
+  281| 2,95 ← EXPLICIT PRICE
+  282| AH ONGEZOUTEN ROOMBOTER 250 GRAM
+  283| 2,95 ← EXPLICIT PRICE
+  284| JUMBO ONGEZOUTEN ROOMBOTER 250 GRAM
+  285| 2,95 ← EXPLICIT PRICE
+  286| CASTELLO DANABLU 125 GRAM
+  287| 2,75 ← EXPLICIT PRICE
+  288| CASTELLO DANABLU 125 GRAM
+  289| 2,75 ← EXPLICIT PRICE
+  290| CASTELLO DANABLU 125 GRAM
+  291| 2,75 ← EXPLICIT PRICE
+  292| 2,29 ← EXPLICIT PRICE
+  293| PICNIC ONGEZOUTEN ROOMBOTER 250 GRAM
+  294| DANOONTJE KINDER FRUITKWARK 6 X 50 GRAM
+  295| 1,45 ← EXPLICIT PRICE
+  296| DANOONTJE KINDER FRUITKWARK 6 X 50 GRAM
+  297| 1,59 ← EXPLICIT PRICE
+  298| DANOONTJE KINDER FRUITKWARK 6 X 50 GRAM
+  299| 1,59 ← EXPLICIT PRICE
+  300| DANOONTJE KINDER FRUITKWARK 6 X 50 GRAM
+  301| 1,69 ← EXPLICIT PRICE
+  302| HEBRO SATÉ AJAM 4 STOKJES 172 GRAM
+  303| 1,99 ← EXPLICIT PRICE
+  304| HEBRO SATÉ AJAM 4 STOKJES 172 GRAM
+  305| 2,39 ← EXPLICIT PRICE
+  306| HEBRO SATÉ AJAM 4 STOKJES 172 GRAM
+  307| 2,39 ← EXPLICIT PRICE
+  308| HEBRO SATÉ AJAM 4 STOKJES 172 GRAM
+  309| 2,39 ← EXPLICIT PRICE
+  310| TOTAAL
+  311| 79.19 ← EXPLICIT PRICE
+  312| VOMA
+  313| R
+  314| IS TOT
+  315| WEL
+  316| 20% ← percentage
+  317| GOED
+  318| KOPER
+  319| TOTAAL
+  320| 99.52 ← EXPLICIT PRICE
+  321| VOMA
+  322| R
+  323| IS TOT
+  324| WEL
+  325| 21% ← percentage
+  326| GOED
+  327| KOPER
+  328| TOTAAL
+  329| 100.56 ← EXPLICIT PRICE
+  330| VOMA
+  331| R
+  332| IS TOT
+  333| WEL
+  334| 21% ← percentage
+  335| GOED
+  336| KOPER
+  337| TOTAAL
+  338| 100.78 ← EXPLICIT PRICE
+  339| Prijzen zijn online geverifieerd bij Vomar, Picnic, Albert Heijn en Jumbo op maandag 23 februari 2026.
+  340| Alle prijzen zijn o.b.v. reguliere verkoopprijzen en exclusief statiegeld. ← UNIT INFO
+
+============================================================
+PAGE 22 (47 lines)
+============================================================
+    0| PER ZAK ← UNIT INFO
+    1| PER ZAK ← UNIT INFO
+    2| 5.49 - 5.99 ← PRICE RANGE
+    3| DIEPVRIES
+    4| Puuur Visch
+    5| Alle soorten zakken ← UNIT INFO
+    6| 400-500 gram.
+    7| 4.49 ← EXPLICIT PRICE
+    8| 2.25 - 2.75 ← PRICE RANGE
+    9| DIEPVRIES
+   10| Aviko Super
+   11| Crunch!
+   12| Alle soorten ← UNIT INFO
+   13| 750 gram ← UNIT INFO
+   14| 4 STUKS ← UNIT INFO
+   15| 3.88 - 3.96 ← PRICE RANGE
+   16| Daily Chef
+   17| Bapao
+   18| Alle soorten ← UNIT INFO
+   19| 115 gram ← UNIT INFO
+   20| 3.-
+   21| PER STUK ← UNIT INFO
+   22| DIEPVRIES
+   23| Iglo Roerbak
+   24| Sensatie of
+   25| Ping & Klaar
+   26| Alle soorten ← UNIT INFO
+   27| 390-450 gram
+   28| 2 STUKS ← UNIT INFO
+   29| Pak 1 liter
+   30| 4.M.u.v. Fruitdrink en
+   31| Fruitontbijt
+   32| 5.35 - 5.49 ← PRICE RANGE
+   33| 3.99 ← EXPLICIT PRICE
+   34| PER STUK ← UNIT INFO
+   35| 6.38 - 7.30 ← PRICE RANGE
+   36| Coolbest
+   37| 100% Juice ← percentage
+   38| 1.99 ← EXPLICIT PRICE
+   39| 4.49 ← EXPLICIT PRICE
+   40| Daily Chef
+   41| Oosterse
+   42| Maaltijd
+   43| Alle soorten ← UNIT INFO
+   44| 450 gram ← UNIT INFO
+   45| 99
+   46| 3.
+
+============================================================
+PAGE 23 (55 lines)
+============================================================
+    0| %NG
+    1| 58
+    2| T
+    3| R I
+    4| KO
+    5| 3 STUKS ← UNIT INFO
+    6| PER STUK ← UNIT INFO
+    7| 5.97 - 7.77 ← PRICE RANGE
+    8| Borrelhapjes,
+    9| Spreads of
+   10| Tapenades
+   11| Alle soorten ← UNIT INFO
+   12| Lindahls
+   13| Protein Kvarg
+   14| of Protein
+   15| Snack
+   16| Alle soorten 40450 gram. Per stuk ← UNIT INFO
+   17| van 1.15 tot 2.69
+   18| Prijsvoorbeeld:
+   19| Protein Snack
+   20| 5.-
+   21| 2.15 ← EXPLICIT PRICE
+   22| OP=OP ← OP=OP
+   23| Arla Skyr
+   24| Bosfruit 0% ← percentage
+   25| Beker 450 gram
+   26| 1
+   27| +
+   28| 1
+   29| GRATIS ← GRATIS
+   30| PER PAK ← UNIT INFO
+   31| 1.65 - 1.89 ← PRICE RANGE
+   32| 2.30 ← EXPLICIT PRICE
+   33| 1.15 ← EXPLICIT PRICE
+   34| Campina
+   35| Yoghurt
+   36| Alle soorten ← UNIT INFO
+   37| pakken 1 liter
+   38| PER STUK ← UNIT INFO
+   39| Alle soorten ← UNIT INFO
+   40| 450 gram ← UNIT INFO
+   41| 99
+   42| 1.
+   43| 1.49 ← EXPLICIT PRICE
+   44| M.u.v. biologisch
+   45| PER STUK ← UNIT INFO
+   46| 2.29 - 2.35 ← PRICE RANGE
+   47| 2.85 ← EXPLICIT PRICE
+   48| Danio Kwark
+   49| 89
+   50| 0.
+   51| Mona Pudding
+   52| Alle soorten 450 ml ← UNIT INFO
+   53| 49
+   54| 1.
+
+============================================================
+PAGE 24 (58 lines)
+============================================================
+    0| R
+    1| ALITEIT
+    2| LU
+    3| A
+    4| TO
+    5| P
+    6| EX
+    7| C
+    8| W
+    9| K
+   10| SIEF
+   11| BIJ V
+   12| OM
+   13| 100 GRAM ← UNIT INFO
+   14| 1.39 ← EXPLICIT PRICE
+   15| Koffiebroodje
+   16| of Chocoladecroissant
+   17| Dagelijks vers
+   18| gebakken in
+   19| de winkel
+   20| Vifit
+   21| Alle soorten ← UNIT INFO
+   22| 400-500 ml
+   23| of Chocomel
+   24| Protein
+   25| Fles 300 ml
+   26| 2
+   27| STUKS
+   28| Versgesneden
+   29| Ketelworst
+   30| Per 100 gram ← UNIT INFO
+   31| 1AN
+   32| 1.18 - 1.58 ← PRICE RANGE
+   33| 1AN
+   34| PER STUK ← UNIT INFO
+   35| 1.45 - 1.79 ← PRICE RANGE
+   36| 1AN
+   37| PER PAK ← UNIT INFO
+   38| 1.69 - 1.8
+   39| Taksi
+   40| Alle soorten pakken ← UNIT INFO
+   41| 1,5 liter
+   42| G'woon
+   43| Aardappelschijfjes
+   44| Zak 600 gram
+   45| 1.14 ← EXPLICIT PRICE
+   46| 1AN
+   47| 1AN
+   48| 2 STUKS ← UNIT INFO
+   49| PER ZAK ← UNIT INFO
+   50| DIEPVRIES
+   51| 9
+   52| 1.38 - 1.6
+   53| Gourmet Gold
+   54| Kattenvoeding
+   55| Alle soorten 85 gram ← UNIT INFO
+   56| 8
+   57| 1AN
+
+============================================================
+PAGE 25 (54 lines)
+============================================================
+    0| %NG
+    1| 74
+    2| T
+    3| R I
+    4| KO
+    5| PER STUK ← UNIT INFO
+    6| PER FLES ← UNIT INFO
+    7| OP=OP ← OP=OP
+    8| Calvé
+    9| Belgische
+   10| Mayonaise
+   11| Fles 430 ml
+   12| G'woon
+   13| Maïswafels
+   14| Zeezout of
+   15| Paprika
+   16| 4-pack à 3 of 5 stuks
+   17| 1.49 - 1.75 ← PRICE RANGE
+   18| 3.85 ← EXPLICIT PRICE
+   19| 1AN
+   20| Maggi Oven
+   21| of Hollands
+   22| Pannetje
+   23| Alle soorten ← UNIT INFO
+   24| 4-PACK
+   25| PER POT ← UNIT INFO
+   26| 4
+   27| 1. 20 - 1. 2
+   28| 1AN
+   29| 1AN
+   30| 1.59 ← EXPLICIT PRICE
+   31| G'woon
+   32| Aardbeienjam
+   33| Minder Suiker
+   34| Pot 320 gram
+   35| 1AN
+   36| %
+   37| 50
+   38| RTING
+   39| KO
+   40| PER FLES ← UNIT INFO
+   41| PER PAK ← UNIT INFO
+   42| 1.35 - 1.99 ← PRICE RANGE
+   43| Arizona
+   44| of Oasis
+   45| Alle soorten flessen ← UNIT INFO
+   46| 500 ml ← UNIT INFO
+   47| 1AN
+   48| 1.99 ← EXPLICIT PRICE
+   49| OP=OP ← OP=OP
+   50| Oreo Koek
+   51| 176 gram ← UNIT INFO
+   52| 1AN
+   53| 25
+
+============================================================
+PAGE 26 (49 lines)
+============================================================
+    0| 2 PAKKEN ← UNIT INFO
+    1| 2 STUKS ← UNIT INFO
+    2| 3.66 - 3.78 ← PRICE RANGE
+    3| 9.98 ← EXPLICIT PRICE
+    4| Café Nova
+    5| Capsules
+    6| Alle soorten ← UNIT INFO
+    7| pakken 20 stuks
+    8| 6.-
+    9| G'woon
+   10| Bokkenpootjes,
+   11| Aardbeigebak
+   12| of Oranjekoek
+   13| Pak 200-300 gram
+   14| 2 PAKKEN ← UNIT INFO
+   15| PER PAK ← UNIT INFO
+   16| 1.95 - 1.99 ← PRICE RANGE
+   17| Balconi
+   18| Trancetto
+   19| of Rollino
+   20| Alle soorten pakken ← UNIT INFO
+   21| 222-280 gram
+   22| 1j ← CODED PRICE: €1.49
+   23| 3.36 - 4.30 ← PRICE RANGE
+   24| Verkade Koek
+   25| Frou Frou, San
+   26| Francisco, Nizza
+   27| Kokos, Maria of
+   28| Knappertjes.
+   29| Pak 150-261 gram
+   30| Pringles
+   31| Alle soorten ← UNIT INFO
+   32| 165 gram ← UNIT INFO
+   33| 69
+   34| 1.
+   35| 3a ← CODED PRICE: €3.00
+   36| PER STUK ← UNIT INFO
+   37| PER STUK ← UNIT INFO
+   38| 2.25 - 2.45 ← PRICE RANGE
+   39| 3.-
+   40| G'woon
+   41| Chocolade
+   42| Cookie & Cream,
+   43| Peanut & Caramel
+   44| of Double Caramel.
+   45| Reep 200 gram
+   46| 2.25 - 2.29 ← PRICE RANGE
+   47| 89
+   48| 1.
+
+============================================================
+PAGE 27 (45 lines)
+============================================================
+    0| PER PAK ← UNIT INFO
+    1| 1.59 - 1.95 ← PRICE RANGE
+    2| Bolletje
+    3| Knäckebrod
+    4| Sesam of volkoren.
+    5| Pak 240-265 gram
+    6| G'woon Soep
+    7| in Zak
+    8| Alle soorten zakken ← UNIT INFO
+    9| 570 ml ← UNIT INFO
+   10| 0.99 ← EXPLICIT PRICE
+   11| PER POT ← UNIT INFO
+   12| Heinz
+   13| Sanwichspread
+   14| Naturel of Tomaat
+   15| Lente-ui.
+   16| Pot 300 gram
+   17| 2 STUKS ← UNIT INFO
+   18| 1.99 - 2.79 ← PRICE RANGE
+   19| 6.78 - 8.38 ← PRICE RANGE
+   20| 1.69 ← EXPLICIT PRICE
+   21| Bertolli
+   22| Pastasauzen
+   23| Alle soorten ← UNIT INFO
+   24| 460 gram ← UNIT INFO
+   25| 50
+   26| 1.
+   27| 4.50 ← EXPLICIT PRICE
+   28| PER STUK ← UNIT INFO
+   29| 3.15 - 3.49 ← PRICE RANGE
+   30| 2.70 ← EXPLICIT PRICE
+   31| Alle soorten ← UNIT INFO
+   32| zakjes 60 gram
+   33| 1.49 ← EXPLICIT PRICE
+   34| PER ZAK ← UNIT INFO
+   35| 5 STUKS ← UNIT INFO
+   36| Thai Temple
+   37| Noodles
+   38| 1.89 - 2.15 ← PRICE RANGE
+   39| Aardappel
+   40| Anders
+   41| Alle soorten ← UNIT INFO
+   42| 390 gram ← UNIT INFO
+   43| 99
+   44| 1.
+
+============================================================
+PAGE 28 (49 lines)
+============================================================
+    0| !
+    1| NIEUW
+    2| 4 STUKS ← UNIT INFO
+    3| PER PAK ← UNIT INFO
+    4| 6.60 - 6.76 ← PRICE RANGE
+    5| 5.-
+    6| Red Bull
+    7| Blik 250 ml
+    8| M.u.v. gekoeld.
+    9| Max. 24 blikken per klant
+   10| 2.29 - 2.39 ← PRICE RANGE
+   11| Dubbeldrank
+   12| Alle soorten ← UNIT INFO
+   13| pakken 1 liter
+   14| 10 -PACK
+   15| PER PAK ← UNIT INFO
+   16| 1.99 - 2.05 ← PRICE RANGE
+   17| Maaza
+   18| Alle soorten ← UNIT INFO
+   19| pakken 1 liter
+   20| 1.49 ← EXPLICIT PRICE
+   21| 2 STUKS ← UNIT INFO
+   22| 4.18 - 5.30 ← PRICE RANGE
+   23| G'woon
+   24| Notenmelanges of
+   25| Notenmixen
+   26| Zak 150-200 gram
+   27| 4.-
+   28| 1.49 ← EXPLICIT PRICE
+   29| 4.75 ← EXPLICIT PRICE
+   30| Capri-Sun
+   31| Multivitamin
+   32| of Orange
+   33| 10-pack pakje
+   34| à 200 ml
+   35| Chio Popcorn
+   36| Zout of Zoet & Zout.
+   37| Zak 90-150 gram.
+   38| Per zak van 1.79 tot ← UNIT INFO
+   39| 1.99 ← EXPLICIT PRICE
+   40| Prijsvoorbeeld:
+   41| Zoet & Zout
+   42| 2t ← CODED PRICE: €2.99
+   43| 1
+   44| +
+   45| 1
+   46| GRATIS ← GRATIS
+   47| 3.58 ← EXPLICIT PRICE
+   48| 1p ← CODED PRICE: €1.79
+
+============================================================
+PAGE 29 (59 lines)
+============================================================
+    0| ROSÉ
+    1| I Heart Wijn
+    2| Alle soorten ← UNIT INFO
+    3| 750 ML ← UNIT INFO
+    4| 5.89 ← EXPLICIT PRICE
+    5| ROSÉ FRUITIG
+    6| 4.49 ← EXPLICIT PRICE
+    7| Florenbelle
+    8| Wijn
+    9| 3 FLESSEN
+   10| Franse wijn.
+   11| Alle soorten ← UNIT INFO
+   12| 750 ML ← UNIT INFO
+   13| 13.17 ← EXPLICIT PRICE
+   14| 4.99 ← EXPLICIT PRICE
+   15| 3.99 ← EXPLICIT PRICE
+   16| Jopen, Straffe
+   17| Hendrik, Brugse Zot
+   18| of Benediktiner
+   19| Alle soorten fles à 33-50 cl ← UNIT INFO
+   20| of 4-pack blik à 33 cl.
+   21| Per stuk van 1.75 tot 9.99 ← UNIT INFO
+   22| Prijsvoorbeeld:
+   23| Benediktiner Weissbier 0.0% ← percentage
+   24| 25% ← percentage
+   25| KORTING ← KORTING
+   26| 1.75 ← EXPLICIT PRICE
+   27| 1.31 ← EXPLICIT PRICE
+   28| Stoney
+   29| Creek Wijn
+   30| Alle soorten ← UNIT INFO
+   31| 750 ml ← UNIT INFO
+   32| 8.6, Bavaria Strong,
+   33| Leffe Blond, Corona,
+   34| Texels Skuumkoppe
+   35| of Alfa Superstrong
+   36| Blik 50 cl. Per stuk
+   37| van 1.59 tot 2.55
+   38| Prijsvoorbeeld:
+   39| Bavaria Strong Blond
+   40| 6-pack fles à 30-33 cl
+   41| KORTING ← KORTING
+   42| 1.59 ← EXPLICIT PRICE
+   43| 1.19 ← EXPLICIT PRICE
+   44| BIJ 2 KRATTEN
+   45| 4.99 - 5.99 ← PRICE RANGE
+   46| 4.79 ← EXPLICIT PRICE
+   47| 25% ← percentage
+   48| 25% ← percentage
+   49| KORTING ← KORTING
+   50| 6-PACK
+   51| St. Florent of
+   52| Claro Mex
+   53| 10.-
+   54| 16.95 ← EXPLICIT PRICE
+   55| Amstel Pils
+   56| Krat 24 flesjes à 30 cl
+   57| 12.71 ← EXPLICIT PRICE
+   58| Per krat ← UNIT INFO
+
+============================================================
+PAGE 30 (62 lines)
+============================================================
+    0| KE UZ E U
+    1| Tientallen whisky’s, likeuren, jenevers en rum.
+    2| In onze slijterij heb je keuze uit ruim 150 soorten
+    3| sterke drank. Natuurlijk voor een altijd lage prijs.
+    4| IT
+    5| 150
+    6| S O O R TE
+    7| N!
+    8| Harpoon Gin
+    9| Een frisse gin met
+   10| uitgesproken smaak
+   11| van jeneverbes en
+   12| citrus en een zachte,
+   13| kruidige ondertoon.
+   14| 700 ML ← UNIT INFO
+   15| 10.49 ← EXPLICIT PRICE
+   16| 8.99 ← EXPLICIT PRICE
+   17| Café Marakesh
+   18| Likeur
+   19| Waard Fine of
+   20| Lichte Borrel
+   21| Zachte en toegankelijke dranken met een
+   22| milde, licht kruidige
+   23| smaak.
+   24| 1 LITER ← UNIT INFO
+   25| 9.99 ← EXPLICIT PRICE
+   26| 8.99 ← EXPLICIT PRICE
+   27| Pieter Jol
+   28| Jenever of Vieux
+   29| Een rijke koffielikeur
+   30| die smaakt naar
+   31| espresso, pure
+   32| chocolade en zachte
+   33| vanille met een warme
+   34| ondertoon.
+   35| Een karaktervolle
+   36| jenever of vieux met
+   37| een volle, moutige
+   38| smaak en warme tonen.
+   39| 700 ML ← UNIT INFO
+   40| 1 LITER ← UNIT INFO
+   41| 13.29 ← EXPLICIT PRICE
+   42| 10.99 ← EXPLICIT PRICE
+   43| Kentucky
+   44| Highway
+   45| Whiskey
+   46| Volle zachte smaak
+   47| van butterscotch en
+   48| wit fruit. Zoet, rijk
+   49| en warm.
+   50| 700 ML ← UNIT INFO
+   51| 15.99 ← EXPLICIT PRICE
+   52| 12.99 ← EXPLICIT PRICE
+   53| 11.49 - 11.99 ← PRICE RANGE
+   54| 9.99 ← EXPLICIT PRICE
+   55| Wisla Vodka
+   56| Een zuivere vodka
+   57| met een zachte,
+   58| neutrale smaak.
+   59| 1 LITER ← UNIT INFO
+   60| 13.99 ← EXPLICIT PRICE
+   61| 10.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 31 (39 lines)
+============================================================
+    0| 700 ML ← UNIT INFO
+    1| 700 ML ← UNIT INFO
+    2| 12.49 - 13.29 ← PRICE RANGE
+    3| 13.99 - 14.49 ← PRICE RANGE
+    4| Eristoff Vodka
+    5| of William
+    6| Lawson's Whisky
+    7| 10.99 ← EXPLICIT PRICE
+    8| Johnnie Walker
+    9| Red Label, Licor
+   10| 43 Originale of
+   11| Jim Beam Whisky
+   12| Old Captain
+   13| Rum of
+   14| Jachtbitter
+   15| Alle soorten ← UNIT INFO
+   16| 9.99 ← EXPLICIT PRICE
+   17| Hooghoudt
+   18| Jenever of
+   19| De Kuyper Vieux
+   20| 700 ML ← UNIT INFO
+   21| 1 LITER ← UNIT INFO
+   22| 19.99 - 21.99 ← PRICE RANGE
+   23| 16.59 - 17.99 ← PRICE RANGE
+   24| 16.99 ← EXPLICIT PRICE
+   25| 13.99 ← EXPLICIT PRICE
+   26| Label 5 Whisky
+   27| of Malibu
+   28| Kokoslikeur
+   29| Ballantine's
+   30| Whisky
+   31| OP=OP ← OP=OP
+   32| XXL-fles 1,5 liter
+   33| 1 LITER ← UNIT INFO
+   34| 1 . 5 LITER
+   35| 18.99 - 19.99 ← PRICE RANGE
+   36| 32.99 ← EXPLICIT PRICE
+   37| 15.99 ← EXPLICIT PRICE
+   38| 24.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 32 (62 lines)
+============================================================
+    0| Nivea
+    1| Deospray
+    2| Alle soorten. Per stuk ← UNIT INFO
+    3| van 4.49 tot 5.49
+    4| Prijsvoorbeeld:
+    5| Men Fresh Power
+    6| 1
+    7| +
+    8| 1
+    9| GRATIS ← GRATIS
+   10| PER STUK ← UNIT INFO
+   11| 8.55 ← EXPLICIT PRICE
+   12| 8.98 ← EXPLICIT PRICE
+   13| 49
+   14| 4.
+   15| Vanish
+   16| Oxi Action
+   17| Whitening
+   18| of color. Pot
+   19| 470 gram ← UNIT INFO
+   20| 3.99 ← EXPLICIT PRICE
+   21| %
+   22| 54
+   23| RTING
+   24| KO
+   25| 16 ROLLEN
+   26| 10.99 ← EXPLICIT PRICE
+   27| OP=OP ← OP=OP
+   28| Page Compleet
+   29| Schoon
+   30| Toiletpapier
+   31| Pak 16 rollen
+   32| Whiskas
+   33| Droog of
+   34| Frolic
+   35| Alle soorten ← UNIT INFO
+   36| 800 gram ← UNIT INFO
+   37| 4.99 ← EXPLICIT PRICE
+   38| Blue Wonder
+   39| Desinfectiedoekjes 72 stuks
+   40| of reiniger 750 ml.
+   41| Per stuk van ← UNIT INFO
+   42| 4.85 tot 5.09
+   43| Prijsvoorbeeld:
+   44| Desinfectiedoekjes
+   45| 1
+   46| +
+   47| 1
+   48| GRATIS ← GRATIS
+   49| 9.70 ← EXPLICIT PRICE
+   50| 4.85 ← EXPLICIT PRICE
+   51| PER PAK ← UNIT INFO
+   52| PER PAK ← UNIT INFO
+   53| 3.79 - 4.29 ← PRICE RANGE
+   54| 4.15 - 4.79 ← PRICE RANGE
+   55| 99
+   56| 2.
+   57| Tena Discreet
+   58| Alle soorten pakken ← UNIT INFO
+   59| 10-28 stuks
+   60| 99
+   61| 2.
+
+============================================================
+PAGE 33 (54 lines)
+============================================================
+    0| Paasartikelen
+    1| • Stickerboek A4
+    2| • Paashaas
+    3| schilderen, 3x
+    4| verf + kwast
+    5| • Canvas 20x
+    6| 15 cm, 3x verf
+    7| + kwast
+    8| • Kleur placemats,
+    9| 6 stuks ← UNIT INFO
+   10| • Foam stickers,
+   11| 30 stuks ← UNIT INFO
+   12| • Cadeautas vilt
+   13| • Paasei verven,
+   14| 6x verf + kwast
+   15| PER STUK ← UNIT INFO
+   16| 99
+   17| 0.
+   18| Paasartikelen
+   19| • Maak je eigen
+   20| diamond painting, 3 vormen
+   21| • Knutselset
+   22| 6 paaseieren
+   23| • Kleurboek
+   24| 20 pagina's
+   25| • Paasmandje
+   26| met fluffy oren
+   27| • Paas etagère
+   28| PER STUK ← UNIT INFO
+   29| Paashaas
+   30| Muts met
+   31| Bewegende
+   32| Oren
+   33| Papieren Borden
+   34| of Bekers Pasen
+   35| Set 10 stuks
+   36| 99
+   37| 1.
+   38| Tafelkleed
+   39| One size
+   40| • Inclusief
+   41| 20 servetten
+   42| • Afmeting tafelkleed: 120x180 cm
+   43| PER STUK ← UNIT INFO
+   44| PER STUK ← UNIT INFO
+   45| 2.99 ← EXPLICIT PRICE
+   46| 3.99 ← EXPLICIT PRICE
+   47| PER SET ← UNIT INFO
+   48| PER STUK ← UNIT INFO
+   49| 1.49 ← EXPLICIT PRICE
+   50| Tafelkleed
+   51| • Afmeting: 120x180 cm
+   52| • Servetten per pak 0.99
+   53| 2.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 34 (31 lines)
+============================================================
+    0| PER ZAK ← UNIT INFO
+    1| G'woon
+    2| Bonbon
+    3| Eitjes
+    4| Pecan Karamel, Pistache,
+    5| Framboos of
+    6| Karamel. Zak
+    7| 140-150 gram
+    8| PER ZAK ← UNIT INFO
+    9| 3.99 ← EXPLICIT PRICE
+   10| 49
+   11| 3.
+   12| Hamlet
+   13| Paasspek
+   14| Zak 250 gram
+   15| PER NET ← UNIT INFO
+   16| PER PAK ← UNIT INFO
+   17| 1.29 ← EXPLICIT PRICE
+   18| Paaseitjes
+   19| of Kuikentjes in
+   20| Netje
+   21| Net 80-100
+   22| gram
+   23| 0.99 ← EXPLICIT PRICE
+   24| 49
+   25| 1.
+   26| G'woon
+   27| Paas
+   28| Bokkenpootjes
+   29| Pak 150 gram
+   30| 1.19 ← EXPLICIT PRICE
+
+============================================================
+PAGE 35 (29 lines)
+============================================================
+    0| Vrolijk Voordelig Pasen Vieren!
+    1| PER PAK ← UNIT INFO
+    2| PER ZAK ← UNIT INFO
+    3| 1.79 ← EXPLICIT PRICE
+    4| G'woon
+    5| Roomboter
+    6| Kuikentjes
+    7| Pak 200 gram
+    8| 49
+    9| 1.
+   10| G'woon
+   11| Massieve
+   12| Paaseitjes
+   13| Melk, Puur,
+   14| Wit of Mix.
+   15| Zak 200 gram
+   16| 79
+   17| 2.
+   18| PER STUK ← UNIT INFO
+   19| PER ZAK ← UNIT INFO
+   20| 1.49 ← EXPLICIT PRICE
+   21| Gimme
+   22| Candy Paas
+   23| Schuim
+   24| Zak 200 gram
+   25| 1.29 ← EXPLICIT PRICE
+   26| Paashaas
+   27| 60 gram ← UNIT INFO
+   28| 0.89 ← EXPLICIT PRICE
+
+============================================================
+PAGE 36 (11 lines)
+============================================================
+    0| Bloemen & Planten
+    1| VAN
+    2| NDSE
+    3| HOLLA
+    4| S
+    5| TELER
+    6| 2 BOSSEN
+    7| 5.98 ← EXPLICIT PRICE
+    8| Tulpen
+    9| Bos 8 stelen
+   10| 5.-
+
+============================================================
+PAGE 37 (46 lines)
+============================================================
+    0| Bloemen & Planten
+    1| 3 STUKS ← UNIT INFO
+    2| PER STUK ← UNIT INFO
+    3| 5.97 ← EXPLICIT PRICE
+    4| OP=OP ← OP=OP
+    5| Anjer
+    6| Pink Kisses
+    7| Potmaat 10,5 cm
+    8| 5a ← CODED PRICE: €5.00
+    9| 4.99 ← EXPLICIT PRICE
+   10| OP=OP ← OP=OP
+   11| Arrangement
+   12| Schaap
+   13| Kalanchoë in
+   14| keramiek
+   15| 2 BOSSEN
+   16| PER STUK ← UNIT INFO
+   17| 6.99 ← EXPLICIT PRICE
+   18| OP=OP ← OP=OP
+   19| Vaste
+   20| Plantenmix
+   21| Potmaat 17 cm
+   22| 99
+   23| 4.
+   24| 5.98 ← EXPLICIT PRICE
+   25| Paastakken
+   26| PER STUK ← UNIT INFO
+   27| Campanula
+   28| In Keramiek.
+   29| Potmaat 10,5 cm
+   30| 99
+   31| 4.
+   32| 5a ← CODED PRICE: €5.00
+   33| Exclusief decoratie
+   34| PER STUK ← UNIT INFO
+   35| 6.99 ← EXPLICIT PRICE
+   36| OP=OP ← OP=OP
+   37| 49
+   38| 3.
+   39| 19.99 ← EXPLICIT PRICE
+   40| OP=OP ← OP=OP
+   41| XL Cactus
+   42| Diverse soorten
+   43| potmaat 17 cm.
+   44| Hoogte 40 cm
+   45| 14.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 38 (13 lines)
+============================================================
+    0| De volgende wedstrijd kijken vanuit het stadion?
+    1| WIN 25x
+    2| 2 TICKETS VOOR ← X VOOR deal
+    3| -
+    4| Tel alle ballen in deze online folder en maak kans op
+    5| 2 tickets voor de wedstrijd AZ – Fortuna Sittard op ← X VOOR deal
+    6| zaterdag 4 april om 18.45 uur. De tickets zijn geldig
+    7| voor VIP-stoelen in de Kees Kist Lounge en in de rust
+    8| krijg je een gratis drankje. ← GRATIS
+    9| Vul het aantal ballen in op vomar.nl/az om kans te
+   10| maken of doe direct mee!
+   11| Doe mee!
+   12| PS De bal op deze pagina telt natuurlijk ook mee!
+
+============================================================
+PAGE 39 (47 lines)
+============================================================
+    0| OP
+    1| =
+    2| OP
+    3| PER STUK ← UNIT INFO
+    4| RVS
+    5| Thermosbeker
+    6| • Ideaal voor onderweg
+    7| • Inhoud: 580 ml
+    8| 4.99 ← EXPLICIT PRICE
+    9| 0.7 LITER
+   10| Luchtdichte
+   11| Bewaarboxen
+   12| • Met handig kliksysteem en luchtdichte afsluiting
+   13| • 1,3 liter 1.99
+   14| • 2,0 liter 2.49
+   15| 1.49 ← EXPLICIT PRICE
+   16| Contour
+   17| Legacy Leg
+   18| Kussen
+   19| • Ideaal om
+   20| rug-, heup- en
+   21| kniepijn te
+   22| verminderen en
+   23| te voorkomen
+   24| • Materiaal:
+   25| memory foam
+   26| PER STUK ← UNIT INFO
+   27| 6.99 ← EXPLICIT PRICE
+   28| PER STUK ← UNIT INFO
+   29| Ovenwant
+   30| of Pannenlap
+   31| • Kleuren: rood, blauw
+   32| of zwart
+   33| • Materiaal: katoen
+   34| 0.99 ← EXPLICIT PRICE
+   35| 5 LITER ← UNIT INFO
+   36| PER STUK ← UNIT INFO
+   37| Keukenweegschaal
+   38| • Tot maximaal 5 kg
+   39| • LCD-display
+   40| 7.99 ← EXPLICIT PRICE
+   41| Afvalbak
+   42| •2
+   43| 0,5 liter met
+   44| dubbele deksel
+   45| 8.99 ← EXPLICIT PRICE
+   46| 4.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 40 (57 lines)
+============================================================
+    0| OP
+    1| =
+    2| OP
+    3| Strijkplankhoes
+    4| • Afmeting: 130x50 cm
+    5| • Verkrijgbaar in
+    6| diverse dessins
+    7| Solar Verlichting
+    8| Keuze uit:
+    9| • Tulp op steker
+   10| • Glazen hanglamp
+   11| PER STUK ← UNIT INFO
+   12| PER STUK ← UNIT INFO
+   13| 0.99 ← EXPLICIT PRICE
+   14| 2.99 ← EXPLICIT PRICE
+   15| PER STUK ← UNIT INFO
+   16| Mannsberger
+   17| 2-1 Draadloze
+   18| Werklamp
+   19| • Werkt op 3x AAA
+   20| batterijen (excl.)
+   21| • 2 lichtstanden
+   22| • Weersbestendig
+   23| 3.99 ← EXPLICIT PRICE
+   24| Onderzetters
+   25| Kurk
+   26| • Onderzetters voor
+   27| kopjes set 6 stuks
+   28| 0.99 ← EXPLICIT PRICE
+   29| • Pannenonderzetter
+   30| set 3 stuks 1.99
+   31| • Gemaakt van duurzaam kurk
+   32| VANAF
+   33| 0.99 ← EXPLICIT PRICE
+   34| Sportfles
+   35| • Inhoud: 1 liter
+   36| • Verkrijgbaar in
+   37| 4 kleuren
+   38| That's Life Puzzel
+   39| • 1000 stukjes
+   40| • Verkrijgbaar in
+   41| 8 varianten
+   42| Diamond Painting
+   43| Canvas
+   44| • Canvas 30x30 cm
+   45| • Verkrijgbaar in
+   46| 3 varianten
+   47| PER STUK ← UNIT INFO
+   48| PER STUK ← UNIT INFO
+   49| 3.99 ← EXPLICIT PRICE
+   50| 2.99 ← EXPLICIT PRICE
+   51| PER STUK ← UNIT INFO
+   52| PER SET ← UNIT INFO
+   53| 3.99 ← EXPLICIT PRICE
+   54| Kruidenpotjes
+   55| Set 4 stuks
+   56| 2.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 41 (31 lines)
+============================================================
+    0| OP
+    1| =
+    2| OP
+    3| Fietspomp met
+    4| Manometer
+    5| • Diverse ventielen
+    6| • Maximale druk 6 bar
+    7| PER STUK ← UNIT INFO
+    8| 4.99 ← EXPLICIT PRICE
+    9| PER SET ← UNIT INFO
+   10| Simson
+   11| Bandenplakset
+   12| • Met bandplakker,
+   13| ventielslang, solutie,
+   14| pleisters en bandendichters
+   15| • Voor 12 plakbeurten
+   16| 4.99 ← EXPLICIT PRICE
+   17| PER STUK ← UNIT INFO
+   18| Fietsartikelen
+   19| • Fietsslot
+   20| Ø10x1800 mm
+   21| • Fietsgereedschap
+   22| • Telefoonhouder
+   23| 2.99 ← EXPLICIT PRICE
+   24| PER STUK ← UNIT INFO
+   25| Fietsitems
+   26| • Fietszadel + veer 245x205 mm
+   27| • Zadeldek met gel
+   28| • Kabelslot 10x2000 mm
+   29| 99
+   30| 3.
+
+============================================================
+PAGE 42 (41 lines)
+============================================================
+    0| OP
+    1| =
+    2| OP
+    3| PER STUK ← UNIT INFO
+    4| Magnetische
+    5| Grijper
+    6| Afmeting: 76 cm
+    7| 5-PACK
+    8| Penn Sportsokken
+    9| • Kleuren: wit,
+   10| zwart of grijs
+   11| • Maten:
+   12| 39/42-43/46
+   13| 4.99 ← EXPLICIT PRICE
+   14| 2.49 ← EXPLICIT PRICE
+   15| PER PAAR ← UNIT INFO
+   16| Compressiesokken
+   17| • Diverse kleuren
+   18| • Maten: 35 t/m 47
+   19| 2.99 ← EXPLICIT PRICE
+   20| PER STUK ← UNIT INFO
+   21| RC Terreinauto
+   22| • Verkrijgbaar in
+   23| 6 varianten
+   24| • Op schaal 1:43
+   25| PER STUK ← UNIT INFO
+   26| Dames
+   27| Sportkleding
+   28| • Diverse kleuren
+   29| • Beha, legging,
+   30| top of shorts
+   31| • Maten: S t/m XL
+   32| 3.99 ← EXPLICIT PRICE
+   33| 6.99 ← EXPLICIT PRICE
+   34| PER STUK ← UNIT INFO
+   35| Speelgoed
+   36| • Galaxy Slime
+   37| 400 gram ← UNIT INFO
+   38| • Dieren in doos
+   39| 3 varianten
+   40| 2.99 ← EXPLICIT PRICE
+
+============================================================
+PAGE 43 (14 lines)
+============================================================
+    0| 22:00
+    1| Elke woensdag en zaterdag
+    2| Altijd op
+    3| de hoogte
+    4| van de beste
+    5| acties ← ACTIE
+    6| Schrijf je in voor de
+    7| Vomar nieuwsbrief
+    8| Inschrijven
+    9| Elke maand kans op
+   10| een cadeaukaart t.w.v.
+   11| ¤ 100,-
+   12| Zet- en drukfouten voorbehouden. Assortiment kan per winkel verschillen
+   13| Aanbiedingen zijn niet bestemd voor grootverbruikers en/of wederverkopers

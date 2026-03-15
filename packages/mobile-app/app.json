@@ -6,25 +6,31 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0066CC"
+      "backgroundColor": "#1B5E20"
     },
     "assetBundlePatterns": [
       "**/*"
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "nl.supermarktdeals.app"
+      "bundleIdentifier": "nl.supermarktdeals.app",
+      "infoPlist": {
+        "CFBundleDisplayName": "SupermarktDeals"
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#0066CC"
+        "backgroundColor": "#1B5E20"
       },
       "package": "nl.supermarktdeals.app",
-      "permissions": []
+      "permissions": [
+        "INTERNET"
+      ]
     },
     "web": {
       "favicon": "./assets/favicon.png",
@@ -34,8 +40,9 @@
     "plugins": [],
     "extra": {
       "eas": {
-        "projectId": "your-eas-project-id"
+        "projectId": "d1af0457-790f-413f-9f36-390b91e751e0"
       }
-    }
+    },
+    "owner": "husayn_atesci"
   }
 }

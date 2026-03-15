@@ -63,6 +63,14 @@ const ALCOHOL_KEYWORDS = [
   'kahlúa', 'kahlua', 'cointreau', 'grand marnier', 'tia maria',
   'passoa', 'coebergh', 'ketel one', 'belvedere', 'stolichnaya',
   'flügel', 'flugel', 'goldstrike', 'peachtree', 'sourz',
+  // Wine brands (additional)
+  'anciano', 'niel joubert', 'woodhaven', 'codici', 'masserie',
+  'gallo family', 'park villa',
+  'speciaalbier',
+  // Spirit brands (additional)
+  'southern comfort', 'salmari', 'luxardo', 'limoncello',
+  'viermaster', 'beerenburg', 'vieux', 'amaretto', 'sambuca',
+  'aperol', 'campari',
 ];
 
 // Animal food keywords — dairy, eggs, fish, meat, honey (removes all animal products)
@@ -150,13 +158,18 @@ function filterHalalOnly(products: ProductWithRelations[]): ProductWithRelations
   });
 }
 
+// Exact alcohol brand names that are too short/generic for substring matching
+const ALCOHOL_EXACT_TITLES = ['brand', 'i am'];
+
 /**
  * Filter out alcohol products (backup — primary filter is at scraper insert level)
  */
 function filterExcludeAlcohol(products: ProductWithRelations[]): ProductWithRelations[] {
   return products.filter((product) => {
     const title = product.title.toLowerCase();
-    return !ALCOHOL_KEYWORDS.some((kw) => title.includes(kw));
+    if (ALCOHOL_KEYWORDS.some((kw) => title.includes(kw))) return false;
+    if (ALCOHOL_EXACT_TITLES.includes(title.trim())) return false;
+    return true;
   });
 }
 

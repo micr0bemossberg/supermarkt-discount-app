@@ -5,9 +5,10 @@
  */
 
 import React from 'react';
-import { View, StyleSheet, Pressable } from 'react-native';
+import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { Text, IconButton } from 'react-native-paper';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { formatPrice, getValidityText, daysUntil, getSupermarketColor } from '../utils/formatters';
 import type { ProductWithRelations } from '@supermarkt-deals/shared';
@@ -22,6 +23,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
   const favorite = isFavorite(product.id);
 
   const handleFavoriteToggle = () => {
+    if (Platform.OS !== 'web') {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    }
     if (favorite) {
       removeFavorite(product.id);
     } else {
@@ -88,10 +92,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           />
         </View>
 
-        {/* Card Required Badge */}
+        {/* Card/Voucher Required Badge */}
         {product.requires_card && (
-          <View style={styles.cardBadge}>
-            <Text style={styles.cardBadgeText}>Pas</Text>
+          <View style={[
+            styles.cardBadge,
+            product.unit_info?.includes('Vomar app') && styles.voucherBadge,
+          ]}>
+            <Text style={styles.cardBadgeText}>
+              {product.unit_info?.includes('Vomar app') ? 'Voucher' : 'Pas'}
+            </Text>
+          </View>
+        )}
+
+        {/* Online Only Badge */}
+        {product.supermarket?.is_online_only && (
+          <View style={styles.onlineBadge}>
+            <Text style={styles.onlineBadgeText}>Online</Text>
           </View>
         )}
       </View>
@@ -212,6 +228,23 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   cardBadgeText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 9,
+  },
+  voucherBadge: {
+    backgroundColor: '#7B1FA2',
+  },
+  onlineBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: '#1565C0',
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  onlineBadgeText: {
     color: '#fff',
     fontWeight: '700',
     fontSize: 9,

@@ -21,6 +21,7 @@ import {
 } from 'react-native-paper';
 import { Image } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFavoritesStore } from '../stores/favoritesStore';
 import { getProductById } from '../services/products';
 import { formatPrice, formatDate, getValidityText, daysUntil, getSupermarketColor } from '../utils/formatters';
@@ -34,6 +35,7 @@ const { width } = Dimensions.get('window');
 
 export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   const { productId } = route.params;
+  const insets = useSafeAreaInsets();
   const [product, setProduct] = useState<ProductWithRelations | null>(null);
   const [loading, setLoading] = useState(true);
   const { isFavorite, addFavorite, removeFavorite } = useFavoritesStore();
@@ -132,7 +134,7 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
   return (
     <View style={styles.container}>
       {/* Floating top bar over image */}
-      <View style={styles.topBar}>
+      <View style={[styles.topBar, { top: insets.top }]}>
         <IconButton
           icon="arrow-left"
           onPress={() => navigation.goBack()}
@@ -196,12 +198,28 @@ export const ProductDetailScreen: React.FC<Props> = ({ route, navigation }) => {
             )}
           </View>
 
-          {/* Card Required Notice */}
+          {/* Card/Voucher Required Notice */}
           {product.requires_card && (
-            <View style={styles.cardNotice}>
-              <MaterialCommunityIcons name="card-account-details" size={16} color="#E65100" />
-              <Text style={styles.cardNoticeText}>
-                Pas of app van {product.supermarket?.name || 'de winkel'} vereist
+            <View style={product.unit_info?.includes('Vomar app') ? styles.voucherNotice : styles.cardNotice}>
+              <MaterialCommunityIcons
+                name={product.unit_info?.includes('Vomar app') ? 'ticket-percent' : 'card-account-details'}
+                size={16}
+                color={product.unit_info?.includes('Vomar app') ? '#7B1FA2' : '#E65100'}
+              />
+              <Text style={product.unit_info?.includes('Vomar app') ? styles.voucherNoticeText : styles.cardNoticeText}>
+                {product.unit_info?.includes('Vomar app')
+                  ? 'Activeer voucher in de Vomar-app voor deze korting'
+                  : `Pas of app van ${product.supermarket?.name || 'de winkel'} vereist`}
+              </Text>
+            </View>
+          )}
+
+          {/* Online Only Notice */}
+          {product.supermarket?.is_online_only && (
+            <View style={styles.onlineNotice}>
+              <MaterialCommunityIcons name="web" size={16} color="#1565C0" />
+              <Text style={styles.onlineNoticeText}>
+                Alleen online verkrijgbaar bij {product.supermarket?.name || 'deze winkel'}
               </Text>
             </View>
           )}
@@ -305,7 +323,7 @@ const styles = StyleSheet.create({
   },
   topBar: {
     position: 'absolute',
-    top: 44,
+    top: 0,
     left: 8,
     right: 8,
     flexDirection: 'row',
@@ -410,6 +428,40 @@ const styles = StyleSheet.create({
   },
   cardNoticeText: {
     color: '#E65100',
+    fontWeight: '600',
+    fontSize: 13,
+    flex: 1,
+  },
+  voucherNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#F3E5F5',
+    borderWidth: 1,
+    borderColor: '#CE93D8',
+  },
+  voucherNoticeText: {
+    color: '#7B1FA2',
+    fontWeight: '600',
+    fontSize: 13,
+    flex: 1,
+  },
+  onlineNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 12,
+    backgroundColor: '#E3F2FD',
+    borderWidth: 1,
+    borderColor: '#BBDEFB',
+  },
+  onlineNoticeText: {
+    color: '#1565C0',
     fontWeight: '600',
     fontSize: 13,
     flex: 1,
