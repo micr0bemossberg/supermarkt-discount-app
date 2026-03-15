@@ -3,8 +3,8 @@ node_modules/
 package-lock.json
 yarn.lock
 
-# Environment variables
-.env
+# Environment variables (allow root .env, block package-level ones)
+packages/**/.env
 .env.*
 .env.local
 .env.*.local
