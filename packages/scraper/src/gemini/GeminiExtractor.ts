@@ -26,19 +26,20 @@ export class GeminiExtractor {
     let chunksFailed = 0;
     const allProducts: import('@supermarkt-deals/shared').ScrapedProduct[] = [];
 
-    // Process in batches to respect rate limits.
-    // Free tier: 15 RPM per project (shared across all keys).
-    // Process up to maxConcurrent chunks per batch, then wait.
+    // 10 keys on 10 separate projects = 10 × 15 RPM = 150 RPM total.
+    // Process in batches of maxConcurrent (10), with a short stagger delay
+    // between batches to stay safely under each project's 15 RPM limit.
+    // 10 chunks/batch × 6 batches/min = 60 RPM (safe margin under 150).
     const batchSize = Math.min(this.config.maxConcurrent, images.length);
     const totalBatches = Math.ceil(images.length / batchSize);
 
-    logger.info(`Processing ${images.length} chunks in ${totalBatches} batches of ${batchSize}`);
+    logger.info(`Processing ${images.length} chunks in ${totalBatches} batches of ${batchSize} (${this.keyPool.availableCount()} keys available)`);
 
     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
       const batchStart = batchIdx * batchSize;
       const batch = images.slice(batchStart, batchStart + batchSize);
 
-      // Process batch concurrently
+      // Process batch concurrently — each chunk gets a different key via key pool
       await Promise.allSettled(
         batch.map(async (chunk) => {
           try {
@@ -54,10 +55,10 @@ export class GeminiExtractor {
         })
       );
 
-      // Rate limit delay between batches (not after last batch)
+      // Short delay between batches to avoid bursting any single project
       if (batchIdx < totalBatches - 1) {
         const delayMs = this.config.batchDelayMs;
-        logger.info(`Batch ${batchIdx + 1}/${totalBatches} done, waiting ${delayMs / 1000}s for rate limit...`);
+        logger.info(`Batch ${batchIdx + 1}/${totalBatches} complete (${allProducts.length} products so far), next batch in ${delayMs / 1000}s`);
         await this.sleep(delayMs);
       }
     }
@@ -79,27 +80,25 @@ export class GeminiExtractor {
     for (let attempt = 0; attempt <= this.config.retryAttempts; attempt++) {
       const apiKey = this.keyPool.getNextKey();
       if (!apiKey) {
-        // All keys on cooldown — wait and retry
-        await this.sleep(2000 * (attempt + 1));
+        // All keys on cooldown — wait for shortest cooldown to expire
+        logger.warning('All API keys on cooldown, waiting 10s...');
+        await this.sleep(10000);
         continue;
       }
 
       try {
         const genAI = new GoogleGenerativeAI(apiKey);
 
-        // Build generation config with all features
         const generationConfig: Record<string, unknown> = {
           temperature: this.config.temperature,
           mediaResolution: this.config.mediaResolution,
         };
 
-        // Structured output: force Gemini to return valid JSON matching our schema
         if (this.config.useStructuredOutput) {
           generationConfig.responseMimeType = 'application/json';
           generationConfig.responseSchema = PRODUCT_EXTRACTION_SCHEMA;
         }
 
-        // Thinking: enable step-by-step reasoning for price/date extraction
         if (this.config.thinkingLevel !== 'minimal') {
           generationConfig.thinkingConfig = {
             thinkingLevel: this.config.thinkingLevel.toUpperCase(),
@@ -129,21 +128,21 @@ export class GeminiExtractor {
       } catch (error: unknown) {
         lastError = error instanceof Error ? error : new Error(String(error));
 
-        // Rate limit — cooldown this key
         if (this.isRateLimitError(error)) {
-          const cooldownMs = this.parseCooldownMs(error) || 5000 * (attempt + 1);
+          // Parse actual retry delay from error, or use 10s default
+          const cooldownMs = this.parseCooldownMs(error) || 10000;
+          logger.warning(`Key rate-limited, cooling down ${Math.round(cooldownMs / 1000)}s`);
           this.keyPool.cooldownKey(apiKey, cooldownMs);
-          continue;
+          continue; // Try next key immediately
         }
 
-        // Auth error — permanently disable this key and try next
         if (this.isAuthError(error)) {
-          logger.warning(`API key expired/invalid, disabling and trying next key`);
-          this.keyPool.cooldownKey(apiKey, 24 * 60 * 60 * 1000); // 24h cooldown
+          logger.warning('API key expired/invalid, disabling and trying next key');
+          this.keyPool.cooldownKey(apiKey, 24 * 60 * 60 * 1000);
           continue;
         }
 
-        // Retryable — exponential backoff
+        // Other errors — exponential backoff
         await this.sleep(2000 * Math.pow(2, attempt));
       }
     }
@@ -168,12 +167,15 @@ export class GeminiExtractor {
 
   private parseCooldownMs(error: unknown): number | null {
     if (error instanceof Error) {
-      // Parse "retry after X seconds" from error message
       const secondsMatch = error.message.match(/(\d+)\s*seconds?/i);
       if (secondsMatch) return parseInt(secondsMatch[1]) * 1000;
 
       const msMatch = error.message.match(/(\d+)\s*ms/i);
       if (msMatch) return parseInt(msMatch[1]);
+
+      // Parse "retryDelay":"35s" from JSON in error message
+      const retryDelayMatch = error.message.match(/"retryDelay":"(\d+)s"/);
+      if (retryDelayMatch) return parseInt(retryDelayMatch[1]) * 1000;
     }
     return null;
   }
