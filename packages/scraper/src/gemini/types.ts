@@ -43,7 +43,7 @@ export interface KeyState {
 export const GEMINI_DEFAULTS: GeminiConfig = {
   apiKeys: [],
   modelId: 'gemini-3.1-flash-lite-preview',
-  maxConcurrent: 10,                        // 10 keys on 10 projects — 1 request per project per batch
+  maxConcurrent: 10,                        // 10 keys on 10 projects — key dispatcher handles RPM per key
   retryAttempts: 2,
   temperature: 0.0,               // Deterministic — no creativity needed for data extraction
   thinkingLevel: 'low',           // Balanced: adds reasoning without 60s+ latency per chunk
