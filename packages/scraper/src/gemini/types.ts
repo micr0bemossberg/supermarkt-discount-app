@@ -49,7 +49,7 @@ export const GEMINI_DEFAULTS: GeminiConfig = {
   thinkingLevel: 'low',           // Balanced: adds reasoning without 60s+ latency per chunk
   mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 1120 tokens/image — needed to read small print prices
   useStructuredOutput: true,      // Force valid JSON via responseSchema
-  batchDelayMs: 4000,             // 4s between batches = 15 req/min per key (matches 15 RPM limit exactly)
+  batchDelayMs: 0,                // No delay — natural API latency (~3s) spaces out key reuse automatically
 };
 
 /**

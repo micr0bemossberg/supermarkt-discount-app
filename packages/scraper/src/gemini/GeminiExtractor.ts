@@ -26,55 +26,42 @@ export class GeminiExtractor {
     let chunksFailed = 0;
     const allProducts: import('@supermarkt-deals/shared').ScrapedProduct[] = [];
 
-    // 10 keys on 10 separate projects = 10 × 15 RPM = 150 RPM total.
-    // Process in batches of numKeys, pre-assigning each chunk a DIFFERENT key
-    // synchronously to avoid race conditions in the key pool.
-    const numKeys = this.keyPool.availableCount();
-    const batchSize = Math.min(numKeys || 1, images.length);
-    const totalBatches = Math.ceil(images.length / batchSize);
+    // Key dispatcher: each chunk waits for an available key, then fires.
+    // The key pool tracks per-key RPM intervals (4s for 15 RPM).
+    // No batches, no artificial delays — the pool itself is the rate limiter.
+    // With 10 keys × 15 RPM, max throughput = 150 RPM (~2.5 req/s).
+    const activeKeys = this.keyPool.totalActiveKeys();
+    logger.info(`Processing ${images.length} chunks across ${activeKeys} keys (max ${activeKeys * 15} RPM)`);
 
-    logger.info(`Processing ${images.length} chunks in ${totalBatches} batches of ${batchSize} (${numKeys} keys available)`);
+    // Use p-limit to cap in-flight requests to number of keys
+    const pLimitModule = require('p-limit');
+    const pLimit = pLimitModule.default || pLimitModule;
+    const limit = pLimit(activeKeys);
 
-    for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
-      const batchStart = batchIdx * batchSize;
-      const batch = images.slice(batchStart, batchStart + batchSize);
+    let completed = 0;
+    const tasks = images.map((chunk) =>
+      limit(async () => {
+        // Wait for a key that's ready (respects per-key RPM interval)
+        const key = await this.keyPool.waitForKey();
 
-      // Pre-assign keys SYNCHRONOUSLY — guarantees each chunk gets a different key
-      const assignments: { chunk: ImageChunk; key: string }[] = [];
-      for (const chunk of batch) {
-        const key = this.keyPool.getNextKey();
-        if (key) {
-          assignments.push({ chunk, key });
-        } else {
-          chunksFailed++;
-          logger.warning(`No available key for chunk ${chunk.index + 1}`);
-        }
-      }
-
-      // Fire all assigned chunks concurrently — each hits a DIFFERENT project
-      await Promise.allSettled(
-        assignments.map(async ({ chunk, key }) => {
-          try {
-            const result = await this.extractFromChunkWithKey(chunk, prompt, key);
-            totalTokens += result.tokens;
-            allProducts.push(...result.products);
-          } catch (error) {
-            chunksFailed++;
-            logger.warning(
-              `Chunk ${chunk.index + 1}/${chunk.totalChunks} failed: ${error instanceof Error ? error.message : String(error)}`
-            );
+        try {
+          const result = await this.extractFromChunkWithKey(chunk, prompt, key);
+          totalTokens += result.tokens;
+          allProducts.push(...result.products);
+          completed++;
+          if (completed % 10 === 0) {
+            logger.info(`Progress: ${completed}/${images.length} chunks done (${allProducts.length} products)`);
           }
-        })
-      );
+        } catch (error) {
+          chunksFailed++;
+          logger.warning(
+            `Chunk ${chunk.index + 1}/${chunk.totalChunks} failed: ${error instanceof Error ? error.message : String(error)}`
+          );
+        }
+      })
+    );
 
-      // Brief delay between batches — each project allows 15 RPM so
-      // with 10 projects, we can do 10 req every 4s safely (= 150 RPM)
-      if (batchIdx < totalBatches - 1) {
-        const delayMs = this.config.batchDelayMs;
-        logger.info(`Batch ${batchIdx + 1}/${totalBatches} complete (${allProducts.length} products so far), next batch in ${delayMs / 1000}s`);
-        await this.sleep(delayMs);
-      }
-    }
+    await Promise.allSettled(tasks);
 
     return {
       products: allProducts,
@@ -151,8 +138,8 @@ export class GeminiExtractor {
         }
 
         if (this.isAuthError(error)) {
-          logger.warning('API key expired/invalid, disabling and trying next key');
-          this.keyPool.cooldownKey(apiKey, 24 * 60 * 60 * 1000);
+          logger.warning('API key expired/invalid, permanently disabling');
+          this.keyPool.disableKey(apiKey);
           continue;
         }
 
