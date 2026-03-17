@@ -43,13 +43,13 @@ export interface KeyState {
 export const GEMINI_DEFAULTS: GeminiConfig = {
   apiKeys: [],
   modelId: 'gemini-3.1-flash-lite-preview',
-  maxConcurrent: 14,                        // Send up to 14 per batch (just under 15 RPM)
+  maxConcurrent: 10,                        // 10 keys on 10 projects — 1 request per project per batch
   retryAttempts: 2,
   temperature: 0.0,               // Deterministic — no creativity needed for data extraction
   thinkingLevel: 'low',           // Balanced: adds reasoning without 60s+ latency per chunk
   mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 1120 tokens/image — needed to read small print prices
   useStructuredOutput: true,      // Force valid JSON via responseSchema
-  batchDelayMs: 65000,            // 65s between batches — free tier enforces 15 RPM per Gmail account, not per project
+  batchDelayMs: 4000,             // 4s between batches = 15 req/min per key (matches 15 RPM limit exactly)
 };
 
 /**

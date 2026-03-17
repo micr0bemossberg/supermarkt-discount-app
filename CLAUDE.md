@@ -215,19 +215,18 @@ Located in `packages/scraper/src/gemini/types.ts` (`GEMINI_DEFAULTS`):
 - **Structured output**: JSON schema enforcement (guarantees valid output)
 - **Media resolution**: `HIGH` (1120 tokens/image)
 - **Temperature**: `0.0` (deterministic)
-- **Batch size**: 14 chunks per batch, 65s delay between batches
-- **Rate limit**: **15 RPM per Gmail account** (not per project — see below)
+- **Batch size**: 10 chunks per batch (one per key/project), 5s delay between batches
+- **Rate limit**: **150 RPM total** (10 keys × 10 projects × 15 RPM each)
 
 ### Gemini API Key & Rate Limit Setup
 
 - **10 API keys** on **10 separate Google Cloud projects** (project1 through project10)
 - Keys created via https://aistudio.google.com/ → API Keys
 - All keys on the same Gmail account, different projects, all Free tier
-- **CRITICAL FINDING**: Despite separate projects, Google enforces **15 RPM per Gmail account on free tier**, NOT per project. The `quotaId` says "per project" but testing proves the limit is shared across all projects on the same account.
-- This means 10 keys ≠ 150 RPM. Effective rate: **15 RPM total**.
-- The 65s batch delay is calibrated for this: send 14 chunks, wait 65s for rate limit window to reset.
+- Rate limits are **per project**: 15 RPM, 250K TPM, 500 RPD per project
+- **CRITICAL**: Keys must be pre-assigned to chunks synchronously before firing concurrent requests. If `getNextKey()` is called concurrently from async code, race conditions cause multiple requests to hit the same key/project, triggering 429 rate limits.
+- The `extractFromChunkWithKey()` method accepts a pre-assigned key to avoid this race.
 - Keys can expire — if `API_KEY_INVALID` errors appear, regenerate at https://aistudio.google.com/
-- To get true 150 RPM: use 10 **different Gmail accounts** (each with its own project), or upgrade to Tier 1 billing.
 - Env vars: `gemini_api_key1` through `gemini_api_key10` in root `.env`
 
 ## Supabase Notes

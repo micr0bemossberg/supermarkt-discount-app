@@ -27,23 +27,35 @@ export class GeminiExtractor {
     const allProducts: import('@supermarkt-deals/shared').ScrapedProduct[] = [];
 
     // 10 keys on 10 separate projects = 10 × 15 RPM = 150 RPM total.
-    // Process in batches of maxConcurrent (10), with a short stagger delay
-    // between batches to stay safely under each project's 15 RPM limit.
-    // 10 chunks/batch × 6 batches/min = 60 RPM (safe margin under 150).
-    const batchSize = Math.min(this.config.maxConcurrent, images.length);
+    // Process in batches of numKeys, pre-assigning each chunk a DIFFERENT key
+    // synchronously to avoid race conditions in the key pool.
+    const numKeys = this.keyPool.availableCount();
+    const batchSize = Math.min(numKeys || 1, images.length);
     const totalBatches = Math.ceil(images.length / batchSize);
 
-    logger.info(`Processing ${images.length} chunks in ${totalBatches} batches of ${batchSize} (${this.keyPool.availableCount()} keys available)`);
+    logger.info(`Processing ${images.length} chunks in ${totalBatches} batches of ${batchSize} (${numKeys} keys available)`);
 
     for (let batchIdx = 0; batchIdx < totalBatches; batchIdx++) {
       const batchStart = batchIdx * batchSize;
       const batch = images.slice(batchStart, batchStart + batchSize);
 
-      // Process batch concurrently — each chunk gets a different key via key pool
+      // Pre-assign keys SYNCHRONOUSLY — guarantees each chunk gets a different key
+      const assignments: { chunk: ImageChunk; key: string }[] = [];
+      for (const chunk of batch) {
+        const key = this.keyPool.getNextKey();
+        if (key) {
+          assignments.push({ chunk, key });
+        } else {
+          chunksFailed++;
+          logger.warning(`No available key for chunk ${chunk.index + 1}`);
+        }
+      }
+
+      // Fire all assigned chunks concurrently — each hits a DIFFERENT project
       await Promise.allSettled(
-        batch.map(async (chunk) => {
+        assignments.map(async ({ chunk, key }) => {
           try {
-            const result = await this.extractFromChunk(chunk, prompt);
+            const result = await this.extractFromChunkWithKey(chunk, prompt, key);
             totalTokens += result.tokens;
             allProducts.push(...result.products);
           } catch (error) {
@@ -55,7 +67,8 @@ export class GeminiExtractor {
         })
       );
 
-      // Short delay between batches to avoid bursting any single project
+      // Brief delay between batches — each project allows 15 RPM so
+      // with 10 projects, we can do 10 req every 4s safely (= 150 RPM)
       if (batchIdx < totalBatches - 1) {
         const delayMs = this.config.batchDelayMs;
         logger.info(`Batch ${batchIdx + 1}/${totalBatches} complete (${allProducts.length} products so far), next batch in ${delayMs / 1000}s`);
@@ -71,16 +84,17 @@ export class GeminiExtractor {
     };
   }
 
-  private async extractFromChunk(
+  private async extractFromChunkWithKey(
     chunk: ImageChunk,
     prompt: string,
+    assignedKey: string,
   ): Promise<{ products: import('@supermarkt-deals/shared').ScrapedProduct[]; tokens: number }> {
     let lastError: Error | null = null;
 
     for (let attempt = 0; attempt <= this.config.retryAttempts; attempt++) {
-      const apiKey = this.keyPool.getNextKey();
+      // Use assigned key on first attempt, rotate on retries
+      const apiKey = attempt === 0 ? assignedKey : this.keyPool.getNextKey();
       if (!apiKey) {
-        // All keys on cooldown — wait for shortest cooldown to expire
         logger.warning('All API keys on cooldown, waiting 10s...');
         await this.sleep(10000);
         continue;
