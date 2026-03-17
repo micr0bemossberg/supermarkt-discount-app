@@ -5,13 +5,14 @@ describe('KeyPool', () => {
     expect(() => new KeyPool([])).toThrow('At least one API key required');
   });
 
-  it('acquires first available key', () => {
-    const pool = new KeyPool(['key1', 'key2', 'key3']);
+  it('acquires different keys due to RPM interval', () => {
+    // High RPM = low interval, but still prevents same-key reuse within interval
+    const pool = new KeyPool(['key1', 'key2', 'key3'], 10000);
     const r1 = pool.acquireKey();
     expect('key' in r1 && r1.key).toBe('key1');
-    // Without cooldown, same key is returned again (it's free)
+    // key1 just used — next call gets key2
     const r2 = pool.acquireKey();
-    expect('key' in r2 && r2.key).toBe('key1');
+    expect('key' in r2 && r2.key).toBe('key2');
   });
 
   it('skips keys on cooldown', () => {

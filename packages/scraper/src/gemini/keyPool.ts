@@ -8,16 +8,19 @@ import type { KeyState } from './types';
  * it waits until the earliest one frees up.
  */
 export class KeyPool {
-  private keys: (KeyState & { disabled: boolean })[];
+  private keys: (KeyState & { disabled: boolean; lastUsedAt: number })[];
+  private minIntervalMs: number;
 
-  constructor(apiKeys: string[]) {
+  constructor(apiKeys: string[], rpmPerKey: number = 15) {
     if (apiKeys.length === 0) {
       throw new Error('At least one API key required');
     }
+    this.minIntervalMs = Math.ceil(60000 / rpmPerKey); // 15 RPM → 4000ms
     this.keys = apiKeys.map((key) => ({
       key,
       cooldownUntil: 0,
       disabled: false,
+      lastUsedAt: 0,
     }));
   }
 
@@ -45,10 +48,21 @@ export class KeyPool {
 
     for (const k of this.keys) {
       if (k.disabled) continue;
-      if (k.cooldownUntil <= now) {
+
+      // Check error cooldown first
+      if (k.cooldownUntil > now) {
+        earliestAvailable = Math.min(earliestAvailable, k.cooldownUntil - now);
+        continue;
+      }
+
+      // Check RPM interval — don't reuse a key within minIntervalMs
+      const readyAt = k.lastUsedAt + this.minIntervalMs;
+      if (readyAt <= now) {
+        k.lastUsedAt = now;
         return { key: k.key };
       }
-      earliestAvailable = Math.min(earliestAvailable, k.cooldownUntil - now);
+
+      earliestAvailable = Math.min(earliestAvailable, readyAt - now);
     }
 
     return { waitMs: earliestAvailable === Infinity ? 10000 : earliestAvailable };
@@ -77,7 +91,9 @@ export class KeyPool {
 
   availableCount(): number {
     const now = Date.now();
-    return this.keys.filter((k) => !k.disabled && k.cooldownUntil <= now).length;
+    return this.keys.filter((k) =>
+      !k.disabled && k.cooldownUntil <= now && k.lastUsedAt + this.minIntervalMs <= now
+    ).length;
   }
 
   totalActiveKeys(): number {

@@ -58,17 +58,17 @@ export class GeminiExtractor {
             const msg = error instanceof Error ? error.message : String(error);
 
             if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-              // Rate limited — parse Google's retry delay and cooldown this key
               const cooldownMs = this.parseCooldownMs(error) || 10000;
+              logger.warning(`Chunk ${chunk.index + 1} rate-limited (key cooldown ${Math.round(cooldownMs / 1000)}s)`);
               this.keyPool.cooldownKey(key, cooldownMs);
-              failedThisRound.push(chunk); // Retry later
+              failedThisRound.push(chunk);
             } else if (msg.includes('API_KEY_INVALID') || msg.includes('401') || msg.includes('403')) {
+              logger.warning(`Chunk ${chunk.index + 1} auth error — disabling key`);
               this.keyPool.disableKey(key);
-              failedThisRound.push(chunk); // Retry with different key
+              failedThisRound.push(chunk);
             } else {
-              // Unknown error — don't retry
               permanentlyFailed++;
-              logger.warning(`Chunk ${chunk.index + 1} permanently failed: ${msg}`);
+              logger.warning(`Chunk ${chunk.index + 1} permanently failed: ${msg.substring(0, 200)}`);
             }
           }
         })
@@ -79,15 +79,13 @@ export class GeminiExtractor {
       if (failedThisRound.length === 0) break;
 
       if (round < maxRounds - 1) {
-        logger.info(`Retrying ${failedThisRound.length} failed chunks (round ${round + 2}/${maxRounds})...`);
         queue = failedThisRound;
-        // Wait for all cooldowns to expire before retrying
-        await new Promise<void>(async (resolve) => {
-          while (this.keyPool.availableCount() === 0) {
-            await new Promise((r) => setTimeout(r, 2000));
-          }
-          resolve();
-        });
+        // Wait for ALL keys to be available — cooldowns fully expired
+        const totalKeys = this.keyPool.totalActiveKeys();
+        while (this.keyPool.availableCount() < totalKeys) {
+          await new Promise((r) => setTimeout(r, 2000));
+        }
+        logger.info(`Retrying ${queue.length} failed chunks (round ${round + 2}/${maxRounds}) — all ${totalKeys} keys available`);
       } else {
         permanentlyFailed += failedThisRound.length;
         logger.warning(`${failedThisRound.length} chunks failed after all retry rounds`);
