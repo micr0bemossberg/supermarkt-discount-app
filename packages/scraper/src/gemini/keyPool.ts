@@ -11,11 +11,11 @@ export class KeyPool {
   private keys: (KeyState & { disabled: boolean; lastUsedAt: number })[];
   private minIntervalMs: number;
 
-  constructor(apiKeys: string[], rpmPerKey: number = 15) {
+  constructor(apiKeys: string[]) {
     if (apiKeys.length === 0) {
       throw new Error('At least one API key required');
     }
-    this.minIntervalMs = Math.ceil(60000 / rpmPerKey); // 15 RPM → 4000ms
+    this.minIntervalMs = 0; // No artificial interval — let Google's 429s be the rate limiter
     this.keys = apiKeys.map((key) => ({
       key,
       cooldownUntil: 0,
