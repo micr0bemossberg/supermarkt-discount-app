@@ -215,8 +215,19 @@ Located in `packages/scraper/src/gemini/types.ts` (`GEMINI_DEFAULTS`):
 - **Structured output**: JSON schema enforcement (guarantees valid output)
 - **Media resolution**: `HIGH` (1120 tokens/image)
 - **Temperature**: `0.0` (deterministic)
-- **Batch size**: 14 chunks per batch, 65s delay between batches (free tier rate limit)
-- **Rate limit**: 15 RPM per Google Cloud project (shared across all 10 API keys)
+- **Batch size**: 10 chunks per batch, 5s delay between batches
+- **Rate limit**: 150 RPM total (10 keys × 10 separate Google Cloud projects × 15 RPM each)
+
+### Gemini API Key Setup
+
+- **10 API keys** on **10 separate Google Cloud projects** (project1 through project10)
+- Each project has its own free tier quota: **15 RPM per project**
+- Keys are created via https://aistudio.google.com/ → API Keys
+- All keys are on the same Gmail account but **different projects** — this is critical for quota separation
+- The `quotaId` in rate limit errors is `GenerateRequestsPerMinutePerProjectPerModel-FreeTier` — per PROJECT, not per key
+- If keys were on the same project, all 10 would share a single 15 RPM quota (150 RPM → 15 RPM)
+- Keys can expire — if `API_KEY_INVALID` errors appear, regenerate at https://aistudio.google.com/
+- Env vars: `gemini_api_key1` through `gemini_api_key10` in root `.env`
 
 ## Supabase Notes
 
