@@ -38,30 +38,49 @@ export class GeminiExtractor {
     const pLimit = pLimitModule.default || pLimitModule;
     const limit = pLimit(activeKeys);
 
-    let completed = 0;
-    const tasks = images.map((chunk) =>
-      limit(async () => {
-        // Wait for a key that's ready (respects per-key RPM interval)
-        const key = await this.keyPool.waitForKey();
+    // Process all chunks with retry on failures
+    let chunksToProcess = [...images];
+    const maxRetryRounds = 3;
 
-        try {
-          const result = await this.extractFromChunkWithKey(chunk, prompt, key);
-          totalTokens += result.tokens;
-          allProducts.push(...result.products);
-          completed++;
-          if (completed % 10 === 0) {
-            logger.info(`Progress: ${completed}/${images.length} chunks done (${allProducts.length} products)`);
+    for (let round = 0; round <= maxRetryRounds; round++) {
+      const failedChunks: ImageChunk[] = [];
+      let completed = 0;
+
+      const tasks = chunksToProcess.map((chunk) =>
+        limit(async () => {
+          const key = await this.keyPool.waitForKey();
+
+          try {
+            const result = await this.extractFromChunkWithKey(chunk, prompt, key);
+            totalTokens += result.tokens;
+            allProducts.push(...result.products);
+            completed++;
+            if (completed % 10 === 0) {
+              logger.info(`Progress: ${completed}/${chunksToProcess.length} chunks done (${allProducts.length} products)`);
+            }
+          } catch (error) {
+            failedChunks.push(chunk);
+            if (round === maxRetryRounds) {
+              chunksFailed++;
+              logger.warning(
+                `Chunk ${chunk.index + 1}/${chunk.totalChunks} permanently failed: ${error instanceof Error ? error.message : String(error)}`
+              );
+            }
           }
-        } catch (error) {
-          chunksFailed++;
-          logger.warning(
-            `Chunk ${chunk.index + 1}/${chunk.totalChunks} failed: ${error instanceof Error ? error.message : String(error)}`
-          );
-        }
-      })
-    );
+        })
+      );
 
-    await Promise.allSettled(tasks);
+      await Promise.allSettled(tasks);
+
+      if (failedChunks.length === 0) break;
+
+      if (round < maxRetryRounds) {
+        logger.info(`Retrying ${failedChunks.length} failed chunks (round ${round + 1}/${maxRetryRounds})...`);
+        // Brief wait for rate limits to clear before retry
+        await this.sleep(5000);
+        chunksToProcess = failedChunks;
+      }
+    }
 
     return {
       products: allProducts,
