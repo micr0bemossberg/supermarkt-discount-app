@@ -46,7 +46,7 @@ export const GEMINI_DEFAULTS: GeminiConfig = {
   maxConcurrent: 10,                        // Match number of active keys
   retryAttempts: 2,
   temperature: 0.0,               // Deterministic — no creativity needed for data extraction
-  thinkingLevel: 'low',           // Balanced: adds reasoning without 60s+ latency per chunk
+  thinkingLevel: 'high',          // Free tier — max reasoning for best extraction accuracy
   mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 1120 tokens/image — needed to read small print prices
   useStructuredOutput: true,      // Force valid JSON via responseSchema
   batchDelayMs: 0,                // No delay — natural API latency (~3s) spaces out key reuse automatically

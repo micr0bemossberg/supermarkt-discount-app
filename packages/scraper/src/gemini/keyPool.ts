@@ -1,26 +1,26 @@
-import type { KeyState } from './types';
-
 /**
- * Simple key pool — no artificial intervals.
+ * Simplified key dispatcher — no intervals, just cooldowns on 429.
  *
- * Keys are either: available, on cooldown (from 429), or disabled (auth error).
- * The dispatcher grabs any available key. If all are on cooldown,
- * it waits until the earliest one frees up.
+ * Keys are either: in-flight (busy), on cooldown (429), disabled (auth), or free.
+ * Dispatcher checks every 100ms for ANY free key and dispatches immediately.
  */
 export class KeyPool {
-  private keys: (KeyState & { disabled: boolean; lastUsedAt: number })[];
-  private minIntervalMs: number;
+  private keys: {
+    key: string;
+    inFlight: boolean;
+    cooldownUntil: number;
+    disabled: boolean;
+  }[];
 
   constructor(apiKeys: string[]) {
     if (apiKeys.length === 0) {
       throw new Error('At least one API key required');
     }
-    this.minIntervalMs = 0; // No artificial interval — let Google's 429s be the rate limiter
     this.keys = apiKeys.map((key) => ({
       key,
+      inFlight: false,
       cooldownUntil: 0,
       disabled: false,
-      lastUsedAt: 0,
     }));
   }
 
@@ -40,59 +40,59 @@ export class KeyPool {
   }
 
   /**
-   * Get a key that's available right now, or wait time until one is.
+   * Get a free key instantly, or null if none available.
    */
-  acquireKey(): { key: string } | { waitMs: number } {
+  acquireKey(): { key: string; keyIndex: number } | null {
     const now = Date.now();
-    let earliestAvailable = Infinity;
-
-    for (const k of this.keys) {
-      if (k.disabled) continue;
-
-      // Check error cooldown first
-      if (k.cooldownUntil > now) {
-        earliestAvailable = Math.min(earliestAvailable, k.cooldownUntil - now);
-        continue;
-      }
-
-      // Check RPM interval — don't reuse a key within minIntervalMs
-      const readyAt = k.lastUsedAt + this.minIntervalMs;
-      if (readyAt <= now) {
-        k.lastUsedAt = now;
-        return { key: k.key };
-      }
-
-      earliestAvailable = Math.min(earliestAvailable, readyAt - now);
+    for (let i = 0; i < this.keys.length; i++) {
+      const k = this.keys[i];
+      if (k.disabled || k.inFlight) continue;
+      if (k.cooldownUntil > now) continue;
+      k.inFlight = true;
+      return { key: k.key, keyIndex: i + 1 };
     }
-
-    return { waitMs: earliestAvailable === Infinity ? 10000 : earliestAvailable };
+    return null;
   }
 
-  /** Wait until a key is free, then return it. */
-  async waitForKey(): Promise<string> {
+  /**
+   * Poll every 100ms until a key is free, then return it.
+   */
+  async waitForKey(): Promise<{ key: string; keyIndex: number }> {
     while (true) {
       const result = this.acquireKey();
-      if ('key' in result) return result.key;
-      await new Promise((r) => setTimeout(r, result.waitMs));
+      if (result) return result;
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 
-  /** Cooldown from rate limit — uses Google's retry delay if available */
+  /** Mark key as done — available for next request */
+  releaseKey(key: string): void {
+    const k = this.keys.find((s) => s.key === key);
+    if (k) k.inFlight = false;
+  }
+
+  /** 429 → cooldown for the duration Google tells us, then auto-available. Dispatcher polls every 100ms. */
   cooldownKey(key: string, durationMs: number): void {
     const k = this.keys.find((s) => s.key === key);
-    if (k) k.cooldownUntil = Date.now() + durationMs;
+    if (k) {
+      k.cooldownUntil = Date.now() + durationMs;
+      k.inFlight = false;
+    }
   }
 
   /** Permanently disable (auth failure) */
   disableKey(key: string): void {
     const k = this.keys.find((s) => s.key === key);
-    if (k) k.disabled = true;
+    if (k) {
+      k.disabled = true;
+      k.inFlight = false;
+    }
   }
 
   availableCount(): number {
     const now = Date.now();
     return this.keys.filter((k) =>
-      !k.disabled && k.cooldownUntil <= now && k.lastUsedAt + this.minIntervalMs <= now
+      !k.disabled && !k.inFlight && k.cooldownUntil <= now
     ).length;
   }
 
@@ -103,6 +103,6 @@ export class KeyPool {
   // Legacy compat
   getNextKey(): string | null {
     const result = this.acquireKey();
-    return 'key' in result ? result.key : null;
+    return result ? result.key : null;
   }
 }

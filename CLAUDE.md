@@ -211,11 +211,10 @@ Single GitHub Actions workflow: `.github/workflows/scrape-daily.yml`
 
 Located in `packages/scraper/src/gemini/types.ts` (`GEMINI_DEFAULTS`):
 - **Model**: `gemini-3.1-flash-lite-preview` (free tier)
-- **Thinking**: `low` — adds reasoning for price/date extraction (~3s per chunk)
+- **Thinking**: `high` — free tier, max reasoning for best extraction accuracy
 - **Structured output**: JSON schema enforcement (guarantees valid output)
-- **Media resolution**: `HIGH` (1120 tokens/image)
+- **Media resolution**: `HIGH` (1120 tokens/image) for reading small print prices
 - **Temperature**: `0.0` (deterministic)
-- **Batch size**: 10 chunks per batch (one per key/project), 5s delay between batches
 - **Rate limit**: **150 RPM total** (10 keys × 10 projects × 15 RPM each)
 
 ### Gemini API Key & Rate Limit Setup
@@ -228,6 +227,24 @@ Located in `packages/scraper/src/gemini/types.ts` (`GEMINI_DEFAULTS`):
 - The `extractFromChunkWithKey()` method accepts a pre-assigned key to avoid this race.
 - Keys can expire — if `API_KEY_INVALID` errors appear, regenerate at https://aistudio.google.com/
 - Env vars: `gemini_api_key1` through `gemini_api_key10` in root `.env`
+
+### Key Pool & Rate Limit Architecture
+
+The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with an in-flight tracking model:
+
+**Dispatcher design**:
+- Keys have 3 states: **free**, **in-flight** (processing a Gemini call), **on cooldown** (429'd)
+- Dispatcher polls every **100ms** for any free key — grabs it instantly when available
+- On success: `releaseKey()` → key becomes free → next chunk grabs it within 100ms
+- On 429: `cooldownKey(retryDelay)` → key is unavailable for the duration Google specifies (typically 10-35s), dispatcher keeps polling and grabs it the moment cooldown expires
+- On auth error: `disableKey()` → key permanently removed from pool
+
+**Rate limit lessons learned**:
+- Google's free tier has **two rate limits**: RPM (15/min) AND a burst limiter (can't fire 15 requests in 1 second even if RPM budget is available)
+- **Do NOT spam 429'd keys** — Google escalates rate limits across ALL projects on the same Gmail account if you hammer keys without respecting the `retryDelay`
+- **500 RPD per project** is the daily limit — exhausted keys won't recover until midnight Pacific time. During development, this is the main bottleneck
+- The `retryDelay` field in Google's 429 error JSON is the authoritative wait time — always use it
+- Multiple Gmail accounts with separate projects give truly independent rate limits
 
 ## Supabase Notes
 
