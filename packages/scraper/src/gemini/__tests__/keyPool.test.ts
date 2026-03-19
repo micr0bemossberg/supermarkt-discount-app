@@ -5,112 +5,73 @@ describe('KeyPool', () => {
     expect(() => new KeyPool([])).toThrow('At least one API key required');
   });
 
-  it('acquires first available key with keyIndex', () => {
-    const pool = new KeyPool(['key1', 'key2', 'key3']);
-    const r1 = pool.acquireKey();
-    expect(r1).not.toBeNull();
-    expect(r1!.key).toBe('key1');
-    expect(r1!.keyIndex).toBe(1);
+  it('creates slots for each key × model combination', () => {
+    const pool = new KeyPool(['key1', 'key2'], ['modelA', 'modelB']);
+    // 2 keys × 2 models = 4 free slots
+    expect(pool.getFreeSlots()).toHaveLength(4);
   });
 
-  it('marks acquired key as in-flight — not available until released', () => {
+  it('getFreeSlots returns all slots initially', () => {
     const pool = new KeyPool(['key1']);
-    const r1 = pool.acquireKey();
-    expect(r1).not.toBeNull();
-    // key1 is in-flight, no keys available
-    expect(pool.acquireKey()).toBeNull();
-    // Release it
-    pool.releaseKey('key1');
-    // Now available again
-    expect(pool.acquireKey()).not.toBeNull();
+    // Default 2 models
+    expect(pool.getFreeSlots()).toHaveLength(2);
   });
 
-  it('rotates to next key when first is in-flight', () => {
-    const pool = new KeyPool(['key1', 'key2']);
-    pool.acquireKey(); // key1 in-flight
-    const r2 = pool.acquireKey();
-    expect(r2).not.toBeNull();
-    expect(r2!.key).toBe('key2');
+  it('markInFlight removes slot from free list', () => {
+    const pool = new KeyPool(['key1'], ['modelA']);
+    const slots = pool.getFreeSlots();
+    pool.markInFlight(slots[0].slotIndex);
+    expect(pool.getFreeSlots()).toHaveLength(0);
   });
 
-  it('skips keys on cooldown', () => {
-    const pool = new KeyPool(['key1', 'key2']);
-    pool.cooldownKey('key1', 5000);
-    const r = pool.acquireKey();
-    expect(r).not.toBeNull();
-    expect(r!.key).toBe('key2');
+  it('markFree makes slot available again', () => {
+    const pool = new KeyPool(['key1'], ['modelA']);
+    const slots = pool.getFreeSlots();
+    pool.markInFlight(slots[0].slotIndex);
+    expect(pool.getFreeSlots()).toHaveLength(0);
+    pool.markFree(slots[0].slotIndex);
+    expect(pool.getFreeSlots()).toHaveLength(1);
   });
 
-  it('returns null when all keys busy', () => {
-    const pool = new KeyPool(['key1']);
-    pool.acquireKey(); // in-flight
-    expect(pool.acquireKey()).toBeNull();
+  it('markRateLimited puts slot in waiting state', () => {
+    const pool = new KeyPool(['key1'], ['modelA', 'modelB']);
+    const slots = pool.getFreeSlots();
+    // Rate-limit modelA slot
+    pool.markRateLimited(slots[0].slotIndex);
+    // modelB slot still free
+    const free = pool.getFreeSlots();
+    expect(free).toHaveLength(1);
+    expect(free[0].model).toBe('modelB');
   });
 
-  it('disableKey permanently removes a key', () => {
-    const pool = new KeyPool(['key1', 'key2']);
+  it('disableKey removes all slots for that key', () => {
+    const pool = new KeyPool(['key1', 'key2'], ['modelA', 'modelB']);
     pool.disableKey('key1');
-    const r = pool.acquireKey();
-    expect(r).not.toBeNull();
-    expect(r!.key).toBe('key2');
+    // Only key2's 2 slots remain
+    expect(pool.getFreeSlots()).toHaveLength(2);
     expect(pool.totalActiveKeys()).toBe(1);
-  });
-
-  it('waitForKey resolves with key and keyIndex', async () => {
-    const pool = new KeyPool(['key1']);
-    const { key, keyIndex } = await pool.waitForKey();
-    expect(key).toBe('key1');
-    expect(keyIndex).toBe(1);
-  });
-
-  it('waitForKey waits until a key is released', async () => {
-    const pool = new KeyPool(['key1']);
-    pool.acquireKey(); // key1 in-flight
-
-    // Release after 200ms
-    setTimeout(() => pool.releaseKey('key1'), 200);
-
-    const start = Date.now();
-    const { key } = await pool.waitForKey();
-    const elapsed = Date.now() - start;
-
-    expect(key).toBe('key1');
-    expect(elapsed).toBeGreaterThanOrEqual(100); // waited for release
-  });
-
-  it('cooldownKey releases in-flight and sets cooldown', () => {
-    const pool = new KeyPool(['key1', 'key2']);
-    pool.acquireKey(); // key1 in-flight
-    pool.cooldownKey('key1', 5000); // cooldown releases in-flight
-    // key1 is on cooldown, key2 is free
-    expect(pool.availableCount()).toBe(1);
   });
 
   it('loads keys from env vars', () => {
     process.env.gemini_api_key1 = 'testkey1';
     process.env.gemini_api_key2 = 'testkey2';
     const pool = KeyPool.fromEnv();
-    const r = pool.acquireKey();
-    expect(r).not.toBeNull();
-    expect(r!.key).toBe('testkey1');
+    expect(pool.getFreeSlots().length).toBeGreaterThan(0);
     delete process.env.gemini_api_key1;
     delete process.env.gemini_api_key2;
   });
 
-  it('reports counts correctly', () => {
-    const pool = new KeyPool(['key1', 'key2', 'key3']);
-    expect(pool.availableCount()).toBe(3);
-    expect(pool.totalActiveKeys()).toBe(3);
-    pool.disableKey('key1');
-    expect(pool.totalActiveKeys()).toBe(2);
-    pool.cooldownKey('key2', 5000);
-    expect(pool.availableCount()).toBe(1);
-  });
+  it('hasInFlight and hasWaiting track correctly', () => {
+    const pool = new KeyPool(['key1'], ['modelA']);
+    expect(pool.hasInFlight()).toBe(false);
+    expect(pool.hasWaiting()).toBe(false);
 
-  it('getNextKey legacy compat', () => {
-    const pool = new KeyPool(['key1']);
-    expect(pool.getNextKey()).toBe('key1');
-    // key1 is now in-flight
-    expect(pool.getNextKey()).toBeNull();
+    const slots = pool.getFreeSlots();
+    pool.markInFlight(slots[0].slotIndex);
+    expect(pool.hasInFlight()).toBe(true);
+
+    pool.markRateLimited(slots[0].slotIndex);
+    expect(pool.hasInFlight()).toBe(false);
+    expect(pool.hasWaiting()).toBe(true);
   });
 });
