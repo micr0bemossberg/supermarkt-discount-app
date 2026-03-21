@@ -1,18 +1,18 @@
-import { ScreenshotOCRScraper } from '../base/ScreenshotOCRScraper';
+import { PublitasOCRScraper } from '../base/PublitasOCRScraper';
 
-export class KruidvatScraper extends ScreenshotOCRScraper {
-  constructor() { super('kruidvat', 'https://www.kruidvat.nl/acties'); }
+export class KruidvatScraper extends PublitasOCRScraper {
+  constructor() { super('kruidvat', 'https://folder.kruidvat.nl'); }
   getSupermarketName() { return 'Kruidvat'; }
 
-  protected getBrowserType(): 'chromium' | 'firefox' {
-    return 'firefox'; // Chromium blocked by TLS fingerprinting
-  }
-
-  getTargetUrl() {
-    return 'https://www.kruidvat.nl/acties';
+  async getPublitasUrl(): Promise<string> {
+    // folder.kruidvat.nl redirects to the current week's folder
+    const response = await fetch('https://folder.kruidvat.nl', { redirect: 'follow' });
+    const finalUrl = response.url.replace(/\/$/, '');
+    this.logger.info(`Kruidvat folder → ${finalUrl}`);
+    return finalUrl;
   }
 
   protected getPromptHints(): string {
-    return 'Kruidvat sells personal care, beauty, and household items. Look for "1+1 gratis" and "2e halve prijs" deals.';
+    return 'Kruidvat sells personal care, beauty, and household items. Look for "1+1 gratis", "2e halve prijs", and "3 voor" deals.';
   }
 }
