@@ -194,9 +194,9 @@ export abstract class PublitasOCRScraper extends BaseScraper {
         } else if (typeof spread.url === 'string') {
           imageUrl = spread.url;
         } else if (spread.pages?.[0]?.images) {
-          // Publitas nested format: pages[0].images.at2400 is a relative path
+          // Publitas nested format: prefer at1600 (662KB) — good OCR quality without overwhelming Gemini
           const images = spread.pages[0].images;
-          const path = images.at2400 || images.at2000 || images.at1600 || images.at1200;
+          const path = images.at1600 || images.at2000 || images.at1200 || images.at2400;
           if (typeof path === 'string') {
             imageUrl = path.startsWith('http') ? path : `https://view.publitas.com${path}`;
           }

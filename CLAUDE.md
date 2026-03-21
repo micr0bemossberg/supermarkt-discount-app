@@ -259,26 +259,34 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 |---|---|---|---|---|
 | Dirk | Screenshot | 378 | 90/92 | 8.5 min | Working |
 | Vomar | Publitas | 219 | 41/41 | 80s | Working |
+| Kruidvat | Publitas | 181 | 54/54 | 846s | Working |
 | DekaMarkt | Publitas | 69 | 16/16 | 23s | Working |
-| Hoogvliet | Screenshot | 21 | 6/6 | 250s | Working |
+| Hoogvliet | Screenshot | 21→177* | 6→25* | 250s | Fixed (scroll-to-load) |
 | Aldi | Screenshot | 48 | 25/25 | 464s | Working |
-| Action | Screenshot | 25 | 10/10 | 161s | Working |
+| Action | Screenshot | 25 | 10/10 | 161s | Working (OCR misses some) |
 | Jumbo | Screenshot | 21 | 5/5 | 70s | Working |
-| Kruidvat | Screenshot (FF) | 1 | 7/7 | 274s | Needs page interaction |
-| Flink | Screenshot | 0 | 2/2 | 17s | Landing/login page |
-| Megafoodstunter | Screenshot | 0 | 5/5 | 27s | No deals visible |
-| Butlon | Screenshot | 0 | - | - | Site down (ERR_CONNECTION_TIMED_OUT) |
-| Joybuy | Screenshot (FF) | 0 | 2/2 | 27s | Needs page interaction |
+| Megafoodstunter | Screenshot | 7 | 15/15 | 144s | Working |
+| Flink | - | - | - | - | Removed (exited NL) |
+| Butlon | - | - | - | - | Disabled (site down) |
+| Joybuy | Screenshot (FF) | - | - | - | Blocked by corp IT, test from CI |
+
+\* Hoogvliet estimate after scroll-to-load fix (pending test)
 
 **Supermarket-specific quirks**:
 - **Dirk**: Multi-product modal expansion (72 cards), dual tabs (t/m dinsdag + vanaf woensdag), weekend deals (VR, ZA & ZO ACTIE)
+- **Hoogvliet**: AJAX lazy loading via `PromotionLoadScroll()` — needs gradual scroll (400px steps, 800ms delay) to trigger all category loads. Without this, only ~21 products load; with it, ~177 products across 20 categories
 - **Aldi**: Uses `domcontentloaded` (continuous background requests cause `networkidle` timeout), Thursday-Wednesday deal cycles
 - **Jumbo**: Uses `domcontentloaded` (same issue as Aldi), has "Laad meer" button for lazy loading
-- **Kruidvat/Joybuy**: Require Firefox (Chromium blocked by TLS fingerprinting), `npx playwright install firefox` required
+- **Kruidvat**: Switched from ScreenshotOCR (Firefox) to Publitas pipeline (`folder.kruidvat.nl`, 55 pages). Uses `at1600` resolution images (662KB) — `at2400` (1.2MB) causes Gemini timeout
 - **Vomar**: Publitas embed URL in iframe, needs browser to resolve, then follows redirect to actual publication
 - **DekaMarkt**: White-labeled Publitas (`folder.dekamarkt.nl`), follows redirect to weekly URL
-- **Flink**: Shows landing/login page — needs `beforeScreenshots()` to navigate to deals
-- **Butlon**: Domain `butlon.nl` unreachable — may be permanently down or renamed
+- **Megafoodstunter**: Wholesale/bulk food outlet. Homepage has no products — deals page is `/acties` (editorial magazine-style layout)
+- **Action**: All ~154 products rendered on page load (no lazy loading/pagination). Only 25 extracted — OCR accuracy issue with dense product grids, not a page interaction problem
+- **Flink**: Exited Netherlands (redirects to Germany). DataDome CAPTCHA. Should be disabled
+- **Butlon**: Domain `butlon.nl` unreachable — permanently down or renamed. Should be disabled
+- **Joybuy**: Parent company Jingdong blocked by corporate IT. Needs two-step navigation (homepage for session cookies, then Flash Deals page). Test from GitHub Actions CI
+
+**Publitas image resolution**: Prefer `at1600` (662KB) over `at2400` (1.2MB) — sufficient OCR quality without Gemini timeout risk. Configured in `PublitasOCRScraper.parseSpreadsData()`
 
 **Gemini call timeout**: Individual `callGemini()` calls have a 120s timeout (`Promise.race`) to prevent hung API calls from blocking the dispatcher indefinitely. This was added after Kruidvat's last chunk hung for minutes.
 
