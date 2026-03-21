@@ -181,12 +181,30 @@ export abstract class PublitasOCRScraper extends BaseScraper {
     for (let i = 0; i < data.length; i++) {
       const spread = data[i];
       if (spread && typeof spread === 'object') {
-        // Publitas spreads have various image URL formats
-        const imageUrl =
-          spread.imageUrl || spread.image_url || spread.url ||
-          spread.pages?.[0]?.imageUrl || spread.pages?.[0]?.image_url;
+        // Try various Publitas formats:
+        // 1. Direct: spread.imageUrl / spread.image_url / spread.url
+        // 2. Nested: spread.pages[0].images.at2400 (relative path, needs CDN prefix)
+        // 3. Nested: spread.pages[0].imageUrl
+        let imageUrl: string | null = null;
 
-        if (typeof imageUrl === 'string') {
+        if (typeof spread.imageUrl === 'string') {
+          imageUrl = spread.imageUrl;
+        } else if (typeof spread.image_url === 'string') {
+          imageUrl = spread.image_url;
+        } else if (typeof spread.url === 'string') {
+          imageUrl = spread.url;
+        } else if (spread.pages?.[0]?.images) {
+          // Publitas nested format: pages[0].images.at2400 is a relative path
+          const images = spread.pages[0].images;
+          const path = images.at2400 || images.at2000 || images.at1600 || images.at1200;
+          if (typeof path === 'string') {
+            imageUrl = path.startsWith('http') ? path : `https://view.publitas.com${path}`;
+          }
+        } else if (typeof spread.pages?.[0]?.imageUrl === 'string') {
+          imageUrl = spread.pages[0].imageUrl;
+        }
+
+        if (imageUrl) {
           pages.push({ imageUrl, pageIndex: i });
         }
       }

@@ -59,7 +59,7 @@ export class KeyPool {
 
   static fromEnv(): KeyPool {
     const keys: string[] = [];
-    for (let i = 1; i <= 50; i++) {
+    for (let i = 1; i <= 100; i++) {
       const key = process.env[`gemini_api_key${i}`];
       if (key) keys.push(key);
       else break;

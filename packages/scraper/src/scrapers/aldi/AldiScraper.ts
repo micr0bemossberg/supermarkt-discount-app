@@ -9,7 +9,14 @@ export class AldiScraper extends ScreenshotOCRScraper {
     return 'https://www.aldi.nl/aanbiedingen';
   }
 
+  protected getWaitUntil(): 'networkidle' | 'domcontentloaded' | 'load' {
+    return 'domcontentloaded'; // Aldi has continuous background requests, networkidle times out
+  }
+
   protected async beforeScreenshots(page: Page): Promise<void> {
+    // Wait for product content to load
+    await page.waitForTimeout(3000);
+
     // Click "Toon meer" button if present to load all products
     const showMore = page.locator('button:has-text("Toon meer"), button:has-text("Meer laden")');
     while (await showMore.isVisible({ timeout: 2000 }).catch(() => false)) {

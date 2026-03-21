@@ -54,6 +54,11 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
     // Default: no-op
   }
 
+  /** Override for sites that don't reach networkidle (continuous background requests) */
+  protected getWaitUntil(): 'networkidle' | 'domcontentloaded' | 'load' {
+    return 'networkidle';
+  }
+
   /** Override to provide additional image chunks (e.g., modal screenshots). */
   protected getExtraChunks(): ImageChunk[] {
     return [];
@@ -72,7 +77,7 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
     try {
       const page = await this.initBrowser();
       await page.setViewportSize({ width: config.viewportWidth, height: config.viewportHeight });
-      await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+      await page.goto(url, { waitUntil: this.getWaitUntil(), timeout: 30000 });
       await this.handleCookieConsent(page);
 
       try {
@@ -138,7 +143,7 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
     // 1. Navigate -- initBrowser() creates this.page and returns it
     const page = await this.initBrowser();
     await page.setViewportSize({ width: config.viewportWidth, height: config.viewportHeight });
-    await page.goto(url, { waitUntil: 'networkidle', timeout: 30000 });
+    await page.goto(url, { waitUntil: this.getWaitUntil(), timeout: 30000 });
 
     // 2. Handle cookie consent (inherited from BaseScraper)
     await this.handleCookieConsent(page);

@@ -84,21 +84,25 @@ The scraper uses **Gemini Vision OCR** (`gemini-3.1-flash-lite-preview`) instead
 
 **GeminiExtractor** (`packages/scraper/src/gemini/`):
 - Core service: images → structured `ScrapedProduct[]` via Google AI SDK
-- 10-key round-robin API pool with per-key cooldown
+- 60-key slot-based dispatcher with dual-model fallback (flash-lite + flash)
 - Structured output (JSON schema enforcement) — guarantees valid JSON
-- Thinking mode (`low`) for step-by-step price/date reasoning
+- Thinking mode (`high`) — free tier, max reasoning for best extraction accuracy
 - Media resolution `HIGH` (1120 tokens/image) for reading small print
-- Batch processing with rate limit delays (free tier: 15 RPM per project)
+- Central dispatcher polls every 100ms, dispatches to free slots with escalating backoff on 429
 
 **Pipeline 1 — PublitasOCRScraper** (flyer-based supermarkets):
-- Fetches `spreads.json` from Publitas CDN → downloads flyer page images
-- No browser needed for image extraction (may need browser for URL resolution)
-- Supermarkets: **Vomar**, **DekaMarkt**
+- Fetches `spreads.json` from Publitas CDN → downloads flyer page images (print-quality, no browser needed)
+- Publitas URLs redirect (e.g., `folder-deze-week` → `online-weekendfolder-week-12`) — scrapers follow redirect to get actual publication URL
+- Spreads format: `spread.pages[0].images.at2400` (relative path, prefixed with `https://view.publitas.com`)
+- Vomar needs browser to resolve Publitas iframe embed URL from `vomar.nl/aanbiedingen`
+- Supermarkets: **Vomar** (219 products, 80s), **DekaMarkt** (69 products, 23s)
 
 **Pipeline 2 — ScreenshotOCRScraper** (self-hosted websites):
 - Playwright navigates, handles cookies, takes scrolling screenshots with 20% overlap
 - `beforeScreenshots()` hook for page interaction (expand cards, click tabs, load more)
-- Supermarkets: **Dirk**, **Hoogvliet**, **Aldi**, **Action**, **Kruidvat** (Firefox), **Joybuy** (Firefox), **Flink**, **Megafoodstunter**, **Butlon**, **Jumbo**
+- `getWaitUntil()` override for sites that don't reach `networkidle` (e.g., Aldi uses `domcontentloaded`)
+- `getBrowserType()` override for Firefox (Kruidvat, Joybuy — Chromium blocked by TLS fingerprinting)
+- Supermarkets: **Dirk** (378 products, 8.5min), **Hoogvliet** (21, 250s), **Aldi** (48, 464s), **Action** (25, 161s), **Kruidvat** (Firefox), **Joybuy** (Firefox), **Flink**, **Megafoodstunter**, **Butlon**, **Jumbo**
 
 **Pipeline 3 — API scrapers** (unchanged, no OCR):
 - **AHScraper** — Albert Heijn mobile API
@@ -114,7 +118,7 @@ The scraper uses **Gemini Vision OCR** (`gemini-3.1-flash-lite-preview`) instead
 **Adding a new scraper**:
 1. Create `packages/scraper/src/scrapers/{name}/{Name}Scraper.ts`
 2. Extend `ScreenshotOCRScraper` (for websites) or `PublitasOCRScraper` (for Publitas flyers)
-3. Implement `getTargetUrl()`, `getSupermarketName()`, and optionally `beforeScreenshots()`, `getPromptHints()`, `getBrowserType()`
+3. Implement `getTargetUrl()`, `getSupermarketName()`, and optionally `beforeScreenshots()`, `getPromptHints()`, `getBrowserType()`, `getWaitUntil()`
 4. Register in `packages/scraper/src/index.ts`
 5. Add slug to `SupermarketSlug` in `packages/shared/src/types/Supermarket.ts`
 6. Add to seed data in `supabase/migrations/`
@@ -215,36 +219,68 @@ Located in `packages/scraper/src/gemini/types.ts` (`GEMINI_DEFAULTS`):
 - **Structured output**: JSON schema enforcement (guarantees valid output)
 - **Media resolution**: `HIGH` (1120 tokens/image) for reading small print prices
 - **Temperature**: `0.0` (deterministic)
-- **Rate limit**: **150 RPM total** (10 keys × 10 projects × 15 RPM each)
+- **Dual-model fallback**: `gemini-3.1-flash-lite-preview` (primary, 15 RPM) + `gemini-3-flash-preview` (fallback, 5 RPM). Different models have separate rate limits per project.
+- **Rate limit**: **~60 keys × 2 models = ~120 slots** across multiple Gmail accounts
 
 ### Gemini API Key & Rate Limit Setup
 
-- **10 API keys** on **10 separate Google Cloud projects** (project1 through project10)
+- **~60 API keys** across multiple Gmail accounts, each on a separate Google Cloud project
 - Keys created via https://aistudio.google.com/ → API Keys
-- All keys on the same Gmail account, different projects, all Free tier
-- Rate limits are **per project**: 15 RPM, 250K TPM, 500 RPD per project
-- **CRITICAL**: Keys must be pre-assigned to chunks synchronously before firing concurrent requests. If `getNextKey()` is called concurrently from async code, race conditions cause multiple requests to hit the same key/project, triggering 429 rate limits.
-- The `extractFromChunkWithKey()` method accepts a pre-assigned key to avoid this race.
+- Rate limits are **per project per model**: flash-lite: 15 RPM / 500 RPD, flash: 5 RPM / 20 RPD
 - Keys can expire — if `API_KEY_INVALID` errors appear, regenerate at https://aistudio.google.com/
-- Env vars: `gemini_api_key1` through `gemini_api_key10` in root `.env`
+- Env vars: `gemini_api_key1` through `gemini_api_key60` in root `.env` (scanner supports up to 100)
 
 ### Key Pool & Rate Limit Architecture
 
-The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with an in-flight tracking model:
+The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a **slot-based dual-model dispatcher**:
 
-**Dispatcher design**:
-- Keys have 3 states: **free**, **in-flight** (processing a Gemini call), **on cooldown** (429'd)
-- Dispatcher polls every **100ms** for any free key — grabs it instantly when available
-- On success: `releaseKey()` → key becomes free → next chunk grabs it within 100ms
-- On 429: `cooldownKey(retryDelay)` → key is unavailable for the duration Google specifies (typically 10-35s), dispatcher keeps polling and grabs it the moment cooldown expires
-- On auth error: `disableKey()` → key permanently removed from pool
+**Slot model**: Each API key has 2 slots — one per model (flash-lite + flash). Rate limits are per-project per-model, so when flash-lite is 429'd, flash on the same key may still be available.
+
+**Central dispatcher** (100ms polling loop in `GeminiExtractor.extractProducts()`):
+1. Every 100ms, scan all slots for FREE ones (including rate-limited slots whose backoff expired)
+2. For each FREE slot + chunk in queue → dispatch (fire-and-forget, key → IN-FLIGHT)
+3. On success → slot FREE (backoff resets), products collected
+4. On 429 → slot RATE_LIMITED with escalating backoff (15s → 30s → 60s → 60s...)
+5. On `API_KEY_INVALID` → key DISABLED (all model slots for that key)
+6. Loop ends when queue empty AND no slots in-flight
+
+**Key states**: FREE (ready) → IN-FLIGHT (processing) → RATE_LIMITED (backoff timer) → FREE (timer expired). DISABLED = permanently dead.
 
 **Rate limit lessons learned**:
-- Google's free tier has **two rate limits**: RPM (15/min) AND a burst limiter (can't fire 15 requests in 1 second even if RPM budget is available)
-- **Do NOT spam 429'd keys** — Google escalates rate limits across ALL projects on the same Gmail account if you hammer keys without respecting the `retryDelay`
-- **500 RPD per project** is the daily limit — exhausted keys won't recover until midnight Pacific time. During development, this is the main bottleneck
-- The `retryDelay` field in Google's 429 error JSON is the authoritative wait time — always use it
-- Multiple Gmail accounts with separate projects give truly independent rate limits
+- Google's free tier has **two rate limits**: RPM (15/min) AND a burst limiter (can't fire 15 requests in 1 second)
+- **Do NOT spam 429'd keys** — Google escalates rate limits across ALL projects on the same Gmail account
+- **500 RPD per project** (flash-lite) / **20 RPD** (flash) — daily limits reset at midnight Pacific
+- **403 can mean rate limit**, not just auth error — only disable keys on `API_KEY_INVALID`
+- Escalating backoff (15s → 30s → 60s) is critical — resets on success so recovered keys immediately get work
+- No health checks needed — the backoff timer + real request attempt is sufficient
+
+**Tested results** (60 keys × 2 models = 120 slots):
+| Supermarket | Pipeline | Products | Chunks | Extraction Time |
+|---|---|---|---|---|
+| Dirk | Screenshot | 378 | 90/92 | 8.5 min | Working |
+| Vomar | Publitas | 219 | 41/41 | 80s | Working |
+| DekaMarkt | Publitas | 69 | 16/16 | 23s | Working |
+| Hoogvliet | Screenshot | 21 | 6/6 | 250s | Working |
+| Aldi | Screenshot | 48 | 25/25 | 464s | Working |
+| Action | Screenshot | 25 | 10/10 | 161s | Working |
+| Jumbo | Screenshot | 21 | 5/5 | 70s | Working |
+| Kruidvat | Screenshot (FF) | 1 | 7/7 | 274s | Needs page interaction |
+| Flink | Screenshot | 0 | 2/2 | 17s | Landing/login page |
+| Megafoodstunter | Screenshot | 0 | 5/5 | 27s | No deals visible |
+| Butlon | Screenshot | 0 | - | - | Site down (ERR_CONNECTION_TIMED_OUT) |
+| Joybuy | Screenshot (FF) | 0 | 2/2 | 27s | Needs page interaction |
+
+**Supermarket-specific quirks**:
+- **Dirk**: Multi-product modal expansion (72 cards), dual tabs (t/m dinsdag + vanaf woensdag), weekend deals (VR, ZA & ZO ACTIE)
+- **Aldi**: Uses `domcontentloaded` (continuous background requests cause `networkidle` timeout), Thursday-Wednesday deal cycles
+- **Jumbo**: Uses `domcontentloaded` (same issue as Aldi), has "Laad meer" button for lazy loading
+- **Kruidvat/Joybuy**: Require Firefox (Chromium blocked by TLS fingerprinting), `npx playwright install firefox` required
+- **Vomar**: Publitas embed URL in iframe, needs browser to resolve, then follows redirect to actual publication
+- **DekaMarkt**: White-labeled Publitas (`folder.dekamarkt.nl`), follows redirect to weekly URL
+- **Flink**: Shows landing/login page — needs `beforeScreenshots()` to navigate to deals
+- **Butlon**: Domain `butlon.nl` unreachable — may be permanently down or renamed
+
+**Gemini call timeout**: Individual `callGemini()` calls have a 120s timeout (`Promise.race`) to prevent hung API calls from blocking the dispatcher indefinitely. This was added after Kruidvat's last chunk hung for minutes.
 
 ## Supabase Notes
 

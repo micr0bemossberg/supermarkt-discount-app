@@ -20,18 +20,25 @@ export class VomarScraper extends PublitasOCRScraper {
     });
 
     // Extract the Publitas embed URL from the page
-    const publitasUrl = await page.evaluate(() => {
+    const embedUrl = await page.evaluate(() => {
       const iframe = document.querySelector('iframe[src*="publitas"]');
       return iframe?.getAttribute('src') || null;
     });
 
     await page.close();
 
-    if (!publitasUrl) {
+    if (!embedUrl) {
       throw new Error('Could not find Publitas embed URL on Vomar aanbiedingen page');
     }
 
-    return publitasUrl;
+    // The embed URL (e.g., /folder-deze-week) redirects to the actual publication URL.
+    // Follow the redirect to get the real URL that has spreads.json.
+    const cleanUrl = embedUrl.startsWith('http') ? embedUrl.split('?')[0] : `https://view.publitas.com${embedUrl.split('?')[0]}`;
+    const response = await fetch(cleanUrl, { redirect: 'follow' });
+    const finalUrl = response.url.replace(/\/$/, '');
+
+    this.logger.info(`Publitas embed → ${finalUrl}`);
+    return finalUrl;
   }
 
   protected getPromptHints(): string {

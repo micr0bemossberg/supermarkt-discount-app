@@ -9,7 +9,12 @@ export class JumboScraper extends ScreenshotOCRScraper {
     return 'https://www.jumbo.com/aanbiedingen';
   }
 
+  protected getWaitUntil(): 'networkidle' | 'domcontentloaded' | 'load' {
+    return 'domcontentloaded';
+  }
+
   protected async beforeScreenshots(page: Page): Promise<void> {
+    await page.waitForTimeout(3000);
     // Jumbo may lazy-load deals -- scroll to trigger
     const loadMore = page.locator('button:has-text("Meer laden"), button:has-text("Laad meer")');
     while (await loadMore.isVisible({ timeout: 2000 }).catch(() => false)) {

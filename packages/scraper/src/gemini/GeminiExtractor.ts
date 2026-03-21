@@ -156,6 +156,19 @@ export class GeminiExtractor {
     apiKey: string,
     modelId: string,
   ): Promise<{ products: import('@supermarkt-deals/shared').ScrapedProduct[]; tokens: number }> {
+    // 120s timeout — prevents hung Gemini calls from blocking the dispatcher
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Gemini call timed out after 120s')), 120_000)
+    );
+    return Promise.race([this._callGeminiImpl(chunk, prompt, apiKey, modelId), timeout]);
+  }
+
+  private async _callGeminiImpl(
+    chunk: ImageChunk,
+    prompt: string,
+    apiKey: string,
+    modelId: string,
+  ): Promise<{ products: import('@supermarkt-deals/shared').ScrapedProduct[]; tokens: number }> {
     const genAI = new GoogleGenerativeAI(apiKey);
     const generationConfig: Record<string, unknown> = {
       temperature: this.config.temperature,

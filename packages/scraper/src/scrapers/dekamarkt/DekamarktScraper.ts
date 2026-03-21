@@ -7,8 +7,12 @@ export class DekamarktScraper extends PublitasOCRScraper {
 
   getSupermarketName() { return 'DekaMarkt'; }
 
-  getPublitasUrl(): string {
-    return 'https://folder.dekamarkt.nl';
+  async getPublitasUrl(): Promise<string> {
+    // folder.dekamarkt.nl redirects to the current week's publication URL
+    const response = await fetch('https://folder.dekamarkt.nl', { redirect: 'follow' });
+    const finalUrl = response.url.replace(/\/$/, '');
+    this.logger.info(`DekaMarkt folder → ${finalUrl}`);
+    return finalUrl;
   }
 
   protected getPromptHints(): string {
