@@ -231,21 +231,60 @@ Located in `packages/scraper/src/gemini/types.ts` (`GEMINI_DEFAULTS`):
 - Keys can expire — if `API_KEY_INVALID` errors appear, regenerate at https://aistudio.google.com/
 - Env vars: `gemini_api_key1` through `gemini_api_key60` in root `.env` (scanner supports up to 100)
 
-### Key Pool & Rate Limit Architecture
+### Key Pool & Dispatcher Architecture (AIMD v6)
 
-The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a **slot-based dual-model dispatcher**:
+The dispatcher (`GeminiExtractor.ts`) + key pool (`keyPool.ts`) use an **AIMD (Additive Increase, Multiplicative Decrease)** concurrency control algorithm — the same approach TCP uses for network congestion control. The system self-discovers the optimal concurrency instead of hardcoding a guess.
 
-**Slot model**: Each API key has 2 slots — one per model (flash-lite + flash). Rate limits are per-project per-model, so when flash-lite is 429'd, flash on the same key may still be available.
+**Setup**: 70 keys × 1 model (`flash-lite` only) = 70 slots. Flash model removed — only 20 RPD, generated 429-noise.
 
-**Central dispatcher** (100ms polling loop in `GeminiExtractor.extractProducts()`):
-1. Every 100ms, scan all slots for FREE ones (including rate-limited slots whose backoff expired)
-2. For each FREE slot + chunk in queue → dispatch (fire-and-forget, key → IN-FLIGHT)
-3. On success → slot FREE (backoff resets), products collected
-4. On 429 → slot RATE_LIMITED with escalating backoff (15s → 30s → 60s → 60s...)
-5. On `API_KEY_INVALID` → key DISABLED (all model slots for that key)
-6. Loop ends when queue empty AND no slots in-flight
+**Async while-loop dispatcher** (replaces earlier `setInterval` polling):
+```
+currentConcurrency = 10  (start conservative)
+CEILING = 30, FLOOR = 5
 
-**Key states**: FREE (ready) → IN-FLIGHT (processing) → RATE_LIMITED (backoff timer) → FREE (timer expired). DISABLED = permanently dead.
+while (queue has chunks OR slots in-flight):
+  if (in-flight >= currentConcurrency):   ← AIMD gate
+    await delay(50ms)
+    continue
+  if (free slot AND chunk in queue):
+    dispatch chunk → slot IN-FLIGHT
+    await delay(150ms)                    ← global pacing (~6.6 req/s)
+  else:
+    await delay(50ms)
+```
+
+**AIMD behavior**:
+- **Additive Increase**: On success → `currentConcurrency += 0.2` (slowly raise, +1 per 5 successes)
+- **Multiplicative Decrease**: On WAF 429 → `currentConcurrency *= 0.5` (emergency brake, halve immediately)
+- **RPD detection**: On 429 where key has 5+ consecutive fails → disable key, do NOT punish concurrency
+- Ceiling: 30 (absolute max), Floor: 5 (never go below)
+
+**Slot lifecycle**:
+```
+FREE → dispatch → IN-FLIGHT → success → RATE_LIMITED (4.1s cooldown) → FREE
+                            → WAF 429 → RATE_LIMITED (15s→30s→60s backoff) → FREE
+                            → RPD 429 (5+ consecutive fails) → DISABLED (permanent)
+                            → API_KEY_INVALID → DISABLED (permanent)
+                            → timeout (120s) → permanent failure
+```
+
+**Three protection layers**:
+1. **AIMD concurrency gate**: Dynamically limits simultaneous HTTP connections (10→30). Finds the WAF limit automatically.
+2. **Global pacing** (150ms): Max ~6.6 dispatches/sec. Spreads requests over time.
+3. **Success cooldown** (4.1s): Same key can't be reused within 4.1s (15 RPM = 1 per 4s per project).
+
+**RPD vs WAF 429 detection**: Google's error messages don't distinguish RPD from WAF 429s. Instead, we track **consecutive fails per key** — if the same key fails 5 times in a row without a single success, it's assumed RPD-exhausted and disabled. This prevents the AIMD from punishing concurrency for dead keys.
+
+**Performance evolution** (Dirk scraper, ~45 chunks):
+| Version | Method | Duration | 429 errors | Key change |
+|---|---|---|---|---|
+| v1 | setInterval, all at once | 2077s | 500+ | Baseline |
+| v3 | async while + 150ms pacing | 688s | 390 | Async loop + pacing |
+| v4 | + fixed gate MAX=15 | 722s | 446 | Concurrency gate |
+| v5 | + AIMD (10→30) | 767s | 256 | Self-tuning concurrency |
+| **v6** | **+ RPD detect + floor=5** | **648s** | **56** | **RPD auto-disable** |
+
+**3.2x faster, 89% fewer errors** from v1 to v6.
 
 ### Full OCR Pipeline Flow (end-to-end)
 
@@ -267,18 +306,16 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
    │  Store for post-OCR fuzzy matching
    │  Time: <1s
    │
-4. DISPATCH PHASE (GeminiExtractor central loop)
-   │  100ms polling interval:
-   │    - Scan all slots (keys × models) for FREE ones
-   │    - Pop chunk from queue → assign to free slot → fire Gemini API call
-   │    - Slot → IN-FLIGHT until response returns
-   │    - On success → slot FREE, products collected
-   │    - On 429 → slot RATE_LIMITED (backoff 15s → 30s → 60s)
-   │    - On timeout (120s) → permanent failure, slot FREE
-   │  All chunks processed when queue empty + no in-flight slots
+4. DISPATCH PHASE (AIMD v6 — GeminiExtractor async while-loop)
+   │  Concurrency gate: max `currentConcurrency` in-flight (starts 10, adapts 5-30)
+   │  Global pacing: 150ms between dispatches (~6.6 req/s max)
+   │  Success: slot → 4.1s cooldown, concurrency += 0.2
+   │  WAF 429: slot → backoff (15s→30s→60s), concurrency *= 0.5
+   │  RPD 429 (5+ consecutive fails): key disabled, concurrency NOT punished
+   │  Timeout (120s): permanent failure
    │
 5. GEMINI API CALL (per chunk)
-   │  Model: gemini-3.1-flash-lite-preview (primary) or gemini-3-flash-preview (fallback)
+   │  Model: gemini-3.1-flash-lite-preview (Lite only, Flash removed)
    │  Config: thinking=high, temperature=0.0, mediaResolution=HIGH, structured output
    │  Input: image buffer (base64) + extraction prompt + context (supermarket, categories)
    │  Output: JSON array of ScrapedProduct[] via responseSchema enforcement
@@ -299,49 +336,32 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 
 ### Speed Optimization Analysis
 
-**Current bottlenecks** (in order of impact):
+**Completed optimizations**:
+- [x] AIMD v6 dispatcher: 3.2x faster, 89% fewer 429s (2077s→648s for Dirk)
+- [x] Composite modal images for Dirk (74 → 13 chunks)
+- [x] Async while-loop (replaces setInterval polling)
+- [x] Global pacing (150ms between dispatches)
+- [x] Success cooldown (4.1s per key)
+- [x] RPD auto-disable (5 consecutive fails → key disabled, AIMD not punished)
+- [x] Lite-only model (Flash removed — 20 RPD caused noise)
 
-1. **Gemini API rate limits** (~70% of total time for large scrapers)
-   - Free tier: 15 RPM per project per model, 500 RPD per project
-   - With 60 keys × 2 models = 120 slots, theoretical max ~900 RPM
-   - In practice: escalating backoff after 429s reduces effective throughput to ~5-15 chunks/minute
-   - **Optimization**: More keys on more Gmail accounts = more independent RPM. Each new account adds 15 RPM × N projects
-
-2. **Dirk modal expansion** (~75s for 72 modals)
-   - Each modal: click → wait → screenshot → close = ~1s per card
-   - 72 cards = ~75s of sequential DOM interaction
-   - **DONE**: Composite modal images implemented (6 modals per image via `sharp`). 74 → 13 API calls. Result: 2.3x faster (913s vs 2077s), 9% more products (580 vs 530)
-
-3. **Thinking level `high`** (3-60s per chunk vs 2-5s for `low`)
-   - Dense grids with many products take longest
-   - Causes 120s timeouts on complex pages
-   - **Optimization**: Use `medium` for screenshot scrapers (dense grids), keep `high` for Publitas (cleaner flyer images). Per-scraper `getThinkingLevel()` override
-
-4. **Browser startup** (~5-8s per run)
-   - Chromium launch + page navigation
-   - **Optimization**: Browser pooling across scrapers (run multiple scrapers in same browser session)
-
-5. **Sequential supermarket runs** (CI runs them in parallel via matrix, but local testing is sequential)
-   - **Optimization**: Already handled by GitHub Actions matrix strategy
-
-**Quick wins**:
-- [x] Composite modal images for Dirk (74 → 13 chunks) — **DONE**, 2.3x faster
-- [x] Staggered dispatch: max 10 slots per 100ms tick — **DONE**, prevents burst 429s
+**Remaining optimizations**:
 - [ ] `thinkingLevel: 'medium'` for Action/Hoogvliet (avoid timeouts, faster responses)
-- [ ] Increase timeout to 180s for Publitas (dense flyer pages need more time but succeed)
+- [ ] Increase timeout to 180s for Publitas (dense flyer pages need more time)
+- [ ] Browser pooling across scrapers (save ~5-8s startup per scraper)
 
 **Rate limit lessons learned**:
-- Google's free tier has **two rate limits**: RPM (15/min) AND a burst limiter (can't fire 15 requests in 1 second)
+- Google WAF blocks >15-18 **simultaneous** HTTP connections from one IP (regardless of API keys)
+- RPM (15/min) is per-project, but WAF burst limit is per-IP — these are independent limits
+- RPD (500/day for Lite, 20/day for Flash) resets at midnight Pacific
+- Google's 429 error messages do NOT distinguish RPD from WAF — use consecutive fail tracking instead
 - **Do NOT spam 429'd keys** — Google escalates rate limits across ALL projects on the same Gmail account
-- **500 RPD per project** (flash-lite) / **20 RPD** (flash) — daily limits reset at midnight Pacific
-- **403 can mean rate limit**, not just auth error — only disable keys on `API_KEY_INVALID`
-- Escalating backoff (15s → 30s → 60s) is critical — resets on success so recovered keys immediately get work
-- No health checks needed — the backoff timer + real request attempt is sufficient
+- AIMD (TCP congestion control) is the correct approach — the system finds the WAF limit itself
 
-**Tested results** (60 keys × 2 models = 120 slots):
-| Supermarket | Pipeline | Products | Chunks | Extraction Time |
+**Tested results** (70 keys × 1 model = 70 slots, AIMD v6):
+| Supermarket | Pipeline | Products | Chunks | Duration |
 |---|---|---|---|---|
-| Dirk | Screenshot | 580 | 45 (composites) | 913s | Working (composites) |
+| Dirk | Screenshot | 459 | 45 (composites) | 648s |
 | Vomar | Publitas | 219 | 41/41 | 80s | Working |
 | Kruidvat | Publitas | 181 | 54/54 | 846s | Working |
 | DekaMarkt | Publitas | 69 | 16/16 | 23s | Working |
