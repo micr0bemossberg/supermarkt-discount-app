@@ -127,6 +127,7 @@ The scraper uses **Gemini Vision OCR** (`gemini-3.1-flash-lite-preview`) instead
 
 Dirk has unique features requiring special handling:
 - **Multi-product cards**: Products with variants (e.g., "Gesneden fruit" → Meloenmix + Fruitsalade) have an expand arrow (`.middle-item.multi-product`). Clicking opens a modal overlay showing individual variants with prices/weights. Close via `button.close[aria-label="Sluiten"]`.
+- **Composite modal images**: The 70+ individual modal screenshots are combined into ~13 composite images (6 modals stacked vertically per image using `sharp`). This reduces API calls from 74 → 13, making Dirk **2.3x faster** (913s vs 2077s) with **9% more products** (580 vs 530). Composites give Gemini more context per image → better extraction. Only Dirk uses this technique — other scrapers don't have expandable modals.
 - **Two tabs**: "Aanbiedingen tot en met dinsdag" (current) and "Aanbiedingen vanaf woensdag" (upcoming). Both are scraped via `button.upcoming` tab click.
 - **Weekend deals**: "VR, ZA & ZO ACTIE" badges mean Friday-Sunday validity only.
 
@@ -256,6 +257,7 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
    │
 2. CAPTURE PHASE
    │  Screenshot scrapers: scroll in viewport-sized steps with 20% overlap
+   │  Dirk: modal screenshots combined into composite images (6 per image via sharp)
    │  Publitas scrapers: download flyer page images from CDN (at1600 resolution)
    │  Output: array of ImageChunk[] (PNG buffers)
    │  Time: 5-15s
@@ -308,7 +310,7 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 2. **Dirk modal expansion** (~75s for 72 modals)
    - Each modal: click → wait → screenshot → close = ~1s per card
    - 72 cards = ~75s of sequential DOM interaction
-   - **Optimization**: Composite modal images (stitch 6 modals into 1 image = 12 API calls instead of 72)
+   - **DONE**: Composite modal images implemented (6 modals per image via `sharp`). 74 → 13 API calls. Result: 2.3x faster (913s vs 2077s), 9% more products (580 vs 530)
 
 3. **Thinking level `high`** (3-60s per chunk vs 2-5s for `low`)
    - Dense grids with many products take longest
@@ -322,11 +324,11 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 5. **Sequential supermarket runs** (CI runs them in parallel via matrix, but local testing is sequential)
    - **Optimization**: Already handled by GitHub Actions matrix strategy
 
-**Quick wins (not yet implemented)**:
+**Quick wins**:
+- [x] Composite modal images for Dirk (74 → 13 chunks) — **DONE**, 2.3x faster
+- [x] Staggered dispatch: max 10 slots per 100ms tick — **DONE**, prevents burst 429s
 - [ ] `thinkingLevel: 'medium'` for Action/Hoogvliet (avoid timeouts, faster responses)
-- [ ] Composite modal images for Dirk (72 → 12 chunks)
 - [ ] Increase timeout to 180s for Publitas (dense flyer pages need more time but succeed)
-- [ ] Skip cover/back pages in Publitas (already implemented via `getSkipPages()`)
 
 **Rate limit lessons learned**:
 - Google's free tier has **two rate limits**: RPM (15/min) AND a burst limiter (can't fire 15 requests in 1 second)
@@ -339,7 +341,7 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 **Tested results** (60 keys × 2 models = 120 slots):
 | Supermarket | Pipeline | Products | Chunks | Extraction Time |
 |---|---|---|---|---|
-| Dirk | Screenshot | 378 | 90/92 | 8.5 min | Working |
+| Dirk | Screenshot | 580 | 45 (composites) | 913s | Working (composites) |
 | Vomar | Publitas | 219 | 41/41 | 80s | Working |
 | Kruidvat | Publitas | 181 | 54/54 | 846s | Working |
 | DekaMarkt | Publitas | 69 | 16/16 | 23s | Working |
@@ -376,11 +378,14 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 
 **Completed**:
 - [x] Supabase integration tested — DekaMarkt: 64 products inserted, `deal_type` + `requires_card` columns applied
+- [x] Dirk real DB write — 530 products inserted with product URLs (102 matched)
 - [x] Flink disabled in `index.ts` + removed from GitHub Actions matrix (exited NL)
 - [x] Butlon disabled in `index.ts` + removed from GitHub Actions matrix (site down)
 - [x] Hoogvliet timeout fixed — viewport 600px, 0 timeouts, 27 products
 - [x] Kruidvat switched to Publitas — 181 products
 - [x] Product URL extraction from DOM implemented for all screenshot scrapers
+- [x] Composite modal images for Dirk — 74 → 13 chunks, 2.3x faster (913s vs 2077s), 9% more products
+- [x] Staggered dispatch — max 10 slots per 100ms tick to prevent burst 429s
 
 **OCR accuracy gaps**:
 - **Action**: ~25/~154 products extracted. Dense product grid — viewport changes (480px, 768px, 1280px) didn't help. Known limitation with `thinkingLevel: 'high'` on dense grids
@@ -397,12 +402,10 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 
 **Remaining items**:
 - [ ] Run all working scrapers for real (non-dry-run) to populate DB with current week's deals
-- [ ] Verify product URL enrichment works in real DB writes (test with Dirk or Jumbo)
 - [ ] Deactivate Flink + Butlon in Supabase DB (`is_active = false`)
 - [ ] Picnic: re-approve 2FA from home network
 - [ ] Joybuy: implement `beforeScreenshots()` with two-step navigation, test from CI
 - [ ] Hoogvliet: scrape second week tab (upcoming week, ~176 more products)
-- [ ] Combine Dirk's 72 individual modal screenshots into composite images to reduce chunk count
 - [ ] Investigate `thinkingLevel: 'medium'` for dense-grid scrapers (Action, Hoogvliet)
 
 ## Supabase Notes
