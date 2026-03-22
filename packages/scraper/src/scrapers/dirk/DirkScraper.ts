@@ -62,8 +62,9 @@ export class DirkScraper extends ScreenshotOCRScraper {
       await upcomingTab.click({ timeout: 3000 });
       await page.waitForTimeout(1500); // Wait for new products to load
 
-      // Reset modal screenshots for tab 2
+      // Reset modal screenshots and links for tab 2
       this.multiProductScreenshots = [];
+      this.modalProductLinks = [];
 
       // Expand multi-product modals on this tab too
       await this.expandMultiProductModals(page);
@@ -113,7 +114,25 @@ export class DirkScraper extends ScreenshotOCRScraper {
   }
 
   protected async beforeScreenshots(page: Page): Promise<void> {
+    this.modalProductLinks = [];
     await this.expandMultiProductModals(page);
+  }
+
+  /**
+   * Override: merge page links with modal overlay links for better URL coverage.
+   */
+  protected async extractProductUrls(page: import('playwright').Page) {
+    const pageLinks = await super.extractProductUrls(page);
+    // Merge modal links (deduplicate by URL)
+    const seenUrls = new Set(pageLinks.map(l => l.url));
+    for (const link of this.modalProductLinks) {
+      if (!seenUrls.has(link.url)) {
+        seenUrls.add(link.url);
+        pageLinks.push(link);
+      }
+    }
+    this.logger.info(`Total links after modal merge: ${pageLinks.length} (${this.modalProductLinks.length} from modals)`);
+    return pageLinks;
   }
 
   /**
@@ -138,6 +157,17 @@ export class DirkScraper extends ScreenshotOCRScraper {
 
         this.multiProductScreenshots.push(await page.screenshot({ type: 'png' }));
 
+        // Extract product links from the open modal overlay
+        const modalLinks = await page.evaluate(() => {
+          const overlay = document.querySelector('.overlay');
+          if (!overlay) return [];
+          const anchors = overlay.querySelectorAll('a[href]');
+          return Array.from(anchors)
+            .map(a => ({ text: (a as HTMLElement).innerText.replace(/\s+/g, ' ').trim(), url: (a as HTMLAnchorElement).href }))
+            .filter(l => l.text.length > 1 && l.url.includes('boodschappen'));
+        });
+        this.modalProductLinks.push(...modalLinks);
+
         await page.evaluate(() => {
           (document.querySelector('button.close[aria-label="Sluiten"]') as HTMLElement)?.click();
         });
@@ -151,7 +181,7 @@ export class DirkScraper extends ScreenshotOCRScraper {
       }
     }
 
-    this.logger.info(`Captured ${this.multiProductScreenshots.length} modal screenshots`);
+    this.logger.info(`Captured ${this.multiProductScreenshots.length} modal screenshots, ${this.modalProductLinks.length} modal links`);
   }
 
   /**
@@ -201,6 +231,7 @@ export class DirkScraper extends ScreenshotOCRScraper {
   }
 
   private multiProductScreenshots: Buffer[] = [];
+  private modalProductLinks: { text: string; url: string }[] = [];
   private static MODALS_PER_COMPOSITE = 6;
 
   /**

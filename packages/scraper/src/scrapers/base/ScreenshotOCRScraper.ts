@@ -224,44 +224,45 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
         const results: { text: string; url: string }[] = [];
         const seen = new Set<string>();
 
+        const skipPatterns = [
+          '/login', '/register', '/cart', '/winkelwagen', '/account',
+          '/privacy', '/cookie', '/voorwaarden', '/contact',
+          'facebook.com', 'twitter.com', 'instagram.com',
+          'youtube.com', 'linkedin.com', 'mailto:', 'tel:',
+        ];
+
         const anchors = Array.from(document.querySelectorAll('a[href]'));
         for (const anchor of anchors) {
           const href = (anchor as HTMLAnchorElement).href;
           if (!href || href === '#' || href.startsWith('javascript:')) continue;
 
-          // Skip obvious non-product links (navigation, social, legal)
           const hrefLower = href.toLowerCase();
-          if (
-            hrefLower.includes('/login') ||
-            hrefLower.includes('/register') ||
-            hrefLower.includes('/cart') ||
-            hrefLower.includes('/winkelwagen') ||
-            hrefLower.includes('/account') ||
-            hrefLower.includes('/privacy') ||
-            hrefLower.includes('/cookie') ||
-            hrefLower.includes('/voorwaarden') ||
-            hrefLower.includes('/contact') ||
-            hrefLower.includes('facebook.com') ||
-            hrefLower.includes('twitter.com') ||
-            hrefLower.includes('instagram.com') ||
-            hrefLower.includes('youtube.com') ||
-            hrefLower.includes('linkedin.com') ||
-            hrefLower.includes('mailto:') ||
-            hrefLower.includes('tel:')
-          ) continue;
+          if (skipPatterns.some(p => hrefLower.includes(p))) continue;
 
           // Get visible text content, cleaned up
-          const text = (anchor as HTMLElement).innerText || '';
-          const cleanText = text.replace(/\s+/g, ' ').trim();
+          let text = (anchor as HTMLElement).innerText || '';
+          text = text.replace(/\s+/g, ' ').trim();
 
-          // Skip links with no meaningful text (icon-only links, empty anchors)
-          if (cleanText.length < 2) continue;
+          // For links with no text, extract product name from URL path
+          // e.g., /boodschappen/.../1%20de%20beste%20ijsbergsla%20melange/43355
+          if (text.length < 2) {
+            try {
+              const pathParts = new URL(href).pathname.split('/').filter(Boolean);
+              // Take the second-to-last segment (product name), skip the numeric ID at the end
+              const namePart = pathParts.length >= 2
+                ? pathParts[pathParts.length - 2]
+                : pathParts[pathParts.length - 1];
+              if (namePart && !/^\d+$/.test(namePart)) {
+                text = decodeURIComponent(namePart).replace(/[+%]/g, ' ').replace(/\s+/g, ' ').trim();
+              }
+            } catch {}
+          }
 
-          // Skip duplicate URLs
+          if (text.length < 2) continue;
           if (seen.has(href)) continue;
           seen.add(href);
 
-          results.push({ text: cleanText, url: href });
+          results.push({ text, url: href });
         }
 
         return results;
@@ -303,15 +304,28 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
       for (const link of normalizedLinks) {
         if (link.normalizedText.length < 2) continue;
 
-        const score = this.urlMatchScore(normalizedTitle, link.normalizedText);
+        // Match against link text
+        let score = this.urlMatchScore(normalizedTitle, link.normalizedText);
+
+        // Also try matching against URL path (e.g., /1%20de%20beste%20ijsbergsla%20melange/)
+        try {
+          const pathParts = new URL(link.url).pathname.split('/').filter(Boolean);
+          const namePart = pathParts.length >= 2 ? pathParts[pathParts.length - 2] : '';
+          if (namePart && !/^\d+$/.test(namePart)) {
+            const normalizedPath = this.normalizeForUrlMatch(decodeURIComponent(namePart));
+            const pathScore = this.urlMatchScore(normalizedTitle, normalizedPath);
+            score = Math.max(score, pathScore);
+          }
+        } catch {}
+
         if (score > bestScore) {
           bestScore = score;
           bestMatch = link;
         }
       }
 
-      // Require a minimum confidence threshold
-      if (bestMatch && bestScore >= 0.5) {
+      // Threshold 0.35 — lower than before (0.5) to catch more partial matches
+      if (bestMatch && bestScore >= 0.35) {
         product.product_url = bestMatch.url;
         matchCount++;
       }
