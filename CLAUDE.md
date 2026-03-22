@@ -292,28 +292,36 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 
 ### Open Items / Known Issues
 
-**Failing chunks (timeout)**:
-- **Hoogvliet**: 3/12 chunks timeout (120s) on dense product grids with `thinkingLevel: 'high'`. Potential fixes: increase timeout to 180s, lower thinking to `medium` for screenshot scrapers, or split dense pages into smaller viewport chunks
-- **Kruidvat**: Dense flyer pages occasionally timeout. `at1600` resolution resolved the worst cases but some pages are still borderline
+**Completed**:
+- [x] Supabase integration tested — DekaMarkt: 64 products inserted, `deal_type` + `requires_card` columns applied
+- [x] Flink disabled in `index.ts` + removed from GitHub Actions matrix (exited NL)
+- [x] Butlon disabled in `index.ts` + removed from GitHub Actions matrix (site down)
+- [x] Hoogvliet timeout fixed — viewport 600px, 0 timeouts, 27 products
+- [x] Kruidvat switched to Publitas — 181 products
+- [x] Product URL extraction from DOM implemented for all screenshot scrapers
 
 **OCR accuracy gaps**:
-- **Action**: Only 25/~154 products extracted despite all content being visible. Dense product grid with small cards — OCR misses most items. May need smaller viewport width or prompt tuning
-- **Megafoodstunter**: 7/12 products extracted from editorial-style page. Prompt hints could improve extraction from magazine-style layouts with text interspersed between products
+- **Action**: ~25/~154 products extracted. Dense product grid — viewport changes (480px, 768px, 1280px) didn't help. Known limitation with `thinkingLevel: 'high'` on dense grids
+- **Megafoodstunter**: 7/12 products from editorial-style `/acties` page. Prompt hints added but editorial layout is inherently harder for OCR
+
+**Product URL (`product_url`) status**:
+- **Screenshot scrapers** (Dirk, Hoogvliet, Aldi, Action, Jumbo, Megafoodstunter): DOM-based URL extraction implemented via `extractProductUrls()` + `enrichWithUrls()` fuzzy matching. URLs populated during `scrapeProducts()`. Not yet verified with a real DB write
+- **Publitas scrapers** (Vomar, DekaMarkt, Kruidvat): `product_url` is always `null` — flyer page images don't have clickable product links. Could potentially extract hotspot data from Publitas spreads metadata in the future
+- **API scrapers** (AH, Picnic): URLs come from the API directly
 
 **API scraper status**:
-- **AH**: Working — mobile API returns ~1000+ bonus products per run, fast and reliable
-- **Picnic**: Broken — login succeeds but API returns `403 Forbidden` on all search requests. Picnic flags new IPs with 2FA. Needs 2FA re-approval on the Picnic account or test from a known IP (home network / GitHub Actions)
+- **AH**: Working — mobile API returns ~1000+ bonus products per run
+- **Picnic**: Broken — `403 Forbidden` after 2FA flag on new IP. Needs re-approval from home network or CI
 
-**Scrapers to disable/remove**:
-- [ ] **Flink**: Remove from `index.ts`, deactivate in DB (`is_active = false`), remove from GitHub Actions matrix
-- [ ] **Butlon**: Same as Flink — site permanently down
-- [ ] **Joybuy**: Blocked by corporate IT (Jingdong). Needs `beforeScreenshots()` with two-step navigation (homepage → Flash Deals). Test from GitHub Actions CI only
-
-**Future improvements**:
-- [ ] Hoogvliet: scrape second week tab (upcoming week, ~176 more products) similar to Dirk dual-tab approach
+**Remaining items**:
+- [ ] Run all working scrapers for real (non-dry-run) to populate DB with current week's deals
+- [ ] Verify product URL enrichment works in real DB writes (test with Dirk or Jumbo)
+- [ ] Deactivate Flink + Butlon in Supabase DB (`is_active = false`)
+- [ ] Picnic: re-approve 2FA from home network
+- [ ] Joybuy: implement `beforeScreenshots()` with two-step navigation, test from CI
+- [ ] Hoogvliet: scrape second week tab (upcoming week, ~176 more products)
 - [ ] Combine Dirk's 72 individual modal screenshots into composite images to reduce chunk count
-- [ ] Investigate `thinkingLevel: 'medium'` for screenshot scrapers (dense grids don't benefit from high thinking and timeout more)
-- [ ] Supabase integration testing (currently all runs use `--dry-run`)
+- [ ] Investigate `thinkingLevel: 'medium'` for dense-grid scrapers (Action, Hoogvliet)
 
 ## Supabase Notes
 
@@ -321,3 +329,4 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 - **Storage**: Bucket `product-images` (public read) — path: `{slug}/{year}/{month}/{hash}.webp`
 - **RLS**: Products/supermarkets/categories have public read; favorites requires auth
 - Scraper uses `SUPABASE_SERVICE_KEY`; mobile app uses `SUPABASE_ANON_KEY`
+- **Migrations**: `deal_type` (20260315000002) and `requires_card` (20260322000001) must be applied manually via Supabase SQL Editor — CLI not installed, service key can't run DDL
