@@ -1,5 +1,6 @@
 import type { Page } from 'playwright';
 import { ScreenshotOCRScraper } from '../base/ScreenshotOCRScraper';
+import type { ScrollConfig } from '../base/ScreenshotOCRScraper';
 
 export class HoogvlietScraper extends ScreenshotOCRScraper {
   constructor() { super('hoogvliet', 'https://www.hoogvliet.com/aanbiedingen'); }
@@ -7,6 +8,21 @@ export class HoogvlietScraper extends ScreenshotOCRScraper {
 
   getTargetUrl() {
     return 'https://www.hoogvliet.com/aanbiedingen';
+  }
+
+  /**
+   * Smaller viewport height (600px instead of 800px) to reduce the number of
+   * products per screenshot chunk. Hoogvliet has dense product grids that cause
+   * Gemini to time out at 120s with thinkingLevel 'high' on larger chunks.
+   */
+  protected getScrollConfig(): ScrollConfig {
+    return {
+      viewportWidth: 1280,
+      viewportHeight: 600,
+      overlapPercent: 0.2,
+      maxChunks: 35,         // More chunks needed since each is shorter
+      scrollDelayMs: [200, 500],
+    };
   }
 
   protected async beforeScreenshots(page: Page): Promise<void> {

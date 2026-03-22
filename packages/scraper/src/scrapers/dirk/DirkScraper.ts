@@ -43,10 +43,16 @@ export class DirkScraper extends ScreenshotOCRScraper {
       // Expand multi-product modals on this tab too
       await this.expandMultiProductModals(page);
 
+      // Extract product URLs from DOM for tab 2
+      const tab2Urls = await this.extractProductUrls(page);
+
       // Capture scrolling screenshots of tab 2 content
       const config = this.getScrollConfig();
       const tab2Result = await this.captureAndExtractTab(page, config);
       const tab2Products = tab2Result.buildContextAndExtract;
+
+      // Enrich tab 2 products with URLs
+      this.enrichWithUrls(tab2Products, tab2Urls);
 
       this.logger.info(`Tab 2 (vanaf woensdag): ${tab2Products.length} products`);
 

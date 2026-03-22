@@ -5,6 +5,11 @@ import { ALL_CATEGORY_SLUGS } from '../../config/constants';
 import type { ScrapedProduct, SupermarketSlug } from '@supermarkt-deals/shared';
 import type { ExtractionContext, ImageChunk } from '../../gemini/types';
 
+export interface DomProductLink {
+  text: string;
+  url: string;
+}
+
 export interface ScrollConfig {
   viewportWidth: number;
   viewportHeight: number;
@@ -86,6 +91,9 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
         this.logger.warning(`beforeScreenshots() failed: ${error}`);
       }
 
+      // Extract product URLs from DOM before screenshots
+      this.lastExtractedUrls = await this.extractProductUrls(page);
+
       await page.waitForTimeout(500);
 
       // Capture only 1 screenshot
@@ -126,6 +134,9 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
         `(${result.tokensUsed} tokens)`
       );
 
+      // Enrich with URLs from DOM
+      this.enrichWithUrls(result.products, this.lastExtractedUrls);
+
       return result.products;
     } finally {
       await this.cleanup();
@@ -155,13 +166,16 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
       this.logger.warning(`beforeScreenshots() failed: ${error}`);
     }
 
-    // 4. Brief settle after interactions
+    // 4. Extract product URLs from DOM (before screenshots scroll the page)
+    this.lastExtractedUrls = await this.extractProductUrls(page);
+
+    // 5. Brief settle after interactions
     await page.waitForTimeout(500);
 
-    // 5. Capture scrolling screenshots with overlap
+    // 6. Capture scrolling screenshots with overlap
     const chunks = await this.captureScrollingScreenshots(page, config);
 
-    // 5b. Merge any extra chunks (e.g., modal screenshots from Dirk)
+    // 6b. Merge any extra chunks (e.g., modal screenshots from Dirk)
     const extraChunks = this.getExtraChunks();
     if (extraChunks.length > 0) {
       chunks.push(...extraChunks);
@@ -175,7 +189,7 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
       return [];
     }
 
-    // 6. Send to GeminiExtractor
+    // 7. Send to GeminiExtractor
     const context: ExtractionContext = {
       supermarketSlug: this.supermarketSlug,
       supermarketName: this.getSupermarketName(),
@@ -189,12 +203,185 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
       `(${result.chunksProcessed} chunks OK, ${result.chunksFailed} failed, ${result.tokensUsed} tokens)`
     );
 
-    // 7. Cross-chunk dedup (overlap zone)
+    // 8. Cross-chunk dedup (overlap zone)
     const deduped = this.deduplicateProducts(result.products);
     this.logger.info(`After dedup: ${deduped.length} products`);
 
+    // 9. Enrich products with URLs extracted from DOM
+    this.enrichWithUrls(deduped, this.lastExtractedUrls);
+
     return deduped;
   }
+
+  /**
+   * Extract product-like links from the page DOM.
+   * Returns an array of { text, url } for all <a> elements that look like product links.
+   * Uses broad heuristics to work across different supermarket sites.
+   */
+  protected async extractProductUrls(page: Page): Promise<DomProductLink[]> {
+    try {
+      const links = await page.evaluate(() => {
+        const results: { text: string; url: string }[] = [];
+        const seen = new Set<string>();
+
+        const anchors = Array.from(document.querySelectorAll('a[href]'));
+        for (const anchor of anchors) {
+          const href = (anchor as HTMLAnchorElement).href;
+          if (!href || href === '#' || href.startsWith('javascript:')) continue;
+
+          // Skip obvious non-product links (navigation, social, legal)
+          const hrefLower = href.toLowerCase();
+          if (
+            hrefLower.includes('/login') ||
+            hrefLower.includes('/register') ||
+            hrefLower.includes('/cart') ||
+            hrefLower.includes('/winkelwagen') ||
+            hrefLower.includes('/account') ||
+            hrefLower.includes('/privacy') ||
+            hrefLower.includes('/cookie') ||
+            hrefLower.includes('/voorwaarden') ||
+            hrefLower.includes('/contact') ||
+            hrefLower.includes('facebook.com') ||
+            hrefLower.includes('twitter.com') ||
+            hrefLower.includes('instagram.com') ||
+            hrefLower.includes('youtube.com') ||
+            hrefLower.includes('linkedin.com') ||
+            hrefLower.includes('mailto:') ||
+            hrefLower.includes('tel:')
+          ) continue;
+
+          // Get visible text content, cleaned up
+          const text = (anchor as HTMLElement).innerText || '';
+          const cleanText = text.replace(/\s+/g, ' ').trim();
+
+          // Skip links with no meaningful text (icon-only links, empty anchors)
+          if (cleanText.length < 2) continue;
+
+          // Skip duplicate URLs
+          if (seen.has(href)) continue;
+          seen.add(href);
+
+          results.push({ text: cleanText, url: href });
+        }
+
+        return results;
+      });
+
+      this.logger.info(`Extracted ${links.length} product-like links from DOM`);
+      return links;
+    } catch (error) {
+      this.logger.warning(`Failed to extract product URLs from DOM: ${error}`);
+      return [];
+    }
+  }
+
+  /**
+   * Enrich OCR-extracted products with URLs from the DOM.
+   * Uses fuzzy title matching: normalizes both strings and checks for substring overlap.
+   */
+  protected enrichWithUrls(products: ScrapedProduct[], domLinks: DomProductLink[]): ScrapedProduct[] {
+    if (domLinks.length === 0) return products;
+
+    // Pre-normalize all DOM link texts for matching
+    const normalizedLinks = domLinks.map(link => ({
+      ...link,
+      normalizedText: this.normalizeForUrlMatch(link.text),
+    }));
+
+    let matchCount = 0;
+
+    for (const product of products) {
+      // Skip products that already have a URL (e.g., from OCR or API)
+      if (product.product_url) continue;
+
+      const normalizedTitle = this.normalizeForUrlMatch(product.title);
+      if (normalizedTitle.length < 2) continue;
+
+      let bestMatch: (typeof normalizedLinks)[number] | null = null;
+      let bestScore = 0;
+
+      for (const link of normalizedLinks) {
+        if (link.normalizedText.length < 2) continue;
+
+        const score = this.urlMatchScore(normalizedTitle, link.normalizedText);
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = link;
+        }
+      }
+
+      // Require a minimum confidence threshold
+      if (bestMatch && bestScore >= 0.5) {
+        product.product_url = bestMatch.url;
+        matchCount++;
+      }
+    }
+
+    this.logger.info(`URL enrichment: matched ${matchCount}/${products.length} products`);
+    return products;
+  }
+
+  /**
+   * Normalize a string for URL matching: lowercase, remove diacritics, trim, collapse whitespace.
+   */
+  private normalizeForUrlMatch(text: string): string {
+    return text
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '') // Remove diacritics
+      .replace(/[^a-z0-9\s]/g, ' ')    // Replace non-alphanumeric with space
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
+
+  /**
+   * Compute a matching score between an OCR product title and a DOM link text.
+   * Returns a value between 0 (no match) and 1 (perfect match).
+   *
+   * Strategy:
+   * 1. Exact match → 1.0
+   * 2. One fully contains the other → 0.9
+   * 3. Word overlap (Jaccard-like) → proportional score
+   */
+  private urlMatchScore(normalizedTitle: string, normalizedLinkText: string): number {
+    // Exact match
+    if (normalizedTitle === normalizedLinkText) return 1.0;
+
+    // Containment: one string fully inside the other
+    if (normalizedTitle.includes(normalizedLinkText) || normalizedLinkText.includes(normalizedTitle)) {
+      // Scale by length ratio to prefer better-fitting matches
+      const shorter = Math.min(normalizedTitle.length, normalizedLinkText.length);
+      const longer = Math.max(normalizedTitle.length, normalizedLinkText.length);
+      // At least 0.7 for any containment, higher for closer lengths
+      return 0.7 + 0.2 * (shorter / longer);
+    }
+
+    // Word-level overlap (Jaccard similarity on words)
+    const titleWords = new Set(normalizedTitle.split(' ').filter(w => w.length > 1));
+    const linkWords = new Set(normalizedLinkText.split(' ').filter(w => w.length > 1));
+
+    if (titleWords.size === 0 || linkWords.size === 0) return 0;
+
+    let intersection = 0;
+    for (const word of titleWords) {
+      if (linkWords.has(word)) intersection++;
+    }
+
+    if (intersection === 0) return 0;
+
+    const union = new Set([...titleWords, ...linkWords]).size;
+    const jaccard = intersection / union;
+
+    // Also consider what fraction of the product title words matched
+    const titleCoverage = intersection / titleWords.size;
+
+    // Weighted: 60% title coverage (how much of the product name matched),
+    // 40% Jaccard (overall similarity)
+    return 0.6 * titleCoverage + 0.4 * jaccard;
+  }
+
+  /** Stored DOM links from the most recent page, available for subclass overrides */
+  protected lastExtractedUrls: DomProductLink[] = [];
 
   private async captureScrollingScreenshots(
     page: Page,
