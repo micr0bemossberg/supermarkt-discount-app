@@ -184,6 +184,11 @@ export class KeyPool {
     return this.slots.some(s => s.status === 'in_flight' && !this.disabledKeys.has(s.key));
   }
 
+  /** Count how many slots are currently processing a Gemini call */
+  getInFlightCount(): number {
+    return this.slots.filter(s => s.status === 'in_flight' && !this.disabledKeys.has(s.key)).length;
+  }
+
   hasWaiting(): boolean {
     return this.slots.some(s => s.status === 'rate_limited' && !this.disabledKeys.has(s.key));
   }

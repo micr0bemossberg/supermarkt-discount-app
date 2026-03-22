@@ -59,11 +59,13 @@ export class GeminiExtractor {
     let permanentlyFailed = 0;
     let lastLogTime = Date.now();
 
+    // Max concurrent requests from this IP — Google WAF blocks >15-18 simultaneous connections.
+    // DekaMarkt (15 concurrent) had zero 429s. Dirk (45 concurrent) had 390 429s.
+    const MAX_CONCURRENT = 15;
     // Global pacing: min delay between dispatching consecutive requests
-    // ~6.6 req/s max across all keys — stays under Google's IP burst limiter
     const GLOBAL_DISPATCH_DELAY_MS = 150;
 
-    // Async while-loop dispatcher (replaces setInterval)
+    // Async while-loop dispatcher
     while (queue.length > 0 || this.keyPool.hasInFlight()) {
       // All keys disabled? Abort.
       if (this.keyPool.totalActiveKeys() === 0) {
@@ -76,8 +78,14 @@ export class GeminiExtractor {
       // Log status every 5s
       if (Date.now() - lastLogTime >= 5000) {
         this.keyPool.logStatus();
-        logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length}`);
+        logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length} | InFlight: ${this.keyPool.getInFlightCount()}/${MAX_CONCURRENT}`);
         lastLogTime = Date.now();
+      }
+
+      // Concurrency gate: don't exceed MAX_CONCURRENT in-flight requests
+      if (this.keyPool.getInFlightCount() >= MAX_CONCURRENT) {
+        await delay(50);
+        continue;
       }
 
       const freeSlots = this.keyPool.getFreeSlots();
