@@ -56,10 +56,13 @@ export class GeminiExtractor {
           logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length}`);
         }
 
-        // Dispatch chunks to FREE slots
+        // Dispatch chunks to FREE slots — max 10 per tick to avoid burst 429s
         const freeSlots = this.keyPool.getFreeSlots();
+        let dispatched = 0;
         for (const { key, model, slotIndex } of freeSlots) {
           if (queue.length === 0) break;
+          if (dispatched >= 10) break; // Stagger: max 10 requests per 100ms tick
+          dispatched++;
 
           const chunk = queue.shift()!;
           this.keyPool.markInFlight(slotIndex);

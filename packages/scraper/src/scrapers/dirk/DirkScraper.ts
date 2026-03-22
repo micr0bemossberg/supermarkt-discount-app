@@ -1,4 +1,5 @@
 import type { Page } from 'playwright';
+import sharp from 'sharp';
 import { ScreenshotOCRScraper } from '../base/ScreenshotOCRScraper';
 import type { ImageChunk } from '../../gemini/types';
 import type { ScrapedProduct } from '@supermarkt-deals/shared';
@@ -12,14 +13,38 @@ export class DirkScraper extends ScreenshotOCRScraper {
   }
 
   /**
-   * Override scrapeProducts to scrape BOTH tabs:
+   * Override scrapeProducts to scrape BOTH tabs with composite modals:
    * 1. "Aanbiedingen tot en met dinsdag" (default, already loaded)
    * 2. "Aanbiedingen vanaf woensdag" (click tab to load)
    */
   async scrapeProducts(): Promise<ScrapedProduct[]> {
-    // Scrape first tab (default loaded)
+    // Scrape first tab — super.scrapeProducts() calls beforeScreenshots() which
+    // expands modals. getExtraChunks() returns [] since we build composites in
+    // captureAndExtractTab() instead.
     this.multiProductScreenshots = [];
     const tab1Products = await super.scrapeProducts();
+
+    // Now build composites from tab 1 modals and extract
+    if (this.multiProductScreenshots.length > 0) {
+      const composites = await this.buildCompositeChunks();
+      if (composites.length > 0) {
+        const { GeminiExtractor, GEMINI_DEFAULTS } = await import('../../gemini');
+        const { ALL_CATEGORY_SLUGS } = await import('../../config/constants');
+        const extractor = new GeminiExtractor({
+          ...GEMINI_DEFAULTS,
+          apiKeys: Array.from({ length: 100 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
+            .filter((k): k is string => !!k),
+        });
+        const result = await extractor.extractProducts(composites, {
+          supermarketSlug: this.supermarketSlug,
+          supermarketName: this.getSupermarketName(),
+          categorySlugList: ALL_CATEGORY_SLUGS,
+          promptHints: this.getPromptHints(),
+        });
+        this.logger.info(`Tab 1 modals: ${result.products.length} products from ${composites.length} composites`);
+        tab1Products.push(...result.products);
+      }
+    }
     this.logger.info(`Tab 1 (t/m dinsdag): ${tab1Products.length} products`);
 
     // Click "Vanaf woensdag" tab and scrape again
@@ -154,13 +179,14 @@ export class DirkScraper extends ScreenshotOCRScraper {
       });
     }
 
-    // Add modal screenshots
-    chunks.push(...this.getExtraChunks());
+    // Add composite modal screenshots (6 modals per image)
+    const compositeChunks = await this.buildCompositeChunks();
+    chunks.push(...compositeChunks);
 
     // Extract
     const extractor = new GeminiExtractor({
       ...GEMINI_DEFAULTS,
-      apiKeys: Array.from({ length: 50 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
+      apiKeys: Array.from({ length: 100 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
         .filter((k): k is string => !!k),
     });
 
@@ -175,13 +201,60 @@ export class DirkScraper extends ScreenshotOCRScraper {
   }
 
   private multiProductScreenshots: Buffer[] = [];
+  private static MODALS_PER_COMPOSITE = 6;
 
+  /**
+   * Combine individual modal screenshots into composite images.
+   * 6 modals per composite = 74 modals → 13 API calls (instead of 74).
+   */
   protected getExtraChunks(): ImageChunk[] {
-    return this.multiProductScreenshots.map((buffer, i) => ({
-      buffer,
-      index: 1000 + i,
-      totalChunks: this.multiProductScreenshots.length,
-    }));
+    // Will be replaced by async version in scrapeProducts
+    return [];
+  }
+
+  private async buildCompositeChunks(): Promise<ImageChunk[]> {
+    if (this.multiProductScreenshots.length === 0) return [];
+
+    const composites: ImageChunk[] = [];
+    const perGroup = DirkScraper.MODALS_PER_COMPOSITE;
+    const totalGroups = Math.ceil(this.multiProductScreenshots.length / perGroup);
+
+    this.logger.info(`Combining ${this.multiProductScreenshots.length} modals into ${totalGroups} composite images (${perGroup} per image)`);
+
+    for (let g = 0; g < totalGroups; g++) {
+      const group = this.multiProductScreenshots.slice(g * perGroup, (g + 1) * perGroup);
+
+      // Get dimensions of each image in the group
+      const metas = await Promise.all(group.map(buf => sharp(buf).metadata()));
+      const maxWidth = Math.max(...metas.map(m => m.width || 800));
+      const totalHeight = metas.reduce((sum, m) => sum + (m.height || 600), 0);
+
+      // Stack vertically
+      const composite = sharp({
+        create: {
+          width: maxWidth,
+          height: totalHeight,
+          channels: 3,
+          background: { r: 255, g: 255, b: 255 },
+        },
+      });
+
+      let yOffset = 0;
+      const overlays: sharp.OverlayOptions[] = [];
+      for (let i = 0; i < group.length; i++) {
+        overlays.push({ input: group[i], top: yOffset, left: 0 });
+        yOffset += metas[i].height || 600;
+      }
+
+      const buffer = await composite.composite(overlays).png().toBuffer();
+      composites.push({
+        buffer,
+        index: 1000 + g,
+        totalChunks: totalGroups,
+      });
+    }
+
+    return composites;
   }
 
   protected getPromptHints(): string {
