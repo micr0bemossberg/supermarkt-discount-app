@@ -397,7 +397,7 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
   /** Stored DOM links from the most recent page, available for subclass overrides */
   protected lastExtractedUrls: DomProductLink[] = [];
 
-  private async captureScrollingScreenshots(
+  protected async captureScrollingScreenshots(
     page: Page,
     config: ScrollConfig,
   ): Promise<ImageChunk[]> {
