@@ -14,18 +14,21 @@ interface KeySlot {
 }
 
 /**
- * Key pool with model fallback and escalating backoff.
+ * Key pool with success cooldown, escalating backoff, and Lite-only model.
  *
- * Each API key gets multiple "slots" — one per model.
- * Rate limits are per-project per-model, so if model A is 429'd,
- * model B on the same key may still be available.
+ * CHANGES from previous version:
+ * 1. SUCCESS COOLDOWN: After a successful request, the slot enters a 4.1s cooldown
+ *    (15 RPM = 1 request per 4s per key). This prevents the same key from being
+ *    reused immediately, which caused burst 429s.
+ * 2. LITE-ONLY by default: Removed gemini-3-flash-preview as default second model.
+ *    Flash has only 20 RPD (vs 500 for Lite) — it exhausted quickly and generated
+ *    429 noise. Now 1 slot per key instead of 2.
+ * 3. Escalating backoff on 429: 15s → 30s → 60s (unchanged).
  *
  * Slot states:
  *   FREE         — ready for a chunk
  *   IN_FLIGHT    — currently processing
- *   RATE_LIMITED — 429'd, waiting with escalating backoff
- *
- * Keys can also be globally disabled (auth error affects all models).
+ *   RATE_LIMITED — 429'd or in success cooldown, waiting until retryAt
  */
 export class KeyPool {
   private slots: KeySlot[];
@@ -33,8 +36,10 @@ export class KeyPool {
 
   private static INITIAL_BACKOFF = 15_000;
   private static MAX_BACKOFF = 60_000;
+  /** After a successful request, wait 4.1s before reusing the same slot (15 RPM = 1 per 4s) */
+  private static SUCCESS_COOLDOWN = 4_100;
 
-  constructor(apiKeys: string[], models: string[] = ['gemini-3.1-flash-lite-preview', 'gemini-3-flash-preview']) {
+  constructor(apiKeys: string[], models: string[] = ['gemini-3.1-flash-lite-preview']) {
     if (apiKeys.length === 0) {
       throw new Error('At least one API key required');
     }
@@ -75,7 +80,7 @@ export class KeyPool {
   /**
    * Get all slots that are ready:
    * - FREE slots on non-disabled keys
-   * - RATE_LIMITED slots whose backoff expired (auto-promoted)
+   * - RATE_LIMITED slots whose backoff/cooldown expired (auto-promoted)
    */
   getFreeSlots(): { key: string; model: string; slotIndex: number }[] {
     const now = Date.now();
@@ -101,10 +106,15 @@ export class KeyPool {
     this.slots[slotIndex].status = 'in_flight';
   }
 
-  /** Mark slot as free (success) — resets backoff */
+  /**
+   * Mark slot as succeeded — applies SUCCESS_COOLDOWN (4.1s) before it can be reused.
+   * This prevents bursting the same key and respects the 15 RPM per-project limit.
+   * Resets the fail backoff so the next 429 starts at 15s again.
+   */
   markFree(slotIndex: number): void {
     const s = this.slots[slotIndex];
-    s.status = 'free';
+    s.status = 'rate_limited'; // Reuse rate_limited state with short cooldown
+    s.retryAt = Date.now() + KeyPool.SUCCESS_COOLDOWN;
     s.backoffMs = KeyPool.INITIAL_BACKOFF;
     s.consecutiveFails = 0;
   }
@@ -116,7 +126,7 @@ export class KeyPool {
     s.status = 'rate_limited';
     s.retryAt = Date.now() + s.backoffMs;
     const keyIndex = this.getKeyIndex(s.key);
-    logger.info(`key${keyIndex}/${s.model.split('-').slice(1, 3).join('-')}: 429 → wait ${Math.round(s.backoffMs / 1000)}s (fail #${s.consecutiveFails})`);
+    logger.info(`key${keyIndex}: 429 → wait ${Math.round(s.backoffMs / 1000)}s (fail #${s.consecutiveFails})`);
     s.backoffMs = Math.min(s.backoffMs * 2, KeyPool.MAX_BACKOFF);
   }
 
@@ -146,11 +156,10 @@ export class KeyPool {
       }
       const keySlots = this.slots.filter(s => s.key === key);
       const modelStatuses = keySlots.map(s => {
-        const mLabel = s.model.includes('3.1') ? 'L' : 'F'; // Lite vs Flash
-        if (s.status === 'free') return `${mLabel}:ok`;
-        if (s.status === 'in_flight') return `${mLabel}:fly`;
+        if (s.status === 'free') return 'ok';
+        if (s.status === 'in_flight') return 'fly';
         const secs = Math.max(0, Math.round((s.retryAt - now) / 1000));
-        return `${mLabel}:${secs}s`;
+        return `${secs}s`;
       });
       statuses.push(`k${ki + 1}[${modelStatuses.join('|')}]`);
     }

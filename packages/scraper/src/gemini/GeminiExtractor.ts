@@ -8,6 +8,30 @@ import { createLogger } from '../utils/logger';
 
 const logger = createLogger('GeminiExtractor');
 
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+/**
+ * GeminiExtractor — async while-loop dispatcher with global pacing.
+ *
+ * CHANGES from previous setInterval version:
+ * 1. ASYNC WHILE-LOOP: Replaces setInterval(100ms) polling. More efficient,
+ *    no race conditions, precise control over dispatch timing.
+ * 2. GLOBAL PACING: 150ms delay between each dispatched request (max ~6.6 req/s).
+ *    Prevents IP-based burst blocking from Google's WAF.
+ * 3. SINGLE MODEL: Lite-only by default (Flash removed from KeyPool).
+ *    60 keys × 1 model = 60 slots (was 120 with 2 models).
+ *    Flash's 20 RPD was exhausting quickly and generating 429 noise.
+ * 4. SUCCESS COOLDOWN: KeyPool.markFree() now applies 4.1s cooldown
+ *    (15 RPM = 1 per 4s). Key won't be reused immediately after success.
+ *
+ * Flow:
+ *   while (queue has items OR slots in-flight):
+ *     if (free slot AND chunk in queue):
+ *       dispatch chunk → slot IN-FLIGHT
+ *       await delay(150ms)  ← global pacing
+ *     else:
+ *       await delay(50ms)   ← idle wait
+ */
 export class GeminiExtractor {
   private config: GeminiConfig;
   private keyPool: KeyPool;
@@ -17,17 +41,6 @@ export class GeminiExtractor {
     this.keyPool = new KeyPool(config.apiKeys);
   }
 
-  /**
-   * Central dispatcher loop — polls every 100ms.
-   *
-   * Each tick:
-   *   1. Check rate-limited slots — if backoff expired, auto-promote to FREE
-   *   2. For each FREE slot + chunk in queue → dispatch (using slot's model)
-   *   3. IN-FLIGHT / WAITING → skip
-   *
-   * Each key has 2 slots: gemini-3.1-flash-lite-preview (primary) + gemini-3-flash-preview (fallback).
-   * Different models have separate rate limits on the same project.
-   */
   async extractProducts(
     images: ImageChunk[],
     context: ExtractionContext,
@@ -39,82 +52,82 @@ export class GeminiExtractor {
     const keyUsage = new Map<number, { calls: number; errors: number }>();
 
     const activeKeys = this.keyPool.totalActiveKeys();
-    logger.info(`Processing ${images.length} chunks across ${activeKeys} keys (2 models each)`);
+    logger.info(`Processing ${images.length} chunks across ${activeKeys} keys`);
 
     const queue: ImageChunk[] = [...images];
     let completed = 0;
     let permanentlyFailed = 0;
-    let pollCount = 0;
+    let lastLogTime = Date.now();
 
-    await new Promise<void>((resolve) => {
-      const interval = setInterval(() => {
-        pollCount++;
+    // Global pacing: min delay between dispatching consecutive requests
+    // ~6.6 req/s max across all keys — stays under Google's IP burst limiter
+    const GLOBAL_DISPATCH_DELAY_MS = 150;
 
-        // Log status every 5s
-        if (pollCount % 50 === 0) {
-          this.keyPool.logStatus();
-          logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length}`);
-        }
+    // Async while-loop dispatcher (replaces setInterval)
+    while (queue.length > 0 || this.keyPool.hasInFlight()) {
+      // All keys disabled? Abort.
+      if (this.keyPool.totalActiveKeys() === 0) {
+        logger.warning('All keys disabled — aborting');
+        permanentlyFailed += queue.length;
+        queue.length = 0;
+        break;
+      }
 
-        // Dispatch chunks to FREE slots — max 10 per tick to avoid burst 429s
-        const freeSlots = this.keyPool.getFreeSlots();
-        let dispatched = 0;
-        for (const { key, model, slotIndex } of freeSlots) {
-          if (queue.length === 0) break;
-          if (dispatched >= 10) break; // Stagger: max 10 requests per 100ms tick
-          dispatched++;
+      // Log status every 5s
+      if (Date.now() - lastLogTime >= 5000) {
+        this.keyPool.logStatus();
+        logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length}`);
+        lastLogTime = Date.now();
+      }
 
-          const chunk = queue.shift()!;
-          this.keyPool.markInFlight(slotIndex);
-          if (!keyUsage.has(slotIndex)) keyUsage.set(slotIndex, { calls: 0, errors: 0 });
+      const freeSlots = this.keyPool.getFreeSlots();
 
-          this.callGemini(chunk, prompt, key, model).then(
-            (result) => {
+      if (queue.length > 0 && freeSlots.length > 0) {
+        // Dispatch ONE chunk to ONE free slot
+        const chunk = queue.shift()!;
+        const { key, model, slotIndex } = freeSlots[0];
+
+        this.keyPool.markInFlight(slotIndex);
+        if (!keyUsage.has(slotIndex)) keyUsage.set(slotIndex, { calls: 0, errors: 0 });
+
+        // Fire-and-forget — result handled async
+        this.callGemini(chunk, prompt, key, model).then(
+          (result) => {
+            this.keyPool.markFree(slotIndex); // 4.1s success cooldown
+            allProducts.push(...result.products);
+            totalTokens += result.tokens;
+            keyUsage.get(slotIndex)!.calls++;
+            completed++;
+            if (completed % 10 === 0) {
+              logger.info(`${completed}/${images.length} done (${allProducts.length} products, ${queue.length} queued)`);
+            }
+          },
+          (error) => {
+            const msg = error instanceof Error ? error.message : String(error);
+            keyUsage.get(slotIndex)!.errors++;
+
+            if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+              this.keyPool.markRateLimited(slotIndex); // Escalating backoff
+              queue.push(chunk); // Back in queue
+            } else if (msg.includes('API_KEY_INVALID')) {
+              logger.warning(`Slot ${slotIndex} invalid key — disabling`);
+              this.keyPool.disableKey(key);
+              queue.push(chunk);
+            } else {
               this.keyPool.markFree(slotIndex);
-              allProducts.push(...result.products);
-              totalTokens += result.tokens;
-              keyUsage.get(slotIndex)!.calls++;
-              completed++;
-              if (completed % 10 === 0) {
-                logger.info(`${completed}/${images.length} done (${allProducts.length} products, ${queue.length} queued)`);
-              }
-            },
-            (error) => {
-              const msg = error instanceof Error ? error.message : String(error);
-              keyUsage.get(slotIndex)!.errors++;
+              permanentlyFailed++;
+              logger.warning(`Chunk ${chunk.index + 1} permanently failed: ${msg.substring(0, 200)}`);
+            }
+          },
+        );
 
-              if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-                this.keyPool.markRateLimited(slotIndex);
-                queue.push(chunk);
-              } else if (msg.includes('API_KEY_INVALID')) {
-                logger.warning(`Slot ${slotIndex} invalid key — disabling`);
-                this.keyPool.disableKey(key);
-                queue.push(chunk);
-              } else {
-                this.keyPool.markFree(slotIndex);
-                permanentlyFailed++;
-                logger.warning(`Chunk ${chunk.index + 1} permanently failed: ${msg.substring(0, 200)}`);
-              }
-            },
-          );
-        }
-
-        // Done check
-        if (queue.length === 0 && !this.keyPool.hasInFlight()) {
-          clearInterval(interval);
-          resolve();
-        }
-
-        // All keys disabled
-        if (this.keyPool.totalActiveKeys() === 0) {
-          logger.warning('All keys disabled — aborting');
-          permanentlyFailed += queue.length;
-          queue.length = 0;
-          clearInterval(interval);
-          resolve();
-        }
-      }, 100);
-    });
+        // Global pacing — wait before dispatching next request
+        await delay(GLOBAL_DISPATCH_DELAY_MS);
+      } else {
+        // No free slots or empty queue — idle wait
+        await delay(50);
+      }
+    }
 
     // Log summary
     const keyStats = [...keyUsage.entries()]
