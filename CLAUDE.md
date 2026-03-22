@@ -411,10 +411,33 @@ FREE → dispatch → IN-FLIGHT → success → RATE_LIMITED (4.1s cooldown) →
 - **Action**: ~25/~154 products extracted. Dense product grid — viewport changes (480px, 768px, 1280px) didn't help. Known limitation with `thinkingLevel: 'high'` on dense grids
 - **Megafoodstunter**: 7/12 products from editorial-style `/acties` page. Prompt hints added but editorial layout is inherently harder for OCR
 
-**Product URL (`product_url`) status**:
-- **Screenshot scrapers** (Dirk, Hoogvliet, Aldi, Action, Jumbo, Megafoodstunter): DOM-based URL extraction implemented via `extractProductUrls()` + `enrichWithUrls()` fuzzy matching. URLs populated during `scrapeProducts()`. Not yet verified with a real DB write
-- **Publitas scrapers** (Vomar, DekaMarkt, Kruidvat): `product_url` is always `null` — flyer page images don't have clickable product links. Could potentially extract hotspot data from Publitas spreads metadata in the future
-- **API scrapers** (AH, Picnic): URLs come from the API directly
+**Product URL (`product_url`) extraction & matching**:
+
+The OCR pipeline extracts product data from screenshots but can't extract clickable URLs from images. Product URLs are obtained separately from the DOM and matched to OCR products via fuzzy title matching.
+
+**Pipeline** (`ScreenshotOCRScraper`):
+1. `extractProductUrls(page)` — after `beforeScreenshots()`, query all `<a href>` elements from the DOM
+   - Filters out non-product links (login, social, legal, navigation)
+   - For links with no visible text: extracts product name from URL path (e.g., `/boodschappen/.../1%20de%20beste%20ijsbergsla%20melange/43355` → "1 de beste ijsbergsla melange")
+   - Dirk override: also captures `<a>` links from each open modal overlay during expansion (362 extra links)
+2. `enrichWithUrls(products, domLinks)` — after OCR extraction + dedup, matches products to links via fuzzy scoring:
+   - **Exact match** (normalized) → score 1.0
+   - **Substring containment** (one fully contains the other) → score 0.7-0.9 scaled by length ratio
+   - **Word overlap** (weighted Jaccard + title coverage) → proportional score
+   - **URL path matching** — also matches OCR title against decoded URL path segments
+   - Threshold: score ≥ 0.35 to apply match (lowered from 0.5 for better coverage)
+   - Normalization: lowercase, strip diacritics, remove non-alphanumeric, collapse whitespace
+
+**Results (Dirk)**:
+- Tab 1: 99/114 = **87%** matched
+- Tab 2: 245/260 = **94%** matched
+- Total: 344/581 = **59%** (was 102/530 = 19% before improvements)
+- Remaining 41% unmatched: products without individual product pages (bulk items, modal-only variants)
+
+**Per pipeline type**:
+- **Screenshot scrapers** (Dirk, Hoogvliet, Aldi, Action, Jumbo, Megafoodstunter): DOM-based extraction + fuzzy matching. Dirk has additional modal link extraction.
+- **Publitas scrapers** (Vomar, DekaMarkt, Kruidvat): `product_url` is always `null` — flyer pages are images without clickable product links
+- **API scrapers** (AH, Picnic): URLs come directly from the API response
 
 **API scraper status**:
 - **AH**: Working — mobile API returns ~1000+ bonus products per run
