@@ -10,8 +10,8 @@ export class ActionScraper extends ScreenshotOCRScraper {
 
   protected getScrollConfig(): ScrollConfig {
     return {
-      viewportWidth: 768,     // Narrower viewport — products render larger, easier for OCR
-      viewportHeight: 800,
+      viewportWidth: 1280,
+      viewportHeight: 600,    // Shorter chunks — fewer products per chunk avoids Gemini timeout
       overlapPercent: 0.2,
       maxChunks: 25,
       scrollDelayMs: [200, 500],
@@ -19,6 +19,6 @@ export class ActionScraper extends ScreenshotOCRScraper {
   }
 
   protected getPromptHints(): string {
-    return 'Action sells non-food items (household, electronics, toys, personal care). This page has MANY products in a grid layout. Extract EVERY product visible — there should be 100+ products. Each product card shows: product name, price, and sometimes an original price or discount badge.';
+    return 'Action sells non-food items (household, electronics, toys, personal care). Extract EVERY product card visible. Each shows: product name, price, and sometimes an original price or discount percentage.';
   }
 }
