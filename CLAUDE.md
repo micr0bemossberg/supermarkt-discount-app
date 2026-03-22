@@ -246,6 +246,88 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 
 **Key states**: FREE (ready) → IN-FLIGHT (processing) → RATE_LIMITED (backoff timer) → FREE (timer expired). DISABLED = permanently dead.
 
+### Full OCR Pipeline Flow (end-to-end)
+
+```
+1. BROWSER PHASE (Playwright)
+   │  Navigate to URL → handle cookies → beforeScreenshots() hook
+   │  (expand modals, click tabs, scroll to load, wait for lazy content)
+   │  Time: 10-80s depending on page complexity
+   │
+2. CAPTURE PHASE
+   │  Screenshot scrapers: scroll in viewport-sized steps with 20% overlap
+   │  Publitas scrapers: download flyer page images from CDN (at1600 resolution)
+   │  Output: array of ImageChunk[] (PNG buffers)
+   │  Time: 5-15s
+   │
+3. URL EXTRACTION (screenshot scrapers only)
+   │  extractProductUrls(page): query all <a> tags from DOM
+   │  Store for post-OCR fuzzy matching
+   │  Time: <1s
+   │
+4. DISPATCH PHASE (GeminiExtractor central loop)
+   │  100ms polling interval:
+   │    - Scan all slots (keys × models) for FREE ones
+   │    - Pop chunk from queue → assign to free slot → fire Gemini API call
+   │    - Slot → IN-FLIGHT until response returns
+   │    - On success → slot FREE, products collected
+   │    - On 429 → slot RATE_LIMITED (backoff 15s → 30s → 60s)
+   │    - On timeout (120s) → permanent failure, slot FREE
+   │  All chunks processed when queue empty + no in-flight slots
+   │
+5. GEMINI API CALL (per chunk)
+   │  Model: gemini-3.1-flash-lite-preview (primary) or gemini-3-flash-preview (fallback)
+   │  Config: thinking=high, temperature=0.0, mediaResolution=HIGH, structured output
+   │  Input: image buffer (base64) + extraction prompt + context (supermarket, categories)
+   │  Output: JSON array of ScrapedProduct[] via responseSchema enforcement
+   │  Time per call: 3-60s (depends on image complexity + thinking level)
+   │
+6. POST-PROCESSING
+   │  parseGeminiResponse(): validate fields, coerce prices, fallback dates
+   │  Cross-chunk dedup: normalize title + price → remove duplicates from overlap zones
+   │  enrichWithUrls(): fuzzy-match OCR titles to DOM links → populate product_url
+   │  Time: <1s
+   │
+7. DB INSERT (BaseScraper)
+   │  For each product: compute scrape_hash (SHA-256) → INSERT with ON CONFLICT skip
+   │  Download product images → WebP optimize → upload to Supabase Storage
+   │  Log to scrape_logs table (success/partial/failed)
+   │  Time: 5-30s depending on product count
+```
+
+### Speed Optimization Analysis
+
+**Current bottlenecks** (in order of impact):
+
+1. **Gemini API rate limits** (~70% of total time for large scrapers)
+   - Free tier: 15 RPM per project per model, 500 RPD per project
+   - With 60 keys × 2 models = 120 slots, theoretical max ~900 RPM
+   - In practice: escalating backoff after 429s reduces effective throughput to ~5-15 chunks/minute
+   - **Optimization**: More keys on more Gmail accounts = more independent RPM. Each new account adds 15 RPM × N projects
+
+2. **Dirk modal expansion** (~75s for 72 modals)
+   - Each modal: click → wait → screenshot → close = ~1s per card
+   - 72 cards = ~75s of sequential DOM interaction
+   - **Optimization**: Composite modal images (stitch 6 modals into 1 image = 12 API calls instead of 72)
+
+3. **Thinking level `high`** (3-60s per chunk vs 2-5s for `low`)
+   - Dense grids with many products take longest
+   - Causes 120s timeouts on complex pages
+   - **Optimization**: Use `medium` for screenshot scrapers (dense grids), keep `high` for Publitas (cleaner flyer images). Per-scraper `getThinkingLevel()` override
+
+4. **Browser startup** (~5-8s per run)
+   - Chromium launch + page navigation
+   - **Optimization**: Browser pooling across scrapers (run multiple scrapers in same browser session)
+
+5. **Sequential supermarket runs** (CI runs them in parallel via matrix, but local testing is sequential)
+   - **Optimization**: Already handled by GitHub Actions matrix strategy
+
+**Quick wins (not yet implemented)**:
+- [ ] `thinkingLevel: 'medium'` for Action/Hoogvliet (avoid timeouts, faster responses)
+- [ ] Composite modal images for Dirk (72 → 12 chunks)
+- [ ] Increase timeout to 180s for Publitas (dense flyer pages need more time but succeed)
+- [ ] Skip cover/back pages in Publitas (already implemented via `getSkipPages()`)
+
 **Rate limit lessons learned**:
 - Google's free tier has **two rate limits**: RPM (15/min) AND a burst limiter (can't fire 15 requests in 1 second)
 - **Do NOT spam 429'd keys** — Google escalates rate limits across ALL projects on the same Gmail account
