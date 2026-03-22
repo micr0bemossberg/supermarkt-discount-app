@@ -288,7 +288,32 @@ The key pool (`packages/scraper/src/gemini/keyPool.ts`) manages API keys with a 
 
 **Publitas image resolution**: Prefer `at1600` (662KB) over `at2400` (1.2MB) — sufficient OCR quality without Gemini timeout risk. Configured in `PublitasOCRScraper.parseSpreadsData()`
 
-**Gemini call timeout**: Individual `callGemini()` calls have a 120s timeout (`Promise.race`) to prevent hung API calls from blocking the dispatcher indefinitely. This was added after Kruidvat's last chunk hung for minutes.
+**Gemini call timeout**: Individual `callGemini()` calls have a 120s timeout (`Promise.race`) to prevent hung API calls from blocking the dispatcher indefinitely. Dense flyer pages with `thinkingLevel: 'high'` are the main cause of timeouts.
+
+### Open Items / Known Issues
+
+**Failing chunks (timeout)**:
+- **Hoogvliet**: 3/12 chunks timeout (120s) on dense product grids with `thinkingLevel: 'high'`. Potential fixes: increase timeout to 180s, lower thinking to `medium` for screenshot scrapers, or split dense pages into smaller viewport chunks
+- **Kruidvat**: Dense flyer pages occasionally timeout. `at1600` resolution resolved the worst cases but some pages are still borderline
+
+**OCR accuracy gaps**:
+- **Action**: Only 25/~154 products extracted despite all content being visible. Dense product grid with small cards — OCR misses most items. May need smaller viewport width or prompt tuning
+- **Megafoodstunter**: 7/12 products extracted from editorial-style page. Prompt hints could improve extraction from magazine-style layouts with text interspersed between products
+
+**API scraper status**:
+- **AH**: Working — mobile API returns ~1000+ bonus products per run, fast and reliable
+- **Picnic**: Broken — login succeeds but API returns `403 Forbidden` on all search requests. Picnic flags new IPs with 2FA. Needs 2FA re-approval on the Picnic account or test from a known IP (home network / GitHub Actions)
+
+**Scrapers to disable/remove**:
+- [ ] **Flink**: Remove from `index.ts`, deactivate in DB (`is_active = false`), remove from GitHub Actions matrix
+- [ ] **Butlon**: Same as Flink — site permanently down
+- [ ] **Joybuy**: Blocked by corporate IT (Jingdong). Needs `beforeScreenshots()` with two-step navigation (homepage → Flash Deals). Test from GitHub Actions CI only
+
+**Future improvements**:
+- [ ] Hoogvliet: scrape second week tab (upcoming week, ~176 more products) similar to Dirk dual-tab approach
+- [ ] Combine Dirk's 72 individual modal screenshots into composite images to reduce chunk count
+- [ ] Investigate `thinkingLevel: 'medium'` for screenshot scrapers (dense grids don't benefit from high thinking and timeout more)
+- [ ] Supabase integration testing (currently all runs use `--dry-run`)
 
 ## Supabase Notes
 
