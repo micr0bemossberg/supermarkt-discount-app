@@ -66,7 +66,7 @@ export class GeminiExtractor {
     //   RPD 429 → disable key (don't punish concurrency for exhausted daily quota)
     let currentConcurrency = 10;          // Start conservative
     const MAX_CONCURRENCY_CEILING = 30;   // Never exceed this
-    const MIN_CONCURRENCY_FLOOR = 3;      // Never go below this
+    const MIN_CONCURRENCY_FLOOR = 5;      // Never go below this (was 3, too conservative)
     const ADDITIVE_INCREASE = 0.2;        // +1 concurrent slot per 5 successes
 
     // Global pacing: min delay between dispatching consecutive requests
@@ -128,19 +128,16 @@ export class GeminiExtractor {
             keyUsage.get(slotIndex)!.errors++;
 
             if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-              // Distinguish RPD exhaustion from WAF burst blocking
-              const isRPD = msg.includes('per day') || msg.includes('RPD') || msg.includes('daily');
+              // markRateLimited returns true if key was auto-disabled (RPD exhausted:
+              // 5+ consecutive fails on same key). Returns false for WAF/RPM burst.
+              const isRPD = this.keyPool.markRateLimited(slotIndex);
 
-              if (isRPD) {
-                // RPD exhausted — disable this key entirely, don't punish concurrency
-                logger.warning(`Slot ${slotIndex} RPD exhausted — disabling key`);
-                this.keyPool.disableKey(key);
-              } else {
+              if (!isRPD) {
                 // WAF/RPM burst — AIMD Multiplicative Decrease
                 currentConcurrency = Math.max(currentConcurrency * 0.5, MIN_CONCURRENCY_FLOOR);
                 logger.warning(`429 WAF hit! Concurrency → ${Math.floor(currentConcurrency)}`);
-                this.keyPool.markRateLimited(slotIndex);
               }
+              // RPD: key already disabled by markRateLimited, concurrency NOT punished
               queue.push(chunk); // Back in queue
             } else if (msg.includes('API_KEY_INVALID')) {
               logger.warning(`Slot ${slotIndex} invalid key — disabling`);

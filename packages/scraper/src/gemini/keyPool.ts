@@ -33,17 +33,22 @@ interface KeySlot {
 export class KeyPool {
   private slots: KeySlot[];
   private disabledKeys: Set<string>;
+  /** Track consecutive fails per KEY (not per slot) — for RPD detection */
+  private keyConsecutiveFails: Map<string, number>;
 
   private static INITIAL_BACKOFF = 15_000;
   private static MAX_BACKOFF = 60_000;
   /** After a successful request, wait 4.1s before reusing the same slot (15 RPM = 1 per 4s) */
   private static SUCCESS_COOLDOWN = 4_100;
+  /** If a key fails this many times in a row without any success, assume RPD exhausted and disable */
+  private static MAX_CONSECUTIVE_KEY_FAILS = 5;
 
   constructor(apiKeys: string[], models: string[] = ['gemini-3.1-flash-lite-preview']) {
     if (apiKeys.length === 0) {
       throw new Error('At least one API key required');
     }
     this.disabledKeys = new Set();
+    this.keyConsecutiveFails = new Map();
 
     // Create one slot per key × model combination
     this.slots = [];
@@ -108,8 +113,7 @@ export class KeyPool {
 
   /**
    * Mark slot as succeeded — applies SUCCESS_COOLDOWN (4.1s) before it can be reused.
-   * This prevents bursting the same key and respects the 15 RPM per-project limit.
-   * Resets the fail backoff so the next 429 starts at 15s again.
+   * Resets per-key consecutive fail counter (this key is NOT RPD-exhausted).
    */
   markFree(slotIndex: number): void {
     const s = this.slots[slotIndex];
@@ -117,17 +121,36 @@ export class KeyPool {
     s.retryAt = Date.now() + KeyPool.SUCCESS_COOLDOWN;
     s.backoffMs = KeyPool.INITIAL_BACKOFF;
     s.consecutiveFails = 0;
+    this.keyConsecutiveFails.set(s.key, 0); // Reset per-key counter on ANY success
   }
 
-  /** Mark slot as rate-limited (429) — escalating backoff */
-  markRateLimited(slotIndex: number): void {
+  /**
+   * Mark slot as rate-limited (429) — escalating backoff.
+   * Also tracks per-key consecutive fails. If a key fails MAX_CONSECUTIVE_KEY_FAILS
+   * times in a row without a single success, it's assumed RPD-exhausted and disabled.
+   * Returns true if the key was auto-disabled (RPD), false if just rate-limited (WAF).
+   */
+  markRateLimited(slotIndex: number): boolean {
     const s = this.slots[slotIndex];
     s.consecutiveFails++;
     s.status = 'rate_limited';
     s.retryAt = Date.now() + s.backoffMs;
     const keyIndex = this.getKeyIndex(s.key);
-    logger.info(`key${keyIndex}: 429 → wait ${Math.round(s.backoffMs / 1000)}s (fail #${s.consecutiveFails})`);
+
+    // Track per-KEY consecutive fails (shared across all model slots for this key)
+    const keyFails = (this.keyConsecutiveFails.get(s.key) || 0) + 1;
+    this.keyConsecutiveFails.set(s.key, keyFails);
+
+    if (keyFails >= KeyPool.MAX_CONSECUTIVE_KEY_FAILS) {
+      // 5+ consecutive fails on this key → likely RPD exhausted, disable it
+      logger.warning(`key${keyIndex}: ${keyFails} consecutive fails → RPD exhausted, disabling`);
+      this.disableKey(s.key);
+      return true; // RPD — caller should NOT punish AIMD concurrency
+    }
+
+    logger.info(`key${keyIndex}: 429 → wait ${Math.round(s.backoffMs / 1000)}s (fail #${s.consecutiveFails}, key-fails: ${keyFails})`);
     s.backoffMs = Math.min(s.backoffMs * 2, KeyPool.MAX_BACKOFF);
+    return false; // WAF — caller should halve AIMD concurrency
   }
 
   /** Disable a key entirely (auth error — affects all model slots) */
