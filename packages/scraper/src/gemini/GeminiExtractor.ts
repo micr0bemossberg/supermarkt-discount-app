@@ -59,9 +59,16 @@ export class GeminiExtractor {
     let permanentlyFailed = 0;
     let lastLogTime = Date.now();
 
-    // Max concurrent requests from this IP — Google WAF blocks >15-18 simultaneous connections.
-    // DekaMarkt (15 concurrent) had zero 429s. Dirk (45 concurrent) had 390 429s.
-    const MAX_CONCURRENT = 15;
+    // AIMD (Additive Increase, Multiplicative Decrease) concurrency control.
+    // Like TCP congestion control — the system finds the optimal concurrency itself.
+    //   Success → slowly increase concurrency (+0.2 per success)
+    //   WAF 429 → halve concurrency immediately (emergency brake)
+    //   RPD 429 → disable key (don't punish concurrency for exhausted daily quota)
+    let currentConcurrency = 10;          // Start conservative
+    const MAX_CONCURRENCY_CEILING = 30;   // Never exceed this
+    const MIN_CONCURRENCY_FLOOR = 3;      // Never go below this
+    const ADDITIVE_INCREASE = 0.2;        // +1 concurrent slot per 5 successes
+
     // Global pacing: min delay between dispatching consecutive requests
     const GLOBAL_DISPATCH_DELAY_MS = 150;
 
@@ -78,12 +85,12 @@ export class GeminiExtractor {
       // Log status every 5s
       if (Date.now() - lastLogTime >= 5000) {
         this.keyPool.logStatus();
-        logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length} | InFlight: ${this.keyPool.getInFlightCount()}/${MAX_CONCURRENT}`);
+        logger.info(`Queue: ${queue.length} | Completed: ${completed}/${images.length} | Products: ${allProducts.length} | InFlight: ${this.keyPool.getInFlightCount()}/${Math.floor(currentConcurrency)}`);
         lastLogTime = Date.now();
       }
 
-      // Concurrency gate: don't exceed MAX_CONCURRENT in-flight requests
-      if (this.keyPool.getInFlightCount() >= MAX_CONCURRENT) {
+      // AIMD concurrency gate
+      if (this.keyPool.getInFlightCount() >= Math.floor(currentConcurrency)) {
         await delay(50);
         continue;
       }
@@ -106,8 +113,14 @@ export class GeminiExtractor {
             totalTokens += result.tokens;
             keyUsage.get(slotIndex)!.calls++;
             completed++;
+
+            // AIMD: Additive Increase — slowly raise concurrency on success
+            if (currentConcurrency < MAX_CONCURRENCY_CEILING) {
+              currentConcurrency = Math.min(currentConcurrency + ADDITIVE_INCREASE, MAX_CONCURRENCY_CEILING);
+            }
+
             if (completed % 10 === 0) {
-              logger.info(`${completed}/${images.length} done (${allProducts.length} products, ${queue.length} queued)`);
+              logger.info(`${completed}/${images.length} done (${allProducts.length} products, ${queue.length} queued, concurrency: ${Math.floor(currentConcurrency)})`);
             }
           },
           (error) => {
@@ -115,7 +128,19 @@ export class GeminiExtractor {
             keyUsage.get(slotIndex)!.errors++;
 
             if (msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
-              this.keyPool.markRateLimited(slotIndex); // Escalating backoff
+              // Distinguish RPD exhaustion from WAF burst blocking
+              const isRPD = msg.includes('per day') || msg.includes('RPD') || msg.includes('daily');
+
+              if (isRPD) {
+                // RPD exhausted — disable this key entirely, don't punish concurrency
+                logger.warning(`Slot ${slotIndex} RPD exhausted — disabling key`);
+                this.keyPool.disableKey(key);
+              } else {
+                // WAF/RPM burst — AIMD Multiplicative Decrease
+                currentConcurrency = Math.max(currentConcurrency * 0.5, MIN_CONCURRENCY_FLOOR);
+                logger.warning(`429 WAF hit! Concurrency → ${Math.floor(currentConcurrency)}`);
+                this.keyPool.markRateLimited(slotIndex);
+              }
               queue.push(chunk); // Back in queue
             } else if (msg.includes('API_KEY_INVALID')) {
               logger.warning(`Slot ${slotIndex} invalid key — disabling`);
