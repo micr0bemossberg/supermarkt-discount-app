@@ -30,15 +30,14 @@ jobs:
             browser: chromium
           - supermarket: megafoodstunter
             browser: chromium
-          - supermarket: butlon
-            browser: chromium
+          # butlon: disabled (site down)
           - supermarket: action
             browser: chromium
           - supermarket: dekamarkt
             browser: chromium
-          # Firefox-based scrapers (TLS fingerprinting blocks Chromium)
+          # Kruidvat now uses Publitas pipeline (no Firefox needed)
           - supermarket: kruidvat
-            browser: firefox
+            browser: chromium
           - supermarket: joybuy
             browser: firefox
           # API-only scrapers (no browser needed)

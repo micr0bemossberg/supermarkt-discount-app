@@ -13,10 +13,10 @@ import { VomarScraper } from './scrapers/vomar/VomarScraper';
 import { PicnicScraper } from './scrapers/picnic/PicnicScraper';
 import { JoybuyScraper } from './scrapers/joybuy/JoybuyScraper';
 import { MegafoodstunterScraper } from './scrapers/megafoodstunter/MegafoodstunterScraper';
-import { ButlonScraper } from './scrapers/butlon/ButlonScraper';
+// import { ButlonScraper } from './scrapers/butlon/ButlonScraper'; // Disabled: site down (ERR_CONNECTION_TIMED_OUT)
 import { HoogvlietScraper } from './scrapers/hoogvliet/HoogvlietScraper';
 import { ActionScraper } from './scrapers/action/ActionScraper';
-import { FlinkScraper } from './scrapers/flink/FlinkScraper';
+// import { FlinkScraper } from './scrapers/flink/FlinkScraper'; // Disabled: Flink exited Netherlands
 import { KruidvatScraper } from './scrapers/kruidvat/KruidvatScraper';
 import { DekamarktScraper } from './scrapers/dekamarkt/DekamarktScraper';
 import { testConnection } from './config/supabase';
@@ -47,13 +47,13 @@ function getScraper(slug: SupermarketSlug) {
     case 'megafoodstunter':
       return new MegafoodstunterScraper();
     case 'butlon':
-      return new ButlonScraper();
+      throw new Error('Butlon is disabled — site is down');
     case 'hoogvliet':
       return new HoogvlietScraper();
     case 'action':
       return new ActionScraper();
     case 'flink':
-      return new FlinkScraper();
+      throw new Error('Flink is disabled — exited Netherlands');
     case 'kruidvat':
       return new KruidvatScraper();
     case 'dekamarkt':
