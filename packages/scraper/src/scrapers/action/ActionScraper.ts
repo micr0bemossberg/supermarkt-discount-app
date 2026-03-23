@@ -90,8 +90,9 @@ export class ActionScraper extends ScreenshotOCRScraper {
 
       this.logger.info(`Page ${pageNum}: ${result.products.length} extracted, ${newCount} new (${result.products.length - newCount} dupes)`);
 
-      // Stop if page returned 0 new products (wrapped around to page 1)
-      if (newCount === 0) {
+      // Stop if page returned 0 new products AND we've seen at least 3 pages
+      // (page 7 might have OCR misses but still has real products)
+      if (newCount === 0 && pageNum >= 8) {
         this.logger.info(`Page ${pageNum}: all duplicates — stopping (likely wrapped around)`);
         break;
       }
@@ -117,6 +118,16 @@ export class ActionScraper extends ScreenshotOCRScraper {
   }
 
   protected getPromptHints(): string {
-    return 'Action sells non-food items (household, electronics, toys, personal care). Extract EVERY product card visible. Each shows: product name, price, and sometimes an original price or discount percentage.';
+    return `Action sells non-food items (household, electronics, toys, personal care).
+IMPORTANT: Extract EVERY single product card. The page shows a 3-column grid of product cards.
+Each product card has:
+- A product image at the top
+- Product name in bold text below the image
+- A short description (size, quantity, material)
+- A price displayed as large digits (e.g., "1.69", "4.95", "12.99")
+- Sometimes a crossed-out original price and/or discount percentage badge
+- Sometimes a "Weekactie" tag
+Count every card carefully. There should be approximately 20-25 products per screenshot.
+Do NOT skip any product, even if it partially overlaps with the edge of the image.`;
   }
 }
