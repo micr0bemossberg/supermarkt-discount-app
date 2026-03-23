@@ -27,15 +27,23 @@ const DEFAULT_SCROLL_CONFIG: ScrollConfig = {
 };
 
 export abstract class ScreenshotOCRScraper extends BaseScraper {
-  private extractor: GeminiExtractor;
+  private _extractor: GeminiExtractor | null = null;
 
   constructor(supermarketSlug: SupermarketSlug, baseUrl: string) {
     super(supermarketSlug, baseUrl);
-    this.extractor = new GeminiExtractor({
-      ...GEMINI_DEFAULTS,
-      apiKeys: Array.from({ length: 50 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
-        .filter((k): k is string => !!k),
-    });
+  }
+
+  /** Lazy-initialized extractor — allows subclass overrides of getThinkingLevel() */
+  protected get extractor(): GeminiExtractor {
+    if (!this._extractor) {
+      this._extractor = new GeminiExtractor({
+        ...GEMINI_DEFAULTS,
+        thinkingLevel: this.getThinkingLevel(),
+        apiKeys: Array.from({ length: 100 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
+          .filter((k): k is string => !!k),
+      });
+    }
+    return this._extractor;
   }
 
   /** Human-readable name for Gemini prompt context */
@@ -62,6 +70,11 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
   /** Override for sites that don't reach networkidle (continuous background requests) */
   protected getWaitUntil(): 'networkidle' | 'domcontentloaded' | 'load' {
     return 'networkidle';
+  }
+
+  /** Override thinking level per scraper. Dense grids benefit from 'medium' (fewer timeouts). */
+  protected getThinkingLevel(): 'minimal' | 'low' | 'medium' | 'high' {
+    return GEMINI_DEFAULTS.thinkingLevel;
   }
 
   /** Override to provide additional image chunks (e.g., modal screenshots). */

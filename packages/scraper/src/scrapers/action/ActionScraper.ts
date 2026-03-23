@@ -18,6 +18,10 @@ export class ActionScraper extends ScreenshotOCRScraper {
     };
   }
 
+  protected getThinkingLevel(): 'minimal' | 'low' | 'medium' | 'high' {
+    return 'medium'; // Dense product grid — 'high' causes timeouts, 'medium' is faster + fewer misses
+  }
+
   protected getPromptHints(): string {
     return 'Action sells non-food items (household, electronics, toys, personal care). Extract EVERY product card visible. Each shows: product name, price, and sometimes an original price or discount percentage.';
   }
