@@ -346,7 +346,7 @@ FREE → dispatch → IN-FLIGHT → success → RATE_LIMITED (4.1s cooldown) →
 - [x] Lite-only model (Flash removed — 20 RPD caused noise)
 
 **Remaining optimizations**:
-- [ ] `thinkingLevel: 'medium'` for Action/Hoogvliet (avoid timeouts, faster responses)
+- [x] `thinkingLevel: 'medium'` for Action — 34 products, 0 timeouts (implemented)
 - [ ] Increase timeout to 180s for Publitas (dense flyer pages need more time)
 - [ ] Browser pooling across scrapers (save ~5-8s startup per scraper)
 
@@ -376,6 +376,26 @@ FREE → dispatch → IN-FLIGHT → success → RATE_LIMITED (4.1s cooldown) →
 
 \* Hoogvliet estimate after scroll-to-load fix (pending test)
 
+**Latest results** (2026-03-25, after all optimizations):
+| Supermarket | Pipeline | Products | Duration | Status |
+|---|---|---|---|---|
+| Dirk | Screenshot + composites | 459 | 648s | Working, 59% URL match |
+| Vomar | Publitas | 219 | 80s | Working |
+| Kruidvat | Publitas | 181 | 846s | Working |
+| DekaMarkt | Publitas | 69 | 23s | Working, DB tested |
+| Hoogvliet | Screenshot (dual-week) | 76 | ~250s | Working (27+49) |
+| Aldi | Screenshot | 48 | 464s | Working |
+| Action | Screenshot (7 pages) | 129 | ~7min | Working (80% of 161) |
+| Jumbo | Screenshot | 21 | 70s | Working |
+| Megafoodstunter | Screenshot | 7 | 144s | Working |
+| AH | API | ~1000+ | - | Unchanged |
+| Picnic | API | - | - | Broken (403, needs 2FA) |
+| Flink | - | - | - | Disabled (exited NL) |
+| Butlon | - | - | - | Disabled (site down) |
+| Joybuy | Screenshot (FF) | - | - | Blocked by corp IT |
+
+**Total: 9 OCR scrapers working — ~1,209 products** + AH API (~1000+)
+
 **Supermarket-specific quirks**:
 - **Dirk**: Multi-product modal expansion (72 cards), dual tabs (t/m dinsdag + vanaf woensdag), weekend deals (VR, ZA & ZO ACTIE)
 - **Hoogvliet**: AJAX lazy loading via `PromotionLoadScroll()` — needs gradual scroll (400px steps, 800ms delay) to trigger all category loads. Without this, only ~21 products load; with it, ~177 products across 20 categories
@@ -385,7 +405,7 @@ FREE → dispatch → IN-FLIGHT → success → RATE_LIMITED (4.1s cooldown) →
 - **Vomar**: Publitas embed URL in iframe, needs browser to resolve, then follows redirect to actual publication
 - **DekaMarkt**: White-labeled Publitas (`folder.dekamarkt.nl`), follows redirect to weekly URL
 - **Megafoodstunter**: Wholesale/bulk food outlet. Homepage has no products — deals page is `/acties` (editorial magazine-style layout)
-- **Action**: All ~154 products rendered on page load (no lazy loading/pagination). Only 25 extracted — OCR accuracy issue with dense product grids, not a page interaction problem
+- **Action**: 7 pages with ~23 products each (161 total). Pagination implemented — shared extractor across all pages, cross-page dedup. 129/161 = 80% extracted. Remaining 20% is inherent OCR miss on dense grids (composite card screenshots also tested, did not improve). `thinkingLevel: 'medium'` for speed
 - **Flink**: Exited Netherlands (redirects to Germany). DataDome CAPTCHA. Should be disabled
 - **Butlon**: Domain `butlon.nl` unreachable — permanently down or renamed. Should be disabled
 - **Joybuy**: Parent company Jingdong blocked by corporate IT. Needs two-step navigation (homepage for session cookies, then Flash Deals page). Test from GitHub Actions CI
@@ -406,9 +426,12 @@ FREE → dispatch → IN-FLIGHT → success → RATE_LIMITED (4.1s cooldown) →
 - [x] Product URL extraction from DOM implemented for all screenshot scrapers
 - [x] Composite modal images for Dirk — 74 → 13 chunks, 2.3x faster (913s vs 2077s), 9% more products
 - [x] Staggered dispatch — max 10 slots per 100ms tick to prevent burst 429s
+- [x] Hoogvliet dual-week scraping — 27 → 76 products (current + upcoming week)
+- [x] Action pagination — 7 pages, shared extractor, cross-page dedup — 34 → 129 products
+- [x] `thinkingLevel: 'medium'` per scraper — Action uses medium (0 timeouts), rest uses high
 
 **OCR accuracy gaps**:
-- **Action**: ~25/~154 products extracted. Dense product grid — viewport changes (480px, 768px, 1280px) didn't help. Known limitation with `thinkingLevel: 'high'` on dense grids
+- **Action**: 129/161 products (80%) after pagination fix (7 pages). Composite card screenshots tested but did not improve — dense grid is an inherent OCR limitation
 - **Megafoodstunter**: 7/12 products from editorial-style `/acties` page. Prompt hints added but editorial layout is inherently harder for OCR
 
 **Product URL (`product_url`) extraction & matching**:
@@ -448,8 +471,12 @@ The OCR pipeline extracts product data from screenshots but can't extract clicka
 - [ ] Deactivate Flink + Butlon in Supabase DB (`is_active = false`)
 - [ ] Picnic: re-approve 2FA from home network
 - [ ] Joybuy: implement `beforeScreenshots()` with two-step navigation, test from CI
-- [ ] Hoogvliet: scrape second week tab (upcoming week, ~176 more products)
-- [ ] Investigate `thinkingLevel: 'medium'` for dense-grid scrapers (Action, Hoogvliet)
+- [x] Hoogvliet: dual-week scraping implemented — 27 → 76 products (2.8x)
+- [x] `thinkingLevel: 'medium'` for Action — implemented, 0 timeouts
+- [x] Action pagination — 34 → 129 products across 7 pages (3.8x improvement)
+- [ ] Action: investigate remaining 20% OCR miss on dense grids (129/161 = 80%)
+- [ ] Improve Dirk URL match rate beyond 59% (344/581)
+- [ ] Test Joybuy from GitHub Actions CI (blocked by corporate IT locally)
 
 ## Supabase Notes
 
