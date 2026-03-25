@@ -2053,3 +2053,4 @@ git commit -m "chore: finalize Gemini OCR scraper integration"
 | 4: Integration | Tasks 15-17 | CLI flags, migration, smoke tests |
 
 **Total estimated code change:** ~5500 lines deleted, ~1200 lines added, 30 unit tests.
+ 
