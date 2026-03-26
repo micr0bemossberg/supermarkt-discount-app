@@ -71,6 +71,15 @@ jobs:
         run: npx playwright install firefox --with-deps
         working-directory: packages/scraper
 
+      - name: Export Gemini API keys
+        if: matrix.browser != 'none'
+        run: |
+          echo "${{ secrets.GEMINI_API_KEYS }}" | while IFS='=' read -r key value; do
+            if [ -n "$key" ] && [ -n "$value" ]; then
+              echo "$key=$value" >> $GITHUB_ENV
+            fi
+          done
+
       - name: Run ${{ matrix.supermarket }} scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
