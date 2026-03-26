@@ -255,6 +255,14 @@ export async function insertProduct(
       productData.requires_card = scrapedProduct.requires_card || false;
     }
 
+    // Optional columns — set if provided
+    if (scrapedProduct.deal_type) {
+      productData.deal_type = scrapedProduct.deal_type;
+    }
+    if (scrapedProduct.is_online_only) {
+      productData.is_online_only = true;
+    }
+
     // Insert into database
     let { data, error } = await supabase
       .from('products')

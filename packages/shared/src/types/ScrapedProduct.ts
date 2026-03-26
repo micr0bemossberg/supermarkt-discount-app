@@ -33,6 +33,9 @@ export interface ScrapedProduct {
 
   // Deal type classification (e.g., "korting", "1+1_gratis", "2e_halve_prijs")
   deal_type?: string;
+
+  // Online-only deal (not available in physical stores)
+  is_online_only?: boolean;
 }
 
 /**
