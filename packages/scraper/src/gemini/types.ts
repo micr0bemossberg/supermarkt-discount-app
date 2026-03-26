@@ -19,6 +19,7 @@ export interface ImageChunk {
   buffer: Buffer;
   index: number;
   totalChunks: number;
+  _useFallbackModel?: boolean;  // Set by dispatcher on 503 — retry with gemini-3-flash-preview
 }
 
 export interface ExtractionContext {

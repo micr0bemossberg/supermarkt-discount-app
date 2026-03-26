@@ -105,8 +105,12 @@ export class GeminiExtractor {
         this.keyPool.markInFlight(slotIndex);
         if (!keyUsage.has(slotIndex)) keyUsage.set(slotIndex, { calls: 0, errors: 0 });
 
+        // Use fallback model if primary returned 503
+        const FALLBACK_MODEL = 'gemini-3-flash-preview';
+        const effectiveModel = chunk._useFallbackModel ? FALLBACK_MODEL : model;
+
         // Fire-and-forget — result handled async
-        this.callGemini(chunk, prompt, key, model).then(
+        this.callGemini(chunk, prompt, key, effectiveModel).then(
           (result) => {
             this.keyPool.markFree(slotIndex); // 4.1s success cooldown
             allProducts.push(...result.products);
@@ -142,6 +146,12 @@ export class GeminiExtractor {
             } else if (msg.includes('API_KEY_INVALID')) {
               logger.warning(`Slot ${slotIndex} invalid key — disabling`);
               this.keyPool.disableKey(key);
+              queue.push(chunk);
+            } else if (msg.includes('503') || msg.includes('Service Unavailable')) {
+              // Model temporarily unavailable — retry with fallback model
+              this.keyPool.markFree(slotIndex);
+              logger.warning(`503 on slot ${slotIndex} — retrying chunk ${chunk.index + 1} with fallback model`);
+              chunk._useFallbackModel = true;
               queue.push(chunk);
             } else {
               this.keyPool.markFree(slotIndex);
