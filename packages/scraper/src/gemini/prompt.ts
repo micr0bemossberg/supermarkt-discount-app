@@ -41,12 +41,17 @@ For each product, extract ALL of these fields (use null when not determinable):
 - deal_type: Classify the promotion type as one of: "korting" (percentage/price discount), "1+1_gratis" (buy one get one free), "2+1_gratis" (buy two get one free), "2e_halve_prijs" (second half price), "x_voor_y" (X items for Y euros, e.g. "2 voor €3"), "weekend_actie" (VR,ZA&ZO or weekend deal), "dag_actie" (single day deal), "bonus" (AH Bonus), "extra" (Jumbo Extra's), "stunt" (stunt/kanskoopje), "combinatie_korting" (combo discount), "gratis_bijproduct" (free add-on), "overig" (other)
 - image_url: null (not extractable from screenshots)
 - product_url: null (not extractable from screenshots)
+- bbox_x: Left edge of this product's area as percentage (0-100) of image width
+- bbox_y: Top edge of this product's area as percentage (0-100) of image height
+- bbox_w: Width of this product's area as percentage (0-100) of image width
+- bbox_h: Height of this product's area as percentage (0-100) of image height
 
 RULES:
 - Extract EVERY product visible. Do not skip any.
-- ALWAYS return ALL 12 fields for every product, even if the value is null.
+- ALWAYS return ALL fields for every product, even if the value is null.
 - Be precise with prices — read the exact numbers shown.
-- Look for "van X.XX" text near prices — this is the original_price.`;
+- Look for "van X.XX" text near prices — this is the original_price.
+- For bounding boxes: estimate the rectangular area containing the product image, name, and price. Use percentage coordinates relative to the full image dimensions.`;
 
   if (promptHints) {
     prompt += `\n\nADDITIONAL CONTEXT:\n${promptHints}`;

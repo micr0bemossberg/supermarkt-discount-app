@@ -47,6 +47,9 @@ export class AHScraper extends BaseScraper {
   private classifyDealType(dealLabel: string, bonusMechanism?: string): string {
     if (!dealLabel && !bonusMechanism) return 'bonus';
 
+    // "2e gratis" = buy one get one free
+    if (/2e\s*gratis/i.test(dealLabel)) return '1+1_gratis';
+
     // Multi-buy free deals: "1+1 gratis", "2+1 gratis", "3+2 gratis"
     if (/(\d)\s*\+\s*(\d)\s*gratis/i.test(dealLabel)) {
       const match = dealLabel.match(/(\d)\s*\+\s*(\d)\s*gratis/i);
@@ -64,11 +67,24 @@ export class AHScraper extends BaseScraper {
     // X voor Y deals: "2 voor 3.49", "3 voor 5"
     if (/\d+\s*voor\s*[\d.,]+/i.test(dealLabel)) return 'x_voor_y';
 
-    // Percentage korting
-    if (/\d+%\s*korting/i.test(dealLabel)) return 'korting';
+    // Percentage korting / volume voordeel
+    if (/\d+%\s*(korting|volume\s*voordeel)/i.test(dealLabel)) return 'korting';
 
     // Flat discount (price reduction)
     if (bonusMechanism === 'BONUS_PRICE') return 'korting';
+
+    // Also check bonusMechanism for patterns not in dealLabel
+    if (bonusMechanism) {
+      const mech = bonusMechanism.toLowerCase();
+      if (/2e\s*gratis/i.test(mech)) return '1+1_gratis';
+      if (/(\d)\s*\+\s*(\d)\s*gratis/i.test(mech)) {
+        const m = mech.match(/(\d)\s*\+\s*(\d)\s*gratis/i);
+        if (m) return m[1] === '1' && m[2] === '1' ? '1+1_gratis' : `${m[1]}+${m[2]}_gratis`;
+      }
+      if (/2e\s*halve/i.test(mech)) return '2e_halve_prijs';
+      if (/\d+\s*voor\s*[\d.,]+/i.test(mech)) return 'x_voor_y';
+      if (/volume\s*voordeel/i.test(mech)) return 'korting';
+    }
 
     return 'bonus';
   }
@@ -223,18 +239,19 @@ export class AHScraper extends BaseScraper {
         }
 
         // Classify deal type from discount labels
-        const dealLabel = product.discountLabels?.[0]?.defaultDescription?.toLowerCase() || '';
-        const dealType = this.classifyDealType(dealLabel, product.bonusMechanism);
+        const rawDealLabel = product.discountLabels?.[0]?.defaultDescription || '';
+        const dealType = this.classifyDealType(rawDealLabel.toLowerCase(), product.bonusMechanism);
 
-        // Build unit_info: use deal label for multi-buy deals, otherwise salesUnitSize
-        let unitInfo = product.salesUnitSize;
-        if (dealLabel && product.currentPrice === product.priceBeforeBonus) {
-          // Multi-buy deal where per-item price doesn't change — put the deal description in unit_info
-          unitInfo = product.discountLabels?.[0]?.defaultDescription || unitInfo;
-        }
+        // Detect online-only: API field OR "volume voordeel" bundles (web-exclusive multi-packs on AH)
+        const isOnline = product.isOnlineOnly ||
+          (product.bonusMechanism?.toLowerCase().includes('volume voordeel') ?? false);
+
+        // Use discountLabel text, fall back to bonusMechanism for description
+        const dealDescription = rawDealLabel || product.bonusMechanism || undefined;
 
         bonusProducts.push({
           title: product.title,
+          description: dealDescription,
           discount_price: product.currentPrice || price,
           original_price: product.priceBeforeBonus && product.priceBeforeBonus > (product.currentPrice || 0)
             ? product.priceBeforeBonus : undefined,
@@ -245,8 +262,8 @@ export class AHScraper extends BaseScraper {
           category_slug: this.detectCategory(product.title, product.mainCategory),
           product_url: `https://www.ah.nl/producten/product/wi${product.webshopId}`,
           image_url: imageUrl,
-          unit_info: unitInfo,
-          is_online_only: product.isOnlineOnly || false,
+          unit_info: product.salesUnitSize,
+          is_online_only: isOnline,
         });
       }
 

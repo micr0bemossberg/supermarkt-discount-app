@@ -36,6 +36,10 @@ export interface Product {
   is_active: boolean;
   requires_card: boolean;
 
+  // Deal classification
+  deal_type: string | null;
+  is_online_only: boolean;
+
   // Deduplication
   scrape_hash: string | null;
 
@@ -67,6 +71,7 @@ export interface ProductFilters {
   min_discount?: number;
   max_price?: number;
   requires_card?: boolean;
+  is_online_only?: boolean;
   valid_on?: string; // ISO date string
   limit?: number;
   offset?: number;

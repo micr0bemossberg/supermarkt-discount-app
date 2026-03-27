@@ -247,6 +247,10 @@ export async function getProducts(
       query = query.eq('requires_card', filters.requires_card);
     }
 
+    if (filters?.is_online_only !== undefined) {
+      query = query.eq('is_online_only', filters.is_online_only);
+    }
+
     query = query.range(offset, offset + fetchLimit - 1);
 
     const { data, error } = await query;

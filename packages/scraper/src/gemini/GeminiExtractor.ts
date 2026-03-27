@@ -113,6 +113,10 @@ export class GeminiExtractor {
         this.callGemini(chunk, prompt, key, effectiveModel).then(
           (result) => {
             this.keyPool.markFree(slotIndex); // 4.1s success cooldown
+            // Tag each product with its source chunk index (for image cropping)
+            for (const p of result.products) {
+              (p as any)._chunkIndex = chunk.index;
+            }
             allProducts.push(...result.products);
             totalTokens += result.tokens;
             keyUsage.get(slotIndex)!.calls++;

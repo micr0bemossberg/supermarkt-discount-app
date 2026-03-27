@@ -41,7 +41,18 @@ export class VomarScraper extends PublitasOCRScraper {
     return finalUrl;
   }
 
+  /** Vomar cover page has products (e.g., weekly hero deals), don't skip it */
+  protected getSkipPages(): number[] {
+    return [];
+  }
+
   protected getPromptHints(): string {
-    return 'Vomar uses a digital flyer (folder). Products may show "Vomar app" which means a digital coupon is required.';
+    return [
+      'Vomar uses a digital flyer (folder).',
+      'Products may show "Vomar app" which means a digital coupon/voucher is required (set requires_card=true).',
+      'The cover page (first page) contains real product deals — extract them.',
+      '"Weekendacties" are weekend-only deals (deal_type=weekend_actie).',
+      'Look carefully for ALL products on each page, including smaller items and sidebar deals.',
+    ].join(' ');
   }
 }

@@ -20,10 +20,17 @@ export interface ProcessedImage {
 }
 
 /**
- * Download image from URL
+ * Download image from URL, or decode base64 data URI
  */
 async function downloadImage(url: string): Promise<Buffer> {
   try {
+    // Handle base64 data URIs (from flyer page cropping)
+    if (url.startsWith('data:')) {
+      const base64 = url.split(',')[1];
+      if (!base64) throw new Error('Invalid data URI');
+      return Buffer.from(base64, 'base64');
+    }
+
     const response = await fetch(url, {
       signal: AbortSignal.timeout(15000), // 15s timeout
     });
@@ -35,7 +42,7 @@ async function downloadImage(url: string): Promise<Buffer> {
     const arrayBuffer = await response.arrayBuffer();
     return Buffer.from(arrayBuffer);
   } catch (error) {
-    logger.error(`Failed to download image from ${url}`, error);
+    logger.error(`Failed to download image from ${url.startsWith('data:') ? 'data:URI' : url}`, error);
     throw error;
   }
 }
