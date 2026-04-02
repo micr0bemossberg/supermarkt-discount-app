@@ -26,7 +26,7 @@ const VEGA_KEYWORDS = [
 const MEAT_KEYWORDS = [
   'kip', 'chicken', 'kippenpoot', 'kipfilet', 'kipnugget', 'kipschnitzel',
   'rund', 'beef', 'biefstuk', 'entrecote', 'ossenstaart', 'rosbief',
-  'varken', 'pork', 'spek', 'bacon', 'ham', 'karbonade', 'schnitzel',
+  'varken', 'pork', 'spek', 'bacon', 'karbonade', 'schnitzel',
   'gehakt', 'hamburger', 'worst', 'rookworst', 'knakworst', 'braadworst',
   'salami', 'cervelaat', 'chorizo', 'parmaham', 'serrano',
   'lam', 'lamb', 'lamsvlees', 'lamsbout',
@@ -37,6 +37,10 @@ const MEAT_KEYWORDS = [
   'fricandel', 'frikandel', 'kroket',
   'draadjes', 'riblap', 'sukade', 'rollade',
 ];
+
+// Short keywords that need word-boundary matching (prevent "champignons" matching "ham")
+const SHORT_MEAT_KEYWORDS = ['ham', 'ijs'];
+
 
 // Alcohol/wine keywords — backup filter (primary filter is at scraper insert level)
 const ALCOHOL_KEYWORDS = [
@@ -98,7 +102,7 @@ const ANIMAL_FOOD_KEYWORDS = [
   // Meat (comprehensive — catches products halal filter might miss in labeling)
   'kip', 'chicken', 'kipfilet', 'kipnugget', 'kipschnitzel', 'kippenpoot',
   'rund', 'beef', 'biefstuk', 'entrecote', 'ossenstaart', 'rosbief',
-  'varken', 'pork', 'spek', 'bacon', 'ham', 'karbonade', 'schnitzel',
+  'varken', 'pork', 'spek', 'bacon', 'karbonade', 'schnitzel',
   'gehakt', 'hamburger', 'worst', 'rookworst', 'knakworst', 'braadworst',
   'salami', 'cervelaat', 'chorizo', 'parmaham', 'serrano',
   'lam', 'lamb', 'lamsvlees', 'lamsbout',
@@ -146,7 +150,8 @@ function filterHalalOnly(products: ProductWithRelations[]): ProductWithRelations
     }
 
     // Products in ANY other category: check for meat keywords
-    const hasMeatKeyword = MEAT_KEYWORDS.some((kw) => title.includes(kw));
+    const hasMeatKeyword = MEAT_KEYWORDS.some((kw) => title.includes(kw))
+      || SHORT_MEAT_KEYWORDS.some((kw) => new RegExp(`\\b${kw}\\b`).test(title));
     if (!hasMeatKeyword) return true;
 
     // Has meat keyword — keep only if halal/fish/vegan
@@ -167,8 +172,16 @@ const ALCOHOL_EXACT_TITLES = ['brand', 'i am'];
 function filterExcludeAlcohol(products: ProductWithRelations[]): ProductWithRelations[] {
   return products.filter((product) => {
     const title = product.title.toLowerCase();
-    if (ALCOHOL_KEYWORDS.some((kw) => title.includes(kw))) return false;
+    const desc = (product.description || '').toLowerCase();
+    const catSlug = product.category?.slug || '';
+
+    // Check title AND description for alcohol keywords
+    if (ALCOHOL_KEYWORDS.some((kw) => title.includes(kw) || desc.includes(kw))) return false;
     if (ALCOHOL_EXACT_TITLES.includes(title.trim())) return false;
+
+    // Filter out products in beer/wine category
+    if (catSlug === 'bier-wijn') return false;
+
     return true;
   });
 }
@@ -262,8 +275,10 @@ export async function getProducts(
 
     const rawCount = (data || []).length;
     const noAlcohol = filterExcludeAlcohol((data || []) as ProductWithRelations[]);
+    // Halal filter: removes haram meat (pork), keeps dairy/fish/vegan
     const halal = filterHalalOnly(noAlcohol);
-    const noAnimal = filterExcludeAnimalFoods(halal);
+    // Vegan filter: only apply if explicitly enabled (removes ALL animal products including dairy)
+    const noAnimal = halal; // filterExcludeAnimalFoods disabled — was removing halal dairy like kwark/yoghurt
     const filtered = filterExcludeFemale(noAnimal);
 
     return { products: filtered.slice(0, requestedLimit), rawCount };

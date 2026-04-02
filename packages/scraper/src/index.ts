@@ -19,6 +19,9 @@ import { ActionScraper } from './scrapers/action/ActionScraper';
 // import { FlinkScraper } from './scrapers/flink/FlinkScraper'; // Disabled: Flink exited Netherlands
 import { KruidvatScraper } from './scrapers/kruidvat/KruidvatScraper';
 import { DekamarktScraper } from './scrapers/dekamarkt/DekamarktScraper';
+import { SligroScraper } from './scrapers/sligro/SligroScraper';
+import { HanosScraper } from './scrapers/hanos/HanosScraper';
+import { MakroScraper } from './scrapers/makro/MakroScraper';
 import { testConnection } from './config/supabase';
 import { deactivateExpiredProducts, getActiveProductCount } from './database/products';
 import { getScraperStats } from './database/scrapeLogs';
@@ -58,6 +61,12 @@ function getScraper(slug: SupermarketSlug) {
       return new KruidvatScraper();
     case 'dekamarkt':
       return new DekamarktScraper();
+    case 'sligro':
+      return new SligroScraper();
+    case 'hanos':
+      return new HanosScraper();
+    case 'makro':
+      return new MakroScraper();
     default:
       throw new Error(`Unknown supermarket: ${slug}`);
   }
@@ -222,7 +231,7 @@ async function main() {
   const outputFlag = flags.find((f) => f.startsWith('--output='));
   const outputPath = outputFlag?.split('=')[1];
 
-  const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat'];
+  const validSupermarkets: SupermarketSlug[] = ['ah', 'jumbo', 'aldi', 'dirk', 'dekamarkt', 'vomar', 'hoogvliet', 'picnic', 'joybuy', 'megafoodstunter', 'butlon', 'action', 'flink', 'kruidvat', 'sligro', 'hanos', 'makro'];
 
   // --test-ocr and --dry-run modes: no DB connection needed
   if ((isTestOcr || isDryRun) && supermarket) {

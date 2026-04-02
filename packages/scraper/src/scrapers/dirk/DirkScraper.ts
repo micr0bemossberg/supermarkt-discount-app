@@ -24,69 +24,70 @@ export class DirkScraper extends ScreenshotOCRScraper {
     this.multiProductScreenshots = [];
     const tab1Products = await super.scrapeProducts();
 
-    // Now build composites from tab 1 modals and extract
+    // PARALLEL: Start modal Gemini extraction while we navigate to tab 2
+    const { GeminiExtractor, GEMINI_DEFAULTS } = await import('../../gemini');
+    const { ALL_CATEGORY_SLUGS } = await import('../../config/constants');
+    const makeExtractor = () => new GeminiExtractor({
+      ...GEMINI_DEFAULTS,
+      apiKeys: Array.from({ length: 100 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
+        .filter((k): k is string => !!k),
+    });
+    const context = {
+      supermarketSlug: this.supermarketSlug,
+      supermarketName: this.getSupermarketName(),
+      categorySlugList: ALL_CATEGORY_SLUGS,
+      promptHints: this.getPromptHints(),
+    };
+
+    // Fire off modal extraction in background (doesn't need browser)
+    let modalPromise: Promise<ScrapedProduct[]> = Promise.resolve([]);
     if (this.multiProductScreenshots.length > 0) {
       const composites = await this.buildCompositeChunks();
       if (composites.length > 0) {
-        const { GeminiExtractor, GEMINI_DEFAULTS } = await import('../../gemini');
-        const { ALL_CATEGORY_SLUGS } = await import('../../config/constants');
-        const extractor = new GeminiExtractor({
-          ...GEMINI_DEFAULTS,
-          apiKeys: Array.from({ length: 100 }, (_, i) => process.env[`gemini_api_key${i + 1}`])
-            .filter((k): k is string => !!k),
-        });
-        const result = await extractor.extractProducts(composites, {
-          supermarketSlug: this.supermarketSlug,
-          supermarketName: this.getSupermarketName(),
-          categorySlugList: ALL_CATEGORY_SLUGS,
-          promptHints: this.getPromptHints(),
-        });
-        this.logger.info(`Tab 1 modals: ${result.products.length} products from ${composites.length} composites`);
-        tab1Products.push(...result.products);
+        modalPromise = (async () => {
+          const result = await makeExtractor().extractProducts(composites, context);
+          this.logger.info(`Tab 1 modals: ${result.products.length} products from ${composites.length} composites`);
+          await this.cropProductImages(result.products, composites);
+          return result.products;
+        })();
       }
     }
-    this.logger.info(`Tab 1 (t/m dinsdag): ${tab1Products.length} products`);
 
-    // Click "Vanaf woensdag" tab and scrape again
+    // MEANWHILE: Navigate to tab 2 and capture screenshots (browser work)
+    let tab2Products: ScrapedProduct[] = [];
     try {
       const page = this.page;
-      if (!page) return tab1Products;
+      if (page) {
+        const upcomingTab = page.locator('button.upcoming');
+        if (await upcomingTab.count() > 0) {
+          this.logger.info('Switching to "Aanbiedingen vanaf woensdag" tab...');
+          await upcomingTab.click({ timeout: 3000 });
+          await page.waitForTimeout(1500);
 
-      const upcomingTab = page.locator('button.upcoming');
-      if (await upcomingTab.count() === 0) {
-        this.logger.info('No "vanaf woensdag" tab found — single tab only');
-        return tab1Products;
+          this.multiProductScreenshots = [];
+          this.modalProductLinks = [];
+
+          await this.expandMultiProductModals(page);
+          const tab2Urls = await this.extractProductUrls(page);
+          const config = this.getScrollConfig();
+          const tab2Result = await this.captureAndExtractTab(page, config);
+          tab2Products = tab2Result.buildContextAndExtract;
+          this.enrichWithUrls(tab2Products, tab2Urls);
+          this.logger.info(`Tab 2 (vanaf woensdag): ${tab2Products.length} products`);
+        } else {
+          this.logger.info('No "vanaf woensdag" tab found — single tab only');
+        }
       }
-
-      this.logger.info('Switching to "Aanbiedingen vanaf woensdag" tab...');
-      await upcomingTab.click({ timeout: 3000 });
-      await page.waitForTimeout(1500); // Wait for new products to load
-
-      // Reset modal screenshots and links for tab 2
-      this.multiProductScreenshots = [];
-      this.modalProductLinks = [];
-
-      // Expand multi-product modals on this tab too
-      await this.expandMultiProductModals(page);
-
-      // Extract product URLs from DOM for tab 2
-      const tab2Urls = await this.extractProductUrls(page);
-
-      // Capture scrolling screenshots of tab 2 content
-      const config = this.getScrollConfig();
-      const tab2Result = await this.captureAndExtractTab(page, config);
-      const tab2Products = tab2Result.buildContextAndExtract;
-
-      // Enrich tab 2 products with URLs
-      this.enrichWithUrls(tab2Products, tab2Urls);
-
-      this.logger.info(`Tab 2 (vanaf woensdag): ${tab2Products.length} products`);
-
-      return [...tab1Products, ...tab2Products];
     } catch (error) {
       this.logger.warning(`Failed to scrape "vanaf woensdag" tab: ${error}`);
-      return tab1Products;
     }
+
+    // Wait for modal extraction to finish (was running in parallel with tab 2 browser work)
+    const modalProducts = await modalPromise;
+    tab1Products.push(...modalProducts);
+    this.logger.info(`Tab 1 (t/m dinsdag): ${tab1Products.length} products`);
+
+    return [...tab1Products, ...tab2Products];
   }
 
   /**
@@ -111,6 +112,17 @@ export class DirkScraper extends ScreenshotOCRScraper {
       const endTime = Date.now();
       this.logger.info(`[TEST-OCR] Duration: ${Math.round((endTime - this.startTime) / 1000)}s`);
     }
+  }
+
+  /** Slower scrolling for Dirk — product images lazy-load with fade transitions */
+  protected getScrollConfig() {
+    return {
+      viewportWidth: 1280,
+      viewportHeight: 800,
+      overlapPercent: 0.2,
+      maxChunks: 30,
+      scrollDelayMs: [800, 1200] as [number, number],  // 800-1200ms (was 200-500ms)
+    };
   }
 
   protected async beforeScreenshots(page: Page): Promise<void> {
@@ -202,6 +214,14 @@ export class DirkScraper extends ScreenshotOCRScraper {
       const [minDelay, maxDelay] = config.scrollDelayMs;
       await page.waitForTimeout(minDelay + Math.random() * (maxDelay - minDelay));
 
+      // Wait for all visible images to finish loading (prevents transparent/ghosting)
+      await page.evaluate(() => {
+        const imgs = document.querySelectorAll('img');
+        return Promise.all(Array.from(imgs).filter(img => !img.complete).map(img =>
+          new Promise(resolve => { img.onload = resolve; img.onerror = resolve; setTimeout(resolve, 2000); })
+        ));
+      });
+
       chunks.push({
         buffer: await page.screenshot({ type: 'png', clip: { x: 0, y: 0, width: config.viewportWidth, height: config.viewportHeight } }),
         index: i,
@@ -226,6 +246,9 @@ export class DirkScraper extends ScreenshotOCRScraper {
       categorySlugList: ALL_CATEGORY_SLUGS,
       promptHints: this.getPromptHints(),
     });
+
+    // Crop product images from screenshots
+    await this.cropProductImages(result.products, chunks);
 
     return { captureScrollingScreenshots: chunks, buildContextAndExtract: result.products };
   }

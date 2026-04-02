@@ -39,11 +39,15 @@ export const SupermarketFilter: React.FC<SupermarketFilterProps> = ({
   };
 
   const stores = useMemo(
-    () => supermarkets.filter((s) => !s.is_online_only),
+    () => supermarkets.filter((s) => !s.is_online_only && !(s as any).is_wholesale),
     [supermarkets]
   );
   const onlineShops = useMemo(
     () => supermarkets.filter((s) => s.is_online_only),
+    [supermarkets]
+  );
+  const wholesale = useMemo(
+    () => supermarkets.filter((s) => (s as any).is_wholesale),
     [supermarkets]
   );
 
@@ -130,6 +134,16 @@ export const SupermarketFilter: React.FC<SupermarketFilterProps> = ({
           <Text style={styles.label}>Online</Text>
           <View style={styles.pillWrap}>
             {onlineShops.map(renderPill)}
+          </View>
+        </View>
+      )}
+
+      {/* Groothandel section (BTW deductible) */}
+      {wholesale.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.label}>Groothandel (BTW aftrekbaar)</Text>
+          <View style={styles.pillWrap}>
+            {wholesale.map(renderPill)}
           </View>
         </View>
       )}

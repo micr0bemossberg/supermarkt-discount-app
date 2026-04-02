@@ -1,4 +1,3 @@
-import sharp from 'sharp';
 import { BaseScraper } from './BaseScraper';
 import { GeminiExtractor, GEMINI_DEFAULTS } from '../../gemini';
 import { downloadImageAsBuffer } from '../../ocr/publitasImages';
@@ -217,76 +216,4 @@ export abstract class PublitasOCRScraper extends BaseScraper {
     return pages;
   }
 
-  /**
-   * Crop individual product images from flyer pages using Gemini bounding boxes.
-   * Sets image_url as a base64 data URI on each product that has bbox data.
-   * The BaseScraper image processor will later upload these to Supabase Storage.
-   */
-  private async cropProductImages(
-    products: ScrapedProduct[],
-    chunks: ImageChunk[],
-  ): Promise<void> {
-    // Build chunk buffer map: chunkIndex → buffer
-    const chunkBuffers = new Map<number, Buffer>();
-    for (const chunk of chunks) {
-      chunkBuffers.set(chunk.index, chunk.buffer);
-    }
-
-    let cropped = 0;
-    let skipped = 0;
-
-    for (const product of products) {
-      const p = product as any;
-      const bbox = p._bbox;
-      const chunkIndex = p._chunkIndex;
-
-      if (!bbox || chunkIndex === undefined) {
-        skipped++;
-        continue;
-      }
-
-      const pageBuffer = chunkBuffers.get(chunkIndex);
-      if (!pageBuffer) {
-        skipped++;
-        continue;
-      }
-
-      try {
-        const metadata = await sharp(pageBuffer).metadata();
-        const imgW = metadata.width || 1;
-        const imgH = metadata.height || 1;
-
-        // Convert percentage bbox to pixel coordinates with padding
-        const pad = 2; // 2% padding
-        const left = Math.max(0, Math.round(((bbox.x - pad) / 100) * imgW));
-        const top = Math.max(0, Math.round(((bbox.y - pad) / 100) * imgH));
-        const width = Math.min(imgW - left, Math.round(((bbox.w + pad * 2) / 100) * imgW));
-        const height = Math.min(imgH - top, Math.round(((bbox.h + pad * 2) / 100) * imgH));
-
-        if (width < 20 || height < 20) {
-          skipped++;
-          continue;
-        }
-
-        const croppedBuffer = await sharp(pageBuffer)
-          .extract({ left, top, width, height })
-          .webp({ quality: 80 })
-          .toBuffer();
-
-        // Store as data URI — BaseScraper's image processor will detect and upload it
-        product.image_url = `data:image/webp;base64,${croppedBuffer.toString('base64')}`;
-        cropped++;
-      } catch {
-        skipped++;
-      }
-
-      // Clean up transient metadata
-      delete p._bbox;
-      delete p._chunkIndex;
-    }
-
-    if (cropped > 0) {
-      this.logger.info(`Cropped ${cropped} product images from flyer pages (${skipped} skipped)`);
-    }
-  }
 }
