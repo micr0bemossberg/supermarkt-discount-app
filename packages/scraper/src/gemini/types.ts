@@ -52,7 +52,7 @@ export const GEMINI_DEFAULTS: GeminiConfig = {
   mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 1120 tokens/image — needed to read small print prices
   useStructuredOutput: true,      // Force valid JSON via responseSchema (Gemini) or responseMimeType (Gemma)
   batchDelayMs: 0,                // No delay — natural API latency spaces out key reuse automatically
-  maxOutputTokens: 2000,          // Cap output — JSON for ~20 products fits in ~1500 tokens
+  maxOutputTokens: 8192,          // Generous cap — thinking tokens + JSON for 20+ products
 };
 
 /**
