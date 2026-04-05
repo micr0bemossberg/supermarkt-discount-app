@@ -149,6 +149,9 @@ export abstract class PublitasOCRScraper extends BaseScraper {
       `(${result.chunksProcessed} chunks OK, ${result.chunksFailed} failed, ${result.tokensUsed} tokens)`
     );
 
+    // 5. Crop individual product images from flyer pages using bounding boxes
+    await this.cropProductImages(result.products, chunks);
+
     return result.products;
   }
 
@@ -212,4 +215,5 @@ export abstract class PublitasOCRScraper extends BaseScraper {
 
     return pages;
   }
+
 }

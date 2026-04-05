@@ -100,6 +100,10 @@ export function getSupermarketColor(slug: string): string {
     flink: '#D9006C',
     kruidvat: '#00A651',
     joybuy: '#E4393C',
+    dekamarkt: '#E3000B',
+    makro: '#E31837',
+    sligro: '#009B3A',
+    hanos: '#1A1A6C',
   };
 
   return colors[slug] || '#666666';

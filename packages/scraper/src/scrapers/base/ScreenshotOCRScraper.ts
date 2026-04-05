@@ -223,6 +223,9 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
     // 9. Enrich products with URLs extracted from DOM
     this.enrichWithUrls(deduped, this.lastExtractedUrls);
 
+    // 10. Crop individual product images from screenshots using bounding boxes
+    await this.cropProductImages(deduped, chunks);
+
     return deduped;
   }
 

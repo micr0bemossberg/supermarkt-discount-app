@@ -48,6 +48,10 @@ export const SUPERMARKET_URLS: Record<SupermarketSlug, string> = {
   megafoodstunter: 'https://www.megafoodstunter.nl',
   butlon: 'https://www.butlon.nl',
   dekamarkt: 'https://www.dekamarkt.nl/aanbiedingen',
+  // Wholesale (groothandel)
+  makro: 'https://www.makro.nl/folders',
+  sligro: 'https://www.sligro.nl/acties.html',
+  hanos: 'https://folders.hanos.nl',
 };
 
 // Image processing

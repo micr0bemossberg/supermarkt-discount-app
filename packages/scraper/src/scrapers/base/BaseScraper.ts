@@ -15,6 +15,7 @@ import type {
   ScrapeResult,
   SupermarketSlug,
 } from '@supermarkt-deals/shared';
+import sharp from 'sharp';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -438,5 +439,64 @@ export abstract class BaseScraper {
     }
 
     return result;
+  }
+
+  /**
+   * Crop individual product images from source chunks using Gemini bounding boxes.
+   * Sets image_url as a base64 data URI — the image processor will upload to Storage.
+   */
+  protected async cropProductImages(
+    products: ScrapedProduct[],
+    chunks: Array<{ buffer: Buffer; index: number }>,
+  ): Promise<void> {
+    const chunkBuffers = new Map<number, Buffer>();
+    for (const chunk of chunks) {
+      chunkBuffers.set(chunk.index, chunk.buffer);
+    }
+
+    let cropped = 0;
+    let skipped = 0;
+
+    for (const product of products) {
+      const p = product as any;
+      const bbox = p._bbox;
+      const chunkIndex = p._chunkIndex;
+
+      if (!bbox || chunkIndex === undefined) { skipped++; continue; }
+
+      const pageBuffer = chunkBuffers.get(chunkIndex);
+      if (!pageBuffer) { skipped++; continue; }
+
+      try {
+        const metadata = await sharp(pageBuffer).metadata();
+        const imgW = metadata.width || 1;
+        const imgH = metadata.height || 1;
+
+        const pad = 2;
+        const left = Math.max(0, Math.round(((bbox.x - pad) / 100) * imgW));
+        const top = Math.max(0, Math.round(((bbox.y - pad) / 100) * imgH));
+        const width = Math.min(imgW - left, Math.round(((bbox.w + pad * 2) / 100) * imgW));
+        const height = Math.min(imgH - top, Math.round(((bbox.h + pad * 2) / 100) * imgH));
+
+        if (width < 20 || height < 20) { skipped++; continue; }
+
+        const croppedBuffer = await sharp(pageBuffer)
+          .extract({ left, top, width, height })
+          .webp({ quality: 80 })
+          .toBuffer();
+
+        product.image_url = `data:image/webp;base64,${croppedBuffer.toString('base64')}`;
+        cropped++;
+      } catch {
+        skipped++;
+      }
+
+      delete p._bbox;
+      delete p._chunkIndex;
+    }
+
+    if (cropped > 0) {
+      this.logger.info(`Cropped ${cropped} product images (${skipped} skipped)`);
+    }
   }
 }

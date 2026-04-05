@@ -13,6 +13,29 @@ import { useFavoritesStore } from '../stores/favoritesStore';
 import { formatPrice, getValidityText, daysUntil, getSupermarketColor } from '../utils/formatters';
 import type { ProductWithRelations } from '@supermarkt-deals/shared';
 
+function formatDealType(dealType: string): string | null {
+  const map: Record<string, string> = {
+    '1+1_gratis': '1+1 Gratis',
+    '2+1_gratis': '2+1 Gratis',
+    '3+2_gratis': '3+2 Gratis',
+    '2e_halve_prijs': '2e Halve Prijs',
+    'x_voor_y': 'Multikoop',
+    'korting': 'Korting',
+    'bonus': 'Bonus',
+    'extra': "Extra's",
+    'stunt': 'Stunt',
+    'weekend_actie': 'Weekendactie',
+    'dag_actie': 'Dagactie',
+    'combinatie_korting': 'Combikorting',
+    'gratis_bijproduct': 'Gratis Bijproduct',
+  };
+  // Handle dynamic patterns like "3+2_gratis"
+  if (/^\d\+\d_gratis$/.test(dealType)) {
+    return dealType.replace('_gratis', ' Gratis');
+  }
+  return map[dealType] || null;
+}
+
 interface ProductCardProps {
   product: ProductWithRelations;
   onPress: () => void;
@@ -35,7 +58,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
 
   const discountPercentage =
     product.discount_percentage ||
-    (product.original_price
+    (product.original_price && product.original_price > product.discount_price
       ? Math.round(
           ((product.original_price - product.discount_price) /
             product.original_price) *
@@ -47,6 +70,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
   const days = daysUntil(product.valid_until);
   const isUrgent = days >= 0 && days <= 2;
   const brandColor = getSupermarketColor(product.supermarket?.slug || '');
+
+  // Format deal_type for display — prefer raw description for richer labels
+  const dealTypeLabel = product.description && product.deal_type
+    ? (product.deal_type === 'x_voor_y' || product.deal_type === 'bonus' || product.deal_type === 'korting'
+        ? product.description  // Use raw text: "2 voor 4.00", "20% korting", etc.
+        : formatDealType(product.deal_type) || product.description)
+    : product.deal_type ? formatDealType(product.deal_type) : null;
+  const isOnlineOnly = (product as any).is_online_only || product.supermarket?.is_online_only;
 
   return (
     <Pressable
@@ -74,12 +105,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           </View>
         )}
 
-        {/* Discount Badge */}
-        {discountPercentage != null && discountPercentage > 0 && (
+        {/* Discount / Deal Badge */}
+        {discountPercentage != null && discountPercentage > 0 ? (
           <View style={styles.discountBadge}>
             <Text style={styles.discountText}>-{discountPercentage}%</Text>
           </View>
-        )}
+        ) : dealTypeLabel && dealTypeLabel !== 'Bonus' && dealTypeLabel !== 'Korting' ? (
+          <View style={[styles.discountBadge, styles.dealBadge]}>
+            <Text style={styles.discountText}>{dealTypeLabel}</Text>
+          </View>
+        ) : null}
 
         {/* Favorite Button */}
         <View style={styles.favoriteButton}>
@@ -105,7 +140,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
         )}
 
         {/* Online Only Badge */}
-        {product.supermarket?.is_online_only && (
+        {isOnlineOnly && (
           <View style={styles.onlineBadge}>
             <Text style={styles.onlineBadgeText}>Online</Text>
           </View>
@@ -127,17 +162,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({ product, onPress }) =>
           {product.title}
         </Text>
 
+        {/* Deal type label (skip generic "Bonus" — adds no info) */}
+        {dealTypeLabel && dealTypeLabel !== 'Bonus' && (
+          <Text style={styles.dealTypeText}>{dealTypeLabel}</Text>
+        )}
+
         {/* Prices */}
         <View style={styles.priceRow}>
           <Text style={styles.discountPrice}>
             {formatPrice(product.discount_price)}
           </Text>
-          {product.original_price && (
+          {product.original_price && product.original_price > product.discount_price && (
             <Text style={styles.originalPrice}>
               {formatPrice(product.original_price)}
             </Text>
           )}
         </View>
+
+        {/* Unit info */}
+        {product.unit_info && !product.unit_info.includes('Vomar app') && (
+          <Text style={styles.unitInfoText} numberOfLines={1}>{product.unit_info}</Text>
+        )}
 
         {/* Validity */}
         <View style={[styles.validityRow, isUrgent && styles.validityUrgent]}>
@@ -201,6 +246,9 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 7,
     paddingVertical: 3,
+  },
+  dealBadge: {
+    backgroundColor: '#2E7D32',
   },
   discountText: {
     color: '#fff',
@@ -277,8 +325,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#212529',
     lineHeight: 17,
-    marginBottom: 6,
+    marginBottom: 4,
     minHeight: 34,
+  },
+  dealTypeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#2E7D32',
+    marginBottom: 3,
+  },
+  unitInfoText: {
+    fontSize: 10,
+    color: '#757575',
+    marginTop: 1,
   },
   priceRow: {
     flexDirection: 'row',

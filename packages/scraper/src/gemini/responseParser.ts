@@ -119,7 +119,17 @@ export function parseGeminiResponse(
       category_slug: categorySlug ?? undefined,
       requires_card: typeof raw.requires_card === 'boolean' ? raw.requires_card : false,
       deal_type: typeof raw.deal_type === 'string' ? raw.deal_type : undefined,
-    });
+    } as ScrapedProduct);
+
+    // Attach bounding box metadata (non-ScrapedProduct fields, used for image cropping)
+    const lastProduct = products[products.length - 1] as any;
+    const bx = typeof raw.bbox_x === 'number' ? raw.bbox_x : undefined;
+    const by = typeof raw.bbox_y === 'number' ? raw.bbox_y : undefined;
+    const bw = typeof raw.bbox_w === 'number' ? raw.bbox_w : undefined;
+    const bh = typeof raw.bbox_h === 'number' ? raw.bbox_h : undefined;
+    if (bx !== undefined && by !== undefined && bw !== undefined && bh !== undefined) {
+      lastProduct._bbox = { x: bx, y: by, w: bw, h: bh };
+    }
   }
 
   return products;

@@ -78,6 +78,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const toggleOnlineFilter = () => {
+    if (filters.is_online_only === undefined) {
+      setFilters({ is_online_only: true });
+    } else if (filters.is_online_only === true) {
+      setFilters({ is_online_only: false });
+    } else {
+      setFilters({ is_online_only: undefined });
+    }
+  };
+
   const renderItem = useCallback(
     ({ item }: any) => (
       <View style={styles.cardContainer}>
@@ -166,6 +176,39 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
                   : filters.requires_card === false
                     ? 'Zonder pas'
                     : 'Pas filter'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={toggleOnlineFilter}
+              style={[
+                styles.quickChip,
+                filters.is_online_only !== undefined && styles.quickChipActive,
+                filters.is_online_only !== undefined && { backgroundColor: '#1565C0' },
+              ]}
+            >
+              <MaterialCommunityIcons
+                name={
+                  filters.is_online_only === true
+                    ? 'web'
+                    : filters.is_online_only === false
+                      ? 'store'
+                      : 'web'
+                }
+                size={14}
+                color={filters.is_online_only !== undefined ? '#fff' : '#616161'}
+              />
+              <Text
+                style={[
+                  styles.quickChipText,
+                  filters.is_online_only !== undefined && styles.quickChipTextActive,
+                ]}
+              >
+                {filters.is_online_only === true
+                  ? 'Alleen online'
+                  : filters.is_online_only === false
+                    ? 'Alleen in winkel'
+                    : 'Online filter'}
               </Text>
             </Pressable>
           </View>

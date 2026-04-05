@@ -203,7 +203,7 @@ export async function insertProduct(
     if (existing) {
       // If deactivated, reactivate and update prices
       if (!existing.is_active) {
-        const updated = await updateProduct(existing.id, {
+        const reactivateData: Record<string, any> = {
           is_active: true,
           discount_price: scrapedProduct.discount_price,
           original_price: scrapedProduct.original_price ?? existing.original_price,
@@ -213,17 +213,34 @@ export async function insertProduct(
           image_storage_path: imagePath || existing.image_storage_path,
           category_id: categoryId || existing.category_id,
           requires_card: scrapedProduct.requires_card || false,
-        } as Partial<Product>);
+        };
+        if (scrapedProduct.deal_type) reactivateData.deal_type = scrapedProduct.deal_type;
+        if (scrapedProduct.description) reactivateData.description = scrapedProduct.description;
+        if (scrapedProduct.is_online_only) reactivateData.is_online_only = true;
+        const updated = await updateProduct(existing.id, reactivateData as Partial<Product>);
         if (updated) {
           logger.success(`Reactivated product: ${scrapedProduct.title}`);
           return updated;
         }
       }
-      // Update category if it changed (e.g., from 'overig' to a detected category)
+      // Update fields that may have been added/changed since last scrape
+      const updates: Record<string, any> = {};
       if (categoryId && existing.category_id !== categoryId) {
-        const updated = await updateProduct(existing.id, { category_id: categoryId });
+        updates.category_id = categoryId;
+      }
+      if (scrapedProduct.deal_type && !existing.deal_type) {
+        updates.deal_type = scrapedProduct.deal_type;
+      }
+      if (scrapedProduct.description && !(existing as any).description) {
+        updates.description = scrapedProduct.description;
+      }
+      if (scrapedProduct.is_online_only && !(existing as any).is_online_only) {
+        updates.is_online_only = true;
+      }
+      if (Object.keys(updates).length > 0) {
+        const updated = await updateProduct(existing.id, updates as Partial<Product>);
         if (updated) {
-          logger.debug(`Updated category for: ${scrapedProduct.title}`);
+          logger.debug(`Updated existing product: ${scrapedProduct.title}`);
           return updated;
         }
       }
@@ -253,6 +270,14 @@ export async function insertProduct(
     // Only include requires_card if the column exists in the DB
     if (requiresCardColumnExists) {
       productData.requires_card = scrapedProduct.requires_card || false;
+    }
+
+    // Optional columns — set if provided
+    if (scrapedProduct.deal_type) {
+      productData.deal_type = scrapedProduct.deal_type;
+    }
+    if (scrapedProduct.is_online_only) {
+      productData.is_online_only = true;
     }
 
     // Insert into database

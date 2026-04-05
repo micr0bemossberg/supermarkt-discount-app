@@ -41,6 +41,54 @@ export class AHScraper extends BaseScraper {
     super('ah', 'https://www.ah.nl/bonus');
   }
 
+  /**
+   * Classify AH deal type from discount label text and bonus mechanism
+   */
+  private classifyDealType(dealLabel: string, bonusMechanism?: string): string {
+    if (!dealLabel && !bonusMechanism) return 'bonus';
+
+    // "2e gratis" = buy one get one free
+    if (/2e\s*gratis/i.test(dealLabel)) return '1+1_gratis';
+
+    // Multi-buy free deals: "1+1 gratis", "2+1 gratis", "3+2 gratis"
+    if (/(\d)\s*\+\s*(\d)\s*gratis/i.test(dealLabel)) {
+      const match = dealLabel.match(/(\d)\s*\+\s*(\d)\s*gratis/i);
+      if (match) {
+        const buy = match[1], free = match[2];
+        if (buy === '1' && free === '1') return '1+1_gratis';
+        if (buy === '2' && free === '1') return '2+1_gratis';
+        return `${buy}+${free}_gratis`;
+      }
+    }
+
+    // Second half price
+    if (/2e\s*(halve\s*prijs|voor\s*de\s*helft)/i.test(dealLabel)) return '2e_halve_prijs';
+
+    // X voor Y deals: "2 voor 3.49", "3 voor 5"
+    if (/\d+\s*voor\s*[\d.,]+/i.test(dealLabel)) return 'x_voor_y';
+
+    // Percentage korting / volume voordeel
+    if (/\d+%\s*(korting|volume\s*voordeel)/i.test(dealLabel)) return 'korting';
+
+    // Flat discount (price reduction)
+    if (bonusMechanism === 'BONUS_PRICE') return 'korting';
+
+    // Also check bonusMechanism for patterns not in dealLabel
+    if (bonusMechanism) {
+      const mech = bonusMechanism.toLowerCase();
+      if (/2e\s*gratis/i.test(mech)) return '1+1_gratis';
+      if (/(\d)\s*\+\s*(\d)\s*gratis/i.test(mech)) {
+        const m = mech.match(/(\d)\s*\+\s*(\d)\s*gratis/i);
+        if (m) return m[1] === '1' && m[2] === '1' ? '1+1_gratis' : `${m[1]}+${m[2]}_gratis`;
+      }
+      if (/2e\s*halve/i.test(mech)) return '2e_halve_prijs';
+      if (/\d+\s*voor\s*[\d.,]+/i.test(mech)) return 'x_voor_y';
+      if (/volume\s*voordeel/i.test(mech)) return 'korting';
+    }
+
+    return 'bonus';
+  }
+
   private detectCategory(title: string, mainCategory?: string): string {
     // Try main category from API first
     if (mainCategory) {
@@ -190,31 +238,32 @@ export class AHScraper extends BaseScraper {
           discountPercentage = Math.round(((product.priceBeforeBonus - product.currentPrice) / product.priceBeforeBonus) * 100);
         }
 
-        // Build title with deal type for multi-buy deals
-        let title = product.title;
-        const dealLabel = product.discountLabels?.[0]?.defaultDescription;
-        if (dealLabel && product.currentPrice === product.priceBeforeBonus) {
-          // Multi-buy deal where per-item price doesn't change (e.g., "2 voor 3.49")
-          title = `${product.title} (${dealLabel})`;
-        }
+        // Classify deal type from discount labels
+        const rawDealLabel = product.discountLabels?.[0]?.defaultDescription || '';
+        const dealType = this.classifyDealType(rawDealLabel.toLowerCase(), product.bonusMechanism);
 
-        // Log unique bonusMechanism values for investigation
-        if (product.bonusMechanism && !['BONUS', 'BONUS_PRICE'].includes(product.bonusMechanism)) {
-          this.logger.debug(`AH bonusMechanism: "${product.bonusMechanism}" for ${product.title}`);
-        }
+        // Detect online-only: API field OR "volume voordeel" bundles (web-exclusive multi-packs on AH)
+        const isOnline = product.isOnlineOnly ||
+          (product.bonusMechanism?.toLowerCase().includes('volume voordeel') ?? false);
+
+        // Use discountLabel text, fall back to bonusMechanism for description
+        const dealDescription = rawDealLabel || product.bonusMechanism || undefined;
 
         bonusProducts.push({
-          title,
+          title: product.title,
+          description: dealDescription,
           discount_price: product.currentPrice || price,
           original_price: product.priceBeforeBonus && product.priceBeforeBonus > (product.currentPrice || 0)
             ? product.priceBeforeBonus : undefined,
           discount_percentage: discountPercentage,
+          deal_type: dealType,
           valid_from: monday,
           valid_until: sunday,
           category_slug: this.detectCategory(product.title, product.mainCategory),
           product_url: `https://www.ah.nl/producten/product/wi${product.webshopId}`,
           image_url: imageUrl,
           unit_info: product.salesUnitSize,
+          is_online_only: isOnline,
         });
       }
 
