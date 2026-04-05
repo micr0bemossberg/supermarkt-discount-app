@@ -2,6 +2,21 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication & Drafting Rules
+
+- Always use **bold** formatting, never `code blocks` for emphasis in messages
+- Never use em dashes (—), use regular dashes or commas instead
+- Write in first person ('I') unless explicitly told otherwise
+- Default language is English unless the user specifies otherwise
+- When asked for copy-pasteable text, provide ONLY the text, no plan updates or translations
+
+## Tool Usage Preferences
+
+- For Databricks operations, always use the REST API, never attempt browser/Playwright automation
+- When investigating a codebase, produce a structured summary on the first attempt
+- Never reduce or remove existing content without explicit permission
+- Always verify file/image paths still work after moving files
+
 ## Project Overview
 
 A Dutch Supermarket Discount Aggregator consisting of:
@@ -466,6 +481,12 @@ The OCR pipeline extracts product data from screenshots but can't extract clicka
 - **AH**: Working — mobile API returns ~1000+ bonus products per run
 - **Picnic**: Broken — `403 Forbidden` after 2FA flag on new IP. Needs re-approval from home network or CI
 
+**Gemma 4 evaluation** (tested 2026-04-05):
+- **Gemma 4 31B** (`gemma-4-31b-it`): 13-21s per call, JSON works with `responseMimeType` + `systemInstruction`. Does NOT support `responseSchema` or `thinkingConfig`. 1,500 RPD (3x more than Flash Lite).
+- **Gemma 4 26B MoE** (`gemma-4-26b-a4b-it`): 12-24s, unreliable JSON output. MoE architecture (3.8B active params) but not faster than 31B via API.
+- **Verdict**: Too slow (~5x) and unreliable JSON for primary use. Code for Gemma detection (`isGemmaModel()`) remains in `GeminiExtractor.ts` for future use.
+- **maxOutputTokens trap**: With `thinkingLevel: 'high'`, the model uses ~1500 "thinking" tokens before generating JSON. Setting `maxOutputTokens: 2000` left only ~500 tokens for actual products (4 instead of 66). Fixed to 8192.
+
 **Remaining items**:
 - [ ] Run all working scrapers for real (non-dry-run) to populate DB with current week's deals
 - [ ] Deactivate Flink + Butlon in Supabase DB (`is_active = false`)
@@ -477,6 +498,10 @@ The OCR pipeline extracts product data from screenshots but can't extract clicka
 - [ ] Action: investigate remaining 20% OCR miss on dense grids (129/161 = 80%)
 - [ ] Improve Dirk URL match rate beyond 59% (344/581)
 - [ ] Test Joybuy from GitHub Actions CI (blocked by corporate IT locally)
+- [x] Gemma 4 evaluated as dual-model fallback — rejected (slower, less reliable JSON)
+- [x] maxOutputTokens fixed: 2000 → 8192 (thinking tokens consumed the cap)
+- [x] API keys leaked via GitHub secret scanning — `.env` removed from git history, keys regenerated
+- [x] `.env` now in `.gitignore` and NOT tracked by git — never commit credentials
 
 ## Supabase Notes
 
