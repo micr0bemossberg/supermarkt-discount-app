@@ -43,7 +43,7 @@ export class KeyPool {
   /** If a key fails this many times in a row without any success, assume RPD exhausted and disable */
   private static MAX_CONSECUTIVE_KEY_FAILS = 5;
 
-  constructor(apiKeys: string[], models: string[] = ['gemini-3.1-flash-lite-preview', 'gemma-4-31b-it']) {
+  constructor(apiKeys: string[], models: string[] = ['gemini-3.1-flash-lite-preview']) {
     if (apiKeys.length === 0) {
       throw new Error('At least one API key required');
     }
