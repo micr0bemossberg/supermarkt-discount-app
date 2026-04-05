@@ -223,6 +223,10 @@ export class GeminiExtractor {
     return Promise.race([this._callGeminiImpl(chunk, prompt, apiKey, modelId), timeout]);
   }
 
+  private isGemmaModel(modelId: string): boolean {
+    return modelId.includes('gemma');
+  }
+
   private async _callGeminiImpl(
     chunk: ImageChunk,
     prompt: string,
@@ -230,34 +234,63 @@ export class GeminiExtractor {
     modelId: string,
   ): Promise<{ products: import('@supermarkt-deals/shared').ScrapedProduct[]; tokens: number }> {
     const genAI = new GoogleGenerativeAI(apiKey);
+    const isGemma = this.isGemmaModel(modelId);
+
     const generationConfig: Record<string, unknown> = {
       temperature: this.config.temperature,
       mediaResolution: this.config.mediaResolution,
+      maxOutputTokens: this.config.maxOutputTokens,
     };
+
     if (this.config.useStructuredOutput) {
       generationConfig.responseMimeType = 'application/json';
-      generationConfig.responseSchema = PRODUCT_EXTRACTION_SCHEMA;
+      // Gemma ignores responseSchema — use prompt-based JSON enforcement instead
+      if (!isGemma) {
+        generationConfig.responseSchema = PRODUCT_EXTRACTION_SCHEMA;
+      }
     }
-    if (this.config.thinkingLevel !== 'minimal') {
+
+    // Gemma models don't support thinkingConfig — only Gemini does
+    if (!isGemma && this.config.thinkingLevel !== 'minimal') {
       generationConfig.thinkingConfig = {
         thinkingLevel: this.config.thinkingLevel.toUpperCase(),
       };
     }
+
+    const systemInstruction = isGemma
+      ? 'You are a JSON-only data extractor. You MUST respond with ONLY a valid JSON array. No explanation, no markdown, no thinking text. Output starts with [ and ends with ].'
+      : 'You are a Dutch supermarket discount data extractor. Extract ALL discount/deal products visible in the provided image. Be thorough — do not skip any products.';
+
     const model = genAI.getGenerativeModel({
       model: modelId,
       generationConfig,
-      systemInstruction: 'You are a Dutch supermarket discount data extractor. Extract ALL discount/deal products visible in the provided image. Be thorough — do not skip any products.',
+      systemInstruction,
     });
+
     const imagePart = {
       inlineData: {
         data: chunk.buffer.toString('base64'),
         mimeType: 'image/png' as const,
       },
     };
+
     const contextLine = `[Image ${chunk.index + 1} of ${chunk.totalChunks}]`;
     const result = await model.generateContent([contextLine + '\n' + prompt, imagePart]);
-    const text = result.response.text();
+    let text = result.response.text();
     const tokens = result.response.usageMetadata?.totalTokenCount ?? 0;
+
+    // Gemma fallback: extract JSON array from response if direct parse fails
+    if (isGemma) {
+      try {
+        JSON.parse(text);
+      } catch {
+        const match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+        if (match) {
+          text = match[0];
+        }
+      }
+    }
+
     return { products: parseGeminiResponse(text), tokens };
   }
 }

@@ -13,6 +13,7 @@ export interface GeminiConfig {
   mediaResolution: MediaResolution;
   useStructuredOutput: boolean;
   batchDelayMs: number;            // Delay between batches to respect rate limits
+  maxOutputTokens: number;         // Cap output tokens to reduce generation time
 }
 
 export interface ImageChunk {
@@ -43,14 +44,15 @@ export interface KeyState {
 
 export const GEMINI_DEFAULTS: GeminiConfig = {
   apiKeys: [],
-  modelId: 'gemini-3.1-flash-lite-preview',
+  modelId: 'gemini-3.1-flash-lite-preview', // Primary: fast (2-4s), 500 RPD. Fallback: gemma-4-31b-it (13s, 1500 RPD)
   maxConcurrent: 10,                        // Match number of active keys
   retryAttempts: 2,
   temperature: 0.0,               // Deterministic — no creativity needed for data extraction
   thinkingLevel: 'high',          // Free tier — max reasoning for best extraction accuracy
   mediaResolution: 'MEDIA_RESOLUTION_HIGH', // 1120 tokens/image — needed to read small print prices
-  useStructuredOutput: true,      // Force valid JSON via responseSchema
-  batchDelayMs: 0,                // No delay — natural API latency (~3s) spaces out key reuse automatically
+  useStructuredOutput: true,      // Force valid JSON via responseSchema (Gemini) or responseMimeType (Gemma)
+  batchDelayMs: 0,                // No delay — natural API latency spaces out key reuse automatically
+  maxOutputTokens: 2000,          // Cap output — JSON for ~20 products fits in ~1500 tokens
 };
 
 /**
