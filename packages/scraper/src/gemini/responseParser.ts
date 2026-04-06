@@ -85,13 +85,19 @@ export function parseGeminiResponse(
     const validFrom = coerceDate(raw.valid_from) ?? getCurrentWeekMonday();
     const validUntil = coerceDate(raw.valid_until) ?? getCurrentWeekSunday();
 
-    // Discount percentage
+    // Discount percentage — recalculate from prices if stated value deviates >5pp
     let discountPercentage = typeof raw.discount_percentage === 'number'
       ? raw.discount_percentage
       : undefined;
 
-    if (discountPercentage === undefined && originalPrice && discountPrice) {
-      discountPercentage = Math.round((1 - discountPrice / originalPrice) * 100);
+    if (originalPrice && discountPrice) {
+      const calculated = Math.round((1 - discountPrice / originalPrice) * 100);
+      if (discountPercentage === undefined) {
+        discountPercentage = calculated;
+      } else if (Math.abs(discountPercentage - calculated) > 5) {
+        // OCR misread the badge — trust the prices, not the printed percentage
+        discountPercentage = calculated;
+      }
     }
 
     // Category validation

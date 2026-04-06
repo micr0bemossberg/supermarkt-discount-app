@@ -341,7 +341,9 @@ export abstract class ScreenshotOCRScraper extends BaseScraper {
       }
 
       // Threshold 0.35 — lower than before (0.5) to catch more partial matches
-      if (bestMatch && bestScore >= 0.35) {
+      // Reject category/listing pages — never valid product destinations
+      const isCategoryPage = bestMatch ? /\/product-categorie\/|\/categorie\/|\/category\//.test(bestMatch.url) : false;
+      if (bestMatch && bestScore >= 0.35 && !isCategoryPage) {
         product.product_url = bestMatch.url;
         matchCount++;
       }
